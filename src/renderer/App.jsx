@@ -632,7 +632,7 @@ export default function App() {
           {/* Orb with shimmering R logo centered inside */}
           <div style={{ position: "relative", width: 320, height: 320 }}>
             <ResonateOrb progress={progress} size={320} />
-            <div className="logo-shimmer" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 110, height: 110, zIndex: 2 }}>
+            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 110, height: 110, zIndex: 2 }}>
               <LogoBlend size={110} isDark={isDark} />
             </div>
           </div>

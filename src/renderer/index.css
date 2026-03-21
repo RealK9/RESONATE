@@ -201,39 +201,6 @@ input::placeholder {
   animation: shimmerSweep 4s ease-in-out infinite;
 }
 
-/* ── Logo shimmer — gradient light sweep tracing across the R logo ── */
-@keyframes logoShimmerSweep {
-  0% { transform: translateX(-150%) rotate(25deg); }
-  100% { transform: translateX(150%) rotate(25deg); }
-}
-
-.logo-shimmer {
-  position: relative;
-  overflow: hidden;
-}
-
-.logo-shimmer::after {
-  content: '';
-  position: absolute;
-  top: -20%;
-  left: -60%;
-  width: 50%;
-  height: 140%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(217, 70, 239, 0.15) 25%,
-    rgba(139, 92, 246, 0.25) 40%,
-    rgba(255, 255, 255, 0.35) 50%,
-    rgba(6, 182, 212, 0.25) 60%,
-    rgba(217, 70, 239, 0.15) 75%,
-    transparent 100%
-  );
-  transform: rotate(25deg);
-  animation: logoShimmerSweep 3s ease-in-out infinite;
-  pointer-events: none;
-}
-
 /* ── Upload card gradient border ── */
 .upload-card {
   position: relative;

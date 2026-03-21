@@ -165,19 +165,113 @@ def classify_type(filepath):
     return "unknown"
 
 
+_BRAND_PREFIXES = re.compile(
+    r'^(?:Cymatics|Ultrasonic|Splice|Loopcloud|Output|Native Instruments'
+    r'|KSHMR|DPTE2?|DS|JUA|LSLMP|PREM|HT|PR|US|iah|hhvt|ds)'
+    r'\s*[-–—x_ ]\s*',
+    re.IGNORECASE,
+)
+
+_BRAND_USCORE = re.compile(
+    r'^(?:KSHMR|DPTE2?|DS[\s_]MT\d|JUA|LSLMP|PREM|US[\s_]\w+|PR[\s_]OF|HT|hhvt)'
+    r'[\s_]',
+    re.IGNORECASE,
+)
+
+
 def clean_name(raw_name):
-    """Strip common prefixes and make readable."""
+    """
+    Strip pack prefixes, brand names, codes, BPM/key suffixes,
+    and produce a clean, minimal display name.
+    """
     name = raw_name
-    name = re.sub(r'^[A-Z0-9_]{2,20}_[A-Z0-9_]{2,20}_\d+_', '', name)
-    name = re.sub(r'^[A-Z]{1,4}_[A-Z0-9]{1,8}_\d+_', '', name)
-    name = re.sub(r'^[A-Z]_[A-Z]{2,6}_[A-Z]?_?\d+_', '', name)
-    name = re.sub(r'^[A-Z]{2,4}_[A-Za-z0-9]{2,12}_\d+_', '', name)
-    name = re.sub(r'^\d+[A-Z]?_[A-Z]+_', '', name)
+
+    # If path separators exist (nested pack paths), take the last segment
+    if '\\' in name:
+        name = name.rsplit('\\', 1)[-1]
+    if '/' in name:
+        name = name.rsplit('/', 1)[-1]
+
+    # Strip file extension if still present
+    name = re.sub(r'\.(wav|mp3|flac|aiff|aif|ogg|m4a)$', '', name, flags=re.IGNORECASE)
+
+    # Replace underscores with spaces early
     name = name.replace('_', ' ')
+
+    # ── Remove BPM + key FIRST (before any dash splitting) ─────────────
+    # Remove BPM: "136 BPM", "100bpm", "140 BPM"
+    name = re.sub(r'\s*[-–]?\s*\d{2,3}\s*[Bb][Pp][Mm]\b', '', name)
+    # Remove key + scale inline: "E Maj", "F# Min", "D# Minor", "A# Maj", "F Sharp"
+    name = re.sub(
+        r'\s+[A-G][#b]?\s+(?:sharp|flat|min(?:or)?|maj(?:or)?)\b',
+        '', name, flags=re.IGNORECASE
+    )
+    # Remove trailing key: "- G", "- F#", "G#m" (must be preceded by space/dash)
+    name = re.sub(
+        r'(?<=\s)[-–]?\s*[A-G][#b]?\s*(?:min(?:or)?|maj(?:or)?|m(?=[\s\d]|$))?\s*$',
+        '', name, flags=re.IGNORECASE
+    )
+    # Remove inline key in parens: "(F#)", "(G)"
+    name = re.sub(r'\s*\([A-G][#b]?\)', '', name)
+
+    # Remove "One Shot(s)", "Loop Stem(s)", "Drum One Shots", "Sample Pack"
+    name = re.sub(r'\b(?:One\s*Shots?|Loop\s*Stems?|Drum\s*One\s*Shots?)\b', '', name, flags=re.IGNORECASE)
+    name = re.sub(r'\b(?:Free\s+)?Sample\s+Pack\b', '', name, flags=re.IGNORECASE)
+    name = re.sub(r'\bVol\.?\s*\d+\b', '', name, flags=re.IGNORECASE)
+
+    # ── Strip brand prefixes ────────────────────────────────────────────
+    name = _BRAND_PREFIXES.sub('', name)
+    name = _BRAND_USCORE.sub('', name)
+
+    # ── Handle dash-separated multi-part names ──────────────────────────
+    parts = re.split(r'\s*[-–—]\s*', name)
+    parts = [p.strip() for p in parts if p.strip()]
+    if len(parts) >= 3:
+        # Keep meaningful segments (not pure numbers unless that's all we have)
+        good = [p for p in parts if len(p) > 2 and not re.match(r'^\d+$', p)]
+        if not good:
+            good = [p for p in parts if p.strip()]
+        name = ' '.join(good[-2:]) if len(good) >= 2 else good[-1] if good else name
+    elif len(parts) == 2:
+        # If second part is just a number, keep both; otherwise use second
+        if re.match(r'^\d+$', parts[1]):
+            name = ' '.join(parts)
+        elif len(parts[1]) >= 3:
+            name = parts[1]
+        else:
+            name = ' '.join(parts)
+    elif len(parts) == 1:
+        name = parts[0]
+
+    # Remove short code prefixes at start: "x S1 "
+    name = re.sub(r'^[xX]\s+[A-Z]\d\s+', '', name)
+
+    # Remove leading numbers with dash/dot: "37 dt ", "12 hit "
+    name = re.sub(r'^\d{1,3}[\-.\s]+', '', name)
+
+    # Strip leading zeros from trailing numbers: " 003" → " 3", " 02" → " 2"
+    name = re.sub(r'\b0+(\d+)\b', r'\1', name)
+
+    # Clean up dashes, spaces, trailing punctuation
+    name = re.sub(r'\s*[-–—]\s*$', '', name)
+    name = re.sub(r'^\s*[-–—]\s*', '', name)
     name = re.sub(r'\s+', ' ', name).strip()
+
+    # Title case — capitalize meaningful words
     if name:
-        name = ' '.join(w.capitalize() if len(w) > 2 else w for w in name.split())
-    return name or raw_name.replace('_', ' ')
+        words = name.split()
+        cleaned = []
+        for w in words:
+            # Keep acronyms like "FX", "HH", "808"
+            if re.match(r'^[A-Z]{2,3}$', w) or re.match(r'^\d+$', w):
+                cleaned.append(w)
+            elif len(w) > 2:
+                cleaned.append(w[0].upper() + w[1:].lower())
+            else:
+                cleaned.append(w.lower())
+        name = ' '.join(cleaned)
+
+    return name if name and len(name) > 1 else raw_name.replace('_', ' ')
 
 
 # Type display labels
