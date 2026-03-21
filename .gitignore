@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+backend/venv/
+
+# Build output
+dist/
+out/
+
+# Environment secrets
+.env
+backend/.env
+
+# API keys directory
+API KEY - RESONATE/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Cache & temp
+backend/transposed_cache/
+backend/uploads/
+backend/sample_index.json
+backend/resonate.db
+backend/resonate.db-shm
+backend/resonate.db-wal
+
+# Sample library (too large for git)
+backend/samples/
+
+# IDE
+.vscode/
+.idea/
+
+# Electron
+*.dmg
+*.zip
+
+# Plugin build artifacts
+plugin/build/
+
+# Claude
+.claude/
+__pycache__/

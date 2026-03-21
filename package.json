@@ -1,0 +1,73 @@
+{
+  "name": "resonate",
+  "version": "1.0.0",
+  "description": "AI-Powered Sample Matching for Music Producers",
+  "main": "src/main/main.js",
+  "author": "RESONATE",
+  "license": "MIT",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
+    "dev:full": "concurrently -n BE,FE,APP -c blue,green,magenta \"cd backend && source venv/bin/activate && python server.py\" \"sleep 3 && vite\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
+    "build": "vite build && electron-builder --mac",
+    "package": "vite build && electron-forge package",
+    "make": "vite build && electron-forge make",
+    "start": "electron ."
+  },
+  "build": {
+    "appId": "com.resonate.app",
+    "productName": "RESONATE",
+    "mac": {
+      "category": "public.app-category.music",
+      "icon": "public/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "files": [
+      "dist/**/*",
+      "src/main/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend",
+        "to": "backend",
+        "filter": [
+          "**/*",
+          "!venv/**/*",
+          "!__pycache__/**/*",
+          "!**/__pycache__/**/*",
+          "!uploads/**/*",
+          "!transposed_cache/**/*",
+          "!*.db",
+          "!*.db-shm",
+          "!*.db-wal",
+          "!sample_index.json"
+        ]
+      }
+    ],
+    "directories": {
+      "output": "out"
+    }
+  },
+  "config": {
+    "forge": "./forge.config.js"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.11.1",
+    "@electron-forge/maker-dmg": "^7.11.1",
+    "@electron-forge/maker-zip": "^7.11.1",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
+    "@electron-forge/plugin-fuses": "^7.11.1",
+    "@electron/fuses": "^1.8.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^41.0.2",
+    "electron-builder": "^26.8.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "vite": "^8.0.0",
+    "wait-on": "^9.0.4"
+  }
+}
