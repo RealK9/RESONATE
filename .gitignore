@@ -42,3 +42,6 @@ plugin/build/
 # Claude
 .claude/
 __pycache__/
+
+# Startup notes with secrets
+STARTUP TERMINAL PROMPTS/

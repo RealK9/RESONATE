@@ -629,12 +629,11 @@ export default function App() {
       {/* ANALYZING */}
       {screen === "analyzing" && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "calc(100vh - 46px)", padding: 40, position: "relative", overflow: "hidden" }}>
-          {/* Orb with R logo centered inside */}
+          {/* Orb with shimmering R logo centered inside */}
           <div style={{ position: "relative", width: 320, height: 320 }}>
             <ResonateOrb progress={progress} size={320} />
-            {/* R logo floating in center of orb, background-blended */}
-            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 100, height: 100, zIndex: 2 }}>
-              <LogoBlend size={100} isDark={isDark} />
+            <div className="logo-shimmer" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 110, height: 110, zIndex: 2 }}>
+              <LogoBlend size={110} isDark={isDark} />
             </div>
           </div>
           <div style={{ marginTop: 36, textAlign: "center", position: "relative", zIndex: 1 }}>
