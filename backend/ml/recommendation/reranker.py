@@ -31,6 +31,7 @@ from backend.ml.models.recommendation import (
     RecommendationResult,
 )
 from backend.ml.models.reference_profile import ReferenceCorpus
+from backend.ml.training.preference_serving import PreferenceServer
 from backend.ml.recommendation.candidate_generator import (
     _POLICY_TO_ROLES,
     _normalize_key,
@@ -82,9 +83,16 @@ class Reranker:
         self,
         corpus: ReferenceCorpus | None = None,
         weights: dict[str, float] | None = None,
+        preference_server: PreferenceServer | None = None,
     ):
         self._corpus = corpus
+        self._preference_server = preference_server
         self._weights = dict(_DEFAULT_WEIGHTS)
+        # Apply learned weight deltas from the preference server.
+        if preference_server is not None and preference_server.is_loaded:
+            for k, delta in preference_server.get_weight_adjustments().items():
+                if k in self._weights:
+                    self._weights[k] = max(0.0, self._weights[k] + delta)
         if weights is not None:
             self._weights.update(weights)
 
@@ -167,7 +175,7 @@ class Reranker:
             rhythmic_compatibility=self._rhythmic_compatibility(sample, mix),
             style_prior_fit=self._style_prior_fit(sample, mix),
             quality_prior=self._quality_prior(sample),
-            user_preference=self._user_preference(sample),
+            user_preference=self._user_preference(sample, mix),
             masking_penalty=self._masking_penalty(sample, mix),
             redundancy_penalty=self._redundancy_penalty(sample, already_selected),
         )
@@ -345,10 +353,15 @@ class Reranker:
 
     # 8. User preference -----------------------------------------------
 
-    @staticmethod
-    def _user_preference(_sample: SampleProfile) -> float:
-        """Placeholder for Phase 5 -- always returns 0.0."""
-        return 0.0
+    def _user_preference(self, sample: SampleProfile, mix: MixProfile) -> float:
+        """Score based on learned user taste model via PreferenceServer."""
+        if self._preference_server is None or not self._preference_server.is_loaded:
+            return 0.0
+        return self._preference_server.score(
+            sample_filepath=sample.filepath,
+            sample_role=sample.labels.role,
+            context_style=mix.style.primary_cluster,
+        )
 
     # 9. Masking penalty -----------------------------------------------
 
