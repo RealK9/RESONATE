@@ -7,6 +7,7 @@ Mutable globals that routes need to read/write across requests.
 latest_track_profile = {}
 latest_ai_analysis = {}
 latest_track_file = None  # path to uploaded track for dual playback
+latest_mix_profile = None  # v2 MixProfile dict from ml.analysis.mix_analyzer
 
 # DAW Bridge state (set by bridge.py, read by routes)
 daw_bpm = 0.0       # Live DAW tempo (0 = not connected)

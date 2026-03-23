@@ -12,6 +12,16 @@ from ai.claude_engine import claude_analyze_track
 from bridge import request_audio_capture, bridge_state
 import state
 
+# v2 ML pipeline imports — wrapped so server starts even if ml modules are missing
+try:
+    from ml.analysis.mix_analyzer import analyze_mix
+    from ml.analysis.style_classifier import StyleClassifier
+    from ml.analysis.needs_engine import NeedsEngine
+    _HAS_V2_ML = True
+except ImportError as _v2_err:
+    _HAS_V2_ML = False
+    print(f"  [v2] ML modules not available ({_v2_err}); v2 endpoints will 503")
+
 router = APIRouter()
 
 
@@ -130,3 +140,66 @@ def _build_response(track, ai, filename=None):
     if filename:
         resp["filename"] = filename
     return resp
+
+
+# ---------------------------------------------------------------------------
+# v2 endpoints — ML-powered mix analysis
+# ---------------------------------------------------------------------------
+
+def _require_v2():
+    """Raise 503 if v2 ML modules failed to import."""
+    if not _HAS_V2_ML:
+        raise HTTPException(
+            status_code=503,
+            detail="v2 ML pipeline not available on this server",
+        )
+
+
+@router.post("/analyze/v2")
+async def analyze_v2(file: UploadFile = File(...)):
+    """Full v2 mix analysis — audio features, style classification, and needs diagnosis."""
+    _require_v2()
+    from config import UPLOAD_DIR
+
+    # Save uploaded file
+    dest = UPLOAD_DIR / file.filename
+    with open(dest, "wb") as f:
+        content = await file.read()
+        f.write(content)
+
+    # --- v2 pipeline ---
+    print("\n  [v2] Running mix analysis...")
+    mix_profile = analyze_mix(str(dest))
+
+    print("  [v2] Classifying style...")
+    StyleClassifier().classify(mix_profile)
+
+    print("  [v2] Diagnosing needs...")
+    NeedsEngine().diagnose(mix_profile)
+
+    state.latest_mix_profile = mix_profile
+
+    # --- backwards-compat: also run v1 pipeline ---
+    print("  [v2] Running legacy v1 analysis for backwards compatibility...")
+    track = analyze_track(str(dest))
+    state.latest_track_file = dest
+    ai = _run_ai_analysis(track)
+    _finalize(track, ai, label="v2 Analysis")
+
+    return mix_profile
+
+
+@router.get("/analyze/v2/needs")
+async def get_v2_needs():
+    """Return just the needs vector from the latest v2 analysis."""
+    if state.latest_mix_profile is None:
+        raise HTTPException(status_code=404, detail="No mix analyzed yet")
+    return {"needs": state.latest_mix_profile.get("needs", [])}
+
+
+@router.get("/analyze/v2/profile")
+async def get_v2_profile():
+    """Return the full MixProfile from the latest v2 analysis."""
+    if state.latest_mix_profile is None:
+        raise HTTPException(status_code=404, detail="No mix analyzed yet")
+    return state.latest_mix_profile
