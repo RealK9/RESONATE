@@ -3,6 +3,7 @@ RESONATE — Track analysis route.
 Supports file upload and bridge (DAW master) analysis.
 """
 
+from typing import Optional
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
 from config import HAS_CLAUDE
@@ -220,7 +221,7 @@ async def get_v2_profile():
 
 
 @router.post("/analyze/v2/reference")
-async def upload_reference(file: UploadFile = File(...), genre: str | None = None):
+async def upload_reference(file: UploadFile = File(...), genre: Optional[str] = None):
     """Upload a reference track to improve style priors.
 
     The file is saved to the uploads directory and stored for future
@@ -356,7 +357,7 @@ async def log_feedback(
     action: str,
     mix_filepath: str = "",
     session_id: str = "",
-    rating: int | None = None,
+    rating: Optional[int] = None,
     recommendation_rank: int = 0,
 ):
     """Log a user interaction with a recommended sample.

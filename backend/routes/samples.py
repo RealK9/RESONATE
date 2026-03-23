@@ -15,6 +15,7 @@ from analysis.scoring import math_match, semitones_to_transpose
 from analysis.genre_profiles import get_genre_profile
 from audio.serve import serve_audio
 from audio.transpose import transpose_sample
+from audio.trim import trim_silence
 from audio.waveform import extract_waveform_peaks
 from utils import classify_type, clean_name, TYPE_LABELS
 import state
@@ -326,12 +327,15 @@ async def get_waveform(sample_path: str, bars: int = 100):
 
 @router.get("/samples/audio/{sample_path:path}")
 async def get_audio(sample_path: str, sync: int = 0):
-    """Serve sample audio. Only transposes when sync=1 (bridge sync enabled)."""
+    """Serve sample audio — always trimmed, optionally transposed."""
     fp = find_sample_file(sample_path)
 
     if not fp:
         print(f"  404: {sample_path} (tried all methods)")
         raise HTTPException(status_code=404, detail=f"Not found: {sample_path}")
+
+    # Always strip leading/trailing silence
+    fp = trim_silence(fp)
 
     # Only transpose when explicitly requested via bridge sync
     if sync and state.latest_track_profile and state.latest_track_profile.get("key"):
