@@ -199,7 +199,7 @@ async def analyze_v2(file: UploadFile = File(...)):
     ai = _run_ai_analysis(track)
     _finalize(track, ai, label="v2 Analysis")
 
-    return mix_profile
+    return mix_profile.to_dict()
 
 
 @router.get("/analyze/v2/needs")
@@ -207,7 +207,8 @@ async def get_v2_needs():
     """Return just the needs vector from the latest v2 analysis."""
     if state.latest_mix_profile is None:
         raise HTTPException(status_code=404, detail="No mix analyzed yet")
-    return {"needs": state.latest_mix_profile.get("needs", [])}
+    profile_dict = state.latest_mix_profile.to_dict() if hasattr(state.latest_mix_profile, "to_dict") else state.latest_mix_profile
+    return {"needs": profile_dict.get("needs", [])}
 
 
 @router.get("/analyze/v2/profile")
@@ -215,7 +216,7 @@ async def get_v2_profile():
     """Return the full MixProfile from the latest v2 analysis."""
     if state.latest_mix_profile is None:
         raise HTTPException(status_code=404, detail="No mix analyzed yet")
-    return state.latest_mix_profile
+    return state.latest_mix_profile.to_dict() if hasattr(state.latest_mix_profile, "to_dict") else state.latest_mix_profile
 
 
 @router.post("/analyze/v2/reference")
