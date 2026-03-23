@@ -16,6 +16,7 @@ from indexer import (
     auto_organize_samples,
     load_disk_cache,
     background_index,
+    background_index_v2,
     sample_cache,
 )
 from app import create_app
@@ -49,6 +50,11 @@ if __name__ == "__main__":
     # Start background indexing for any new/changed samples
     idx_thread = threading.Thread(target=background_index, daemon=True)
     idx_thread.start()
+
+    # Start v2 indexing in background
+    t2 = threading.Thread(target=background_index_v2, daemon=True)
+    t2.start()
+    print("  ⟳ V2 sample analysis running in background...")
 
     if sample_cache:
         print(f"  → Server ready immediately with {len(sample_cache)} cached samples")

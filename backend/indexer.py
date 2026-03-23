@@ -7,7 +7,7 @@ import json
 import shutil
 from pathlib import Path
 
-from config import SAMPLE_DIR, SAMPLE_INDEX_FILE, AUDIO_EXT, SPLICE_DIRS, LOOPCLOUD_DIRS
+from config import SAMPLE_DIR, SAMPLE_INDEX_FILE, AUDIO_EXT, SPLICE_DIRS, LOOPCLOUD_DIRS, PROFILE_DB_PATH
 from utils import classify_type, file_hash
 from analysis.sample_analyzer import analyze_sample
 
@@ -239,3 +239,49 @@ def background_index():
         source_counts[src] = source_counts.get(src, 0) + 1
     source_str = ", ".join(f"{v} {k}" for k, v in sorted(source_counts.items()))
     print(f"\n  ✓ Indexing complete: {cached_count} cached, {new_count} new, {len(all_indexed)} total ({source_str})\n")
+
+
+# ── V2 Pipeline Indexing ──────────────────────────────────────────────────
+
+v2_indexing_status = {"done": False, "total": 0, "processed": 0}
+
+
+def background_index_v2():
+    """Background indexing using the new Phase 1 analysis pipeline."""
+    global v2_indexing_status
+
+    try:
+        from backend.ml.pipeline.batch_processor import BatchProcessor
+        from backend.ml.db.sample_store import SampleStore
+    except ImportError as e:
+        print(f"  ✗ V2 pipeline import error: {e}")
+        v2_indexing_status["done"] = True
+        return
+
+    store = SampleStore(str(PROFILE_DB_PATH))
+    store.init()
+
+    processor = BatchProcessor(
+        skip_embeddings=True,  # Start without embeddings for speed
+        db_path=str(PROFILE_DB_PATH),
+        max_workers=4,
+    )
+
+    # Index local samples
+    if SAMPLE_DIR.exists():
+        result = processor.process_directory(str(SAMPLE_DIR), source="local")
+        print(f"  ✓ Indexed {result['processed']} local samples (v2 pipeline)")
+
+    # Index external libraries
+    for d in SPLICE_DIRS:
+        if d.exists():
+            result = processor.process_directory(str(d), source="splice")
+            print(f"  ✓ Indexed {result['processed']} Splice samples (v2 pipeline)")
+    for d in LOOPCLOUD_DIRS:
+        if d.exists():
+            result = processor.process_directory(str(d), source="loopcloud")
+            print(f"  ✓ Indexed {result['processed']} Loopcloud samples (v2 pipeline)")
+
+    v2_indexing_status["done"] = True
+    total = store.count()
+    print(f"\n  ✓ V2 indexing complete: {total} total profiles\n")

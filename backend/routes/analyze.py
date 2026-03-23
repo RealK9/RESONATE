@@ -12,6 +12,22 @@ from ai.claude_engine import claude_analyze_track
 from bridge import request_audio_capture, bridge_state
 import state
 
+# v2 ML pipeline imports — wrapped so server starts even if ml modules are missing
+try:
+    from ml.analysis.mix_analyzer import analyze_mix
+    from ml.analysis.style_classifier import StyleClassifier
+    from ml.analysis.needs_engine import NeedsEngine
+    from ml.training.style_priors import StylePriorsTrainer
+    from ml.recommendation.candidate_generator import CandidateGenerator
+    from ml.recommendation.reranker import Reranker
+    from ml.recommendation.explanations import ExplanationEngine
+    from ml.db.sample_store import SampleStore
+    from ml.models.recommendation import RecommendationResult
+    _HAS_V2_ML = True
+except ImportError as _v2_err:
+    _HAS_V2_ML = False
+    print(f"  [v2] ML modules not available ({_v2_err}); v2 endpoints will 503")
+
 router = APIRouter()
 
 
@@ -130,3 +146,180 @@ def _build_response(track, ai, filename=None):
     if filename:
         resp["filename"] = filename
     return resp
+
+
+# ---------------------------------------------------------------------------
+# v2 endpoints — ML-powered mix analysis
+# ---------------------------------------------------------------------------
+
+def _require_v2():
+    """Raise 503 if v2 ML modules failed to import."""
+    if not _HAS_V2_ML:
+        raise HTTPException(
+            status_code=503,
+            detail="v2 ML pipeline not available on this server",
+        )
+
+
+@router.post("/analyze/v2")
+async def analyze_v2(file: UploadFile = File(...)):
+    """Full v2 mix analysis — audio features, style classification, and needs diagnosis."""
+    _require_v2()
+    from config import UPLOAD_DIR, REFERENCE_CORPUS_PATH
+
+    # Save uploaded file
+    dest = UPLOAD_DIR / file.filename
+    with open(dest, "wb") as f:
+        content = await file.read()
+        f.write(content)
+
+    # --- v2 pipeline ---
+    print("\n  [v2] Running mix analysis...")
+    mix_profile = analyze_mix(str(dest))
+
+    print("  [v2] Classifying style...")
+    StyleClassifier().classify(mix_profile)
+
+    print("  [v2] Loading reference corpus...")
+    corpus = StylePriorsTrainer(str(REFERENCE_CORPUS_PATH)).load_or_default()
+
+    print("  [v2] Diagnosing needs...")
+    NeedsEngine(corpus=corpus).diagnose(mix_profile)
+
+    state.latest_mix_profile = mix_profile
+
+    # --- backwards-compat: also run v1 pipeline ---
+    print("  [v2] Running legacy v1 analysis for backwards compatibility...")
+    track = analyze_track(str(dest))
+    state.latest_track_file = dest
+    ai = _run_ai_analysis(track)
+    _finalize(track, ai, label="v2 Analysis")
+
+    return mix_profile
+
+
+@router.get("/analyze/v2/needs")
+async def get_v2_needs():
+    """Return just the needs vector from the latest v2 analysis."""
+    if state.latest_mix_profile is None:
+        raise HTTPException(status_code=404, detail="No mix analyzed yet")
+    return {"needs": state.latest_mix_profile.get("needs", [])}
+
+
+@router.get("/analyze/v2/profile")
+async def get_v2_profile():
+    """Return the full MixProfile from the latest v2 analysis."""
+    if state.latest_mix_profile is None:
+        raise HTTPException(status_code=404, detail="No mix analyzed yet")
+    return state.latest_mix_profile
+
+
+@router.post("/analyze/v2/reference")
+async def upload_reference(file: UploadFile = File(...), genre: str | None = None):
+    """Upload a reference track to improve style priors.
+
+    The file is saved to the uploads directory and stored for future
+    training.  If the full v2 ML pipeline is available the file is
+    immediately analyzed and added to the on-disk reference corpus.
+    """
+    _require_v2()
+    from config import UPLOAD_DIR, REFERENCE_CORPUS_PATH
+
+    dest = UPLOAD_DIR / f"ref_{file.filename}"
+    with open(dest, "wb") as f:
+        content = await file.read()
+        f.write(content)
+
+    print(f"\n  [v2] Reference track saved: {dest}")
+
+    # Analyze and fold into the corpus
+    trainer = StylePriorsTrainer(str(REFERENCE_CORPUS_PATH))
+
+    # Load existing corpus references (if any) by starting fresh and
+    # just training the new file.  The full retrain-from-all approach
+    # would require storing raw profiles; for now we just save the file
+    # and let a batch retrain pick it up later.
+    try:
+        trainer.add_reference_file(str(dest), genre=genre)
+        corpus = trainer.train()
+        print(f"  [v2] Reference corpus updated ({corpus.total_references} refs)")
+        return {
+            "status": "ok",
+            "filepath": str(dest),
+            "total_references": corpus.total_references,
+        }
+    except Exception as exc:
+        # Even if analysis fails, the file is saved for later
+        print(f"  [v2] Reference analysis failed ({exc}); file saved for batch retrain")
+        return {
+            "status": "saved",
+            "filepath": str(dest),
+            "error": str(exc),
+        }
+
+
+# ---------------------------------------------------------------------------
+# v2 recommendation endpoints
+# ---------------------------------------------------------------------------
+
+@router.post("/recommend/v2")
+async def recommend_v2(max_results: int = 20):
+    """Generate sample recommendations for the latest analyzed mix.
+
+    Requires a prior call to ``/analyze/v2`` so that a MixProfile is available.
+    Uses the full recommendation pipeline: candidate generation → reranking →
+    explanation generation.
+    """
+    _require_v2()
+    from config import PROFILE_DB_PATH, REFERENCE_CORPUS_PATH
+
+    if state.latest_mix_profile is None:
+        raise HTTPException(status_code=404, detail="No mix analyzed yet — call /analyze/v2 first")
+
+    mix_profile = state.latest_mix_profile
+    needs = mix_profile.needs
+    if not needs:
+        return RecommendationResult(mix_filepath=mix_profile.filepath).to_dict()
+
+    # Load sample store and reference corpus
+    store = SampleStore(str(PROFILE_DB_PATH))
+    store.init()
+
+    corpus = StylePriorsTrainer(str(REFERENCE_CORPUS_PATH)).load_or_default()
+
+    # Stage 1: candidate generation
+    print("  [v2] Generating candidates...")
+    generator = CandidateGenerator(sample_store=store)
+    candidates = generator.generate(mix_profile, needs, max_candidates=max_results * 5)
+
+    # Stage 2: reranking
+    print(f"  [v2] Reranking {len(candidates)} candidates...")
+    reranker = Reranker(corpus=corpus)
+    recommendations = reranker.rerank(candidates, mix_profile, needs)
+
+    # Stage 3: explanations
+    print("  [v2] Generating explanations...")
+    engine = ExplanationEngine()
+    engine.explain_batch(recommendations, mix_profile, needs)
+
+    # Trim to requested count
+    recommendations = recommendations[:max_results]
+
+    result = RecommendationResult(
+        mix_filepath=mix_profile.filepath,
+        recommendations=recommendations,
+        needs_addressed=list({r.need_addressed for r in recommendations if r.need_addressed}),
+        total_candidates_considered=len(candidates),
+    )
+    state.latest_recommendations = result
+
+    print(f"  [v2] Returning {len(recommendations)} recommendations")
+    return result.to_dict()
+
+
+@router.get("/recommend/v2/latest")
+async def get_latest_recommendations():
+    """Return the latest recommendation result."""
+    if state.latest_recommendations is None:
+        raise HTTPException(status_code=404, detail="No recommendations generated yet")
+    return state.latest_recommendations.to_dict()

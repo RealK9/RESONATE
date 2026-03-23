@@ -4,6 +4,7 @@ Loads environment variables and defines shared paths.
 """
 
 import os
+import sys
 from pathlib import Path
 
 # ── Paths ──────────────────────────────────────────────────────────────────
@@ -16,6 +17,16 @@ UPLOAD_DIR = BACKEND_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 SAMPLE_INDEX_FILE = BACKEND_DIR / "sample_index.json"
 DB_PATH = BACKEND_DIR / "resonate.db"
+
+# ── New analysis pipeline ─────────────────────────────────────────────────
+PROJECT_ROOT = BACKEND_DIR.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+REFERENCE_CORPUS_PATH = BACKEND_DIR / "reference_corpus.json"
+PROFILE_DB_PATH = BACKEND_DIR / "sample_profiles.db"
+VECTOR_INDEX_DIR = BACKEND_DIR / "vector_indexes"
+VECTOR_INDEX_DIR.mkdir(exist_ok=True)
 
 # ── Supported audio formats ────────────────────────────────────────────────
 AUDIO_EXT = {".wav", ".mp3", ".flac", ".ogg", ".aiff", ".aif", ".m4a"}
