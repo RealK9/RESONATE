@@ -50,7 +50,65 @@ export function useApi() {
     return r.json();
   };
 
-  return { checkHealth, getSettings, setSampleDir, analyzeTrack, getSamples, getSampleAbsPath, API };
+  // ---------------------------------------------------------------------------
+  // v2 ML pipeline endpoints
+  // ---------------------------------------------------------------------------
+
+  /** Full v2 analysis (runs v1 internally for backward compat). */
+  const analyzeTrackV2 = async (file) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const r = await fetch(API + "/analyze/v2", { method: "POST", body: fd });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.detail || "v2 analysis failed");
+    }
+    return r.json();
+  };
+
+  /** Generate v2 recommendations for the latest analyzed mix. */
+  const getRecommendationsV2 = async (maxResults = 30) => {
+    const r = await fetch(API + `/recommend/v2?max_results=${maxResults}`, { method: "POST" });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.detail || "Recommendation failed");
+    }
+    return r.json();
+  };
+
+  /** Log a user interaction with a recommended sample. */
+  const logFeedbackV2 = (params) => {
+    const qs = new URLSearchParams();
+    qs.set("sample_filepath", params.sample_filepath);
+    qs.set("action", params.action);
+    if (params.mix_filepath) qs.set("mix_filepath", params.mix_filepath);
+    if (params.session_id) qs.set("session_id", params.session_id);
+    if (params.rating != null) qs.set("rating", String(params.rating));
+    if (params.recommendation_rank != null) qs.set("recommendation_rank", String(params.recommendation_rank));
+    // Fire-and-forget — don't await, don't block UI
+    fetch(API + "/feedback/v2?" + qs.toString(), { method: "POST" }).catch(() => {});
+  };
+
+  /** Train the per-user preference model from accumulated feedback. */
+  const trainPreferencesV2 = async (userId = "default", minPairs = 10) => {
+    const r = await fetch(API + `/preference/v2/train?user_id=${userId}&min_pairs=${minPairs}`, { method: "POST" });
+    return r.json();
+  };
+
+  /** Get the v2 needs vector from the latest analysis. */
+  const getNeedsV2 = async () => {
+    const r = await fetch(API + "/analyze/v2/needs");
+    return r.json();
+  };
+
+  return {
+    checkHealth, getSettings, setSampleDir,
+    analyzeTrack, getSamples, getSampleAbsPath,
+    // v2
+    analyzeTrackV2, getRecommendationsV2, logFeedbackV2,
+    trainPreferencesV2, getNeedsV2,
+    API,
+  };
 }
 
 export { API };

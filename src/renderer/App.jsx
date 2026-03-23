@@ -9,7 +9,8 @@ import { useTheme } from "./theme/ThemeProvider";
 import { SERIF, AF, MONO } from "./theme/fonts";
 import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useWaveformData } from "./hooks/useWaveformData";
-import { API } from "./hooks/useApi";
+import { useApi, API } from "./hooks/useApi";
+import { mergeV2WithV1, formatNeeds, NEED_CATEGORY_COLORS, POLICY_LABELS } from "./utils/v2Adapter";
 import { Titlebar } from "./components/Titlebar";
 import { ResonateOrb } from "./components/ResonateOrb";
 import { SkeletonRow } from "./components/SkeletonRow";
@@ -125,6 +126,7 @@ export default function App() {
   const { theme, mode } = useTheme();
   const isDark = mode === "dark";
   const toast = useToast();
+  const api = useApi();
 
   // ── Core State ──
   const [screen, setScreen] = useState("home");
@@ -162,6 +164,14 @@ export default function App() {
   const [hoverWaveform, setHoverWaveform] = useState({ path: null, rect: null });
   const [checkedSamples, setCheckedSamples] = useState(new Set());  // batch select
   const searchRef = useRef(null);
+
+  // ── v2 ML Pipeline State ──
+  const [mixProfile, setMixProfile] = useState(null);              // v2 MixProfile dict
+  const [v2Recommendations, setV2Recommendations] = useState([]);  // raw v2 recs
+  const [mixNeeds, setMixNeeds] = useState([]);                    // formatted needs for display
+  const [v2Available, setV2Available] = useState(true);            // v2 pipeline responded?
+  const [v2Loading, setV2Loading] = useState(false);               // loading spinner for v2 recs
+  const [viewMode, setViewMode] = useState("smart");               // "smart" | "all"
 
   // ── Virtual Scrolling State ──
   const scrollRef = useRef(null);
@@ -214,18 +224,44 @@ export default function App() {
 
   const runAnalysis = useCallback(async (file) => {
     setScreen("analyzing"); setProgress(0); setError(null); setSimilarSamples(null);
+    setMixProfile(null); setV2Recommendations([]); setMixNeeds([]); setV2Loading(false);
     let p = 0, si = 0; setStage(STAGES[0]);
     tmr.current = setInterval(() => { p += Math.random() * 1.5 + 0.5; p = Math.min(p, 90); const nsi = Math.min(Math.floor(p / (90 / (STAGES.length - 1))), STAGES.length - 2); if (nsi !== si) { si = nsi; setStage(STAGES[nsi]); } setProgress(Math.round(p)); }, 100);
     try {
-      const fd = new FormData(); fd.append("file", file);
-      const res = await fetch(API + "/analyze", { method: "POST", body: fd });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.detail || "Failed"); }
-      const result = await res.json(); setAnalysisResult(result);
+      // Try v2 first (it runs v1 internally for backward compat)
+      let v2Success = false;
+      try {
+        const v2Result = await api.analyzeTrackV2(file);
+        setMixProfile(v2Result);
+        setMixNeeds(formatNeeds(v2Result));
+        v2Success = true;
+        setV2Available(true);
+        // Build a v1-compatible analysisResult from v2 data
+        const v1Compat = { analysis: { key: v2Result?.analysis?.key || "", bpm: v2Result?.analysis?.bpm || 0, genre: v2Result?.style?.primary_cluster || "", mood: "", energy_label: "", summary: "", what_track_needs: (v2Result?.needs || []).map(n => n.description).slice(0, 6), frequency_bands: {}, frequency_gaps: [], detected_instruments: [] } };
+        setAnalysisResult(v1Compat);
+      } catch {
+        // v2 not available — fall back to v1
+        setV2Available(false);
+        const fd = new FormData(); fd.append("file", file);
+        const res = await fetch(API + "/analyze", { method: "POST", body: fd });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.detail || "Failed"); }
+        const result = await res.json(); setAnalysisResult(result);
+      }
       clearInterval(tmr.current); setStage(STAGES[STAGES.length - 1]); setProgress(100);
       await loadSamples(); audio.loadTrack();
+
+      // Fetch v2 recommendations in the background
+      if (v2Success) {
+        setV2Loading(true);
+        api.getRecommendationsV2(30).then(recsResult => {
+          if (recsResult?.recommendations) setV2Recommendations(recsResult.recommendations);
+          setV2Loading(false);
+        }).catch(() => setV2Loading(false));
+      }
+
       setTimeout(() => { setScreen("results"); toast.success("Analysis complete"); }, 500);
     } catch (e) { clearInterval(tmr.current); setError(e.message); setProgress(0); setScreen("home"); toast.error(e.message); }
-  }, [loadSamples, audio, toast]);
+  }, [loadSamples, audio, toast, api]);
 
   const handleUpload = useCallback(async () => {
     if (!backendOk) { setError("Backend not running"); toast.error("Backend not running"); return; }
@@ -280,12 +316,27 @@ export default function App() {
     } catch { toast.error("Layering search failed"); }
   }, [toast]);
 
+  // ── v2 Feedback helper (fire-and-forget) ──
+  const logV2Feedback = useCallback((sample, action, extras = {}) => {
+    if (!v2Available || !sample) return;
+    api.logFeedbackV2({
+      sample_filepath: sample.id || sample.filepath || "",
+      action,
+      mix_filepath: mixProfile?.filepath || "",
+      session_id: currentSessionId || "",
+      recommendation_rank: sample.v2_rank ?? 0,
+      ...extras,
+    });
+  }, [v2Available, api, mixProfile, currentSessionId]);
+
   // ── Rating ──
   const rateSample = useCallback((sampleId, rating) => {
     setRatings(prev => ({ ...prev, [sampleId]: rating }));
     fetch(API + "/ratings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sample_filepath: sampleId, rating, session_id: currentSessionId }) }).catch(() => {});
+    // Also log to v2 feedback
+    logV2Feedback({ id: sampleId }, "rate", { rating });
     toast.info(`Rated ${rating} star${rating > 1 ? "s" : ""}`);
-  }, [currentSessionId, toast]);
+  }, [currentSessionId, toast, logV2Feedback]);
 
   // ── Similarity Search ──
   const findSimilar = useCallback(async (sample) => {
@@ -333,7 +384,16 @@ export default function App() {
   }, [toast]);
 
   const a = analysisResult?.analysis || {};
-  const filtered = useMemo(() => samples.filter(s => {
+
+  // Merge v2 recommendations with v1 library when in "smart" mode
+  const displaySamples = useMemo(() => {
+    if (viewMode === "smart" && v2Recommendations.length > 0) {
+      return mergeV2WithV1(v2Recommendations, samples);
+    }
+    return samples;
+  }, [viewMode, v2Recommendations, samples]);
+
+  const filtered = useMemo(() => displaySamples.filter(s => {
     if (category !== "all" && s.category.toLowerCase() !== category.toLowerCase()) return false;
     if (selectedKey !== "Any" && s.key !== "—" && s.key !== selectedKey) return false;
     if (search && !(s.clean_name || s.name).toLowerCase().includes(search.toLowerCase())) return false;
@@ -341,19 +401,19 @@ export default function App() {
     if (sourceFilter !== "all" && (s.source || "local") !== sourceFilter) return false;
     if (moodFilter !== "all" && (s.mood || "neutral") !== moodFilter) return false;
     return true;
-  }).sort((a, b) => (b.match || 0) - (a.match || 0)), [samples, category, selectedKey, search, tab, favorites, sourceFilter, moodFilter]);
+  }).sort((a, b) => (b.match || 0) - (a.match || 0)), [displaySamples, category, selectedKey, search, tab, favorites, sourceFilter, moodFilter]);
 
   const isSynced = bridge.connected && bridge.dawSync;
-  const handlePlay = s => { setActiveSample(s); audio.toggle(s.path, s.id, isSynced); const idx = filtered.findIndex(x => x.id === s.id); if (idx >= 0) setSelectedIdx(idx); };
+  const handlePlay = s => { setActiveSample(s); audio.toggle(s.path, s.id, isSynced); const idx = filtered.findIndex(x => x.id === s.id); if (idx >= 0) setSelectedIdx(idx); logV2Feedback(s, "audition"); };
   const selectAllVisible = useCallback(() => { setCheckedSamples(new Set(filtered.map(s => s.id))); }, [filtered]);
 
   // Count samples by source
   const sourceCounts = useMemo(() => {
-    const c = { all: samples.length, local: 0, splice: 0, loopcloud: 0 };
-    for (const s of samples) { const src = s.source || "local"; c[src] = (c[src] || 0) + 1; }
+    const c = { all: displaySamples.length, local: 0, splice: 0, loopcloud: 0 };
+    for (const s of displaySamples) { const src = s.source || "local"; c[src] = (c[src] || 0) + 1; }
     return c;
-  }, [samples]);
-  const cats = useMemo(() => ["all", ...new Set(samples.map(s => s.category.toLowerCase()))], [samples]);
+  }, [displaySamples]);
+  const cats = useMemo(() => ["all", ...new Set(displaySamples.filter(s => s.category).map(s => s.category.toLowerCase()))], [displaySamples]);
 
   // ── Virtual Scrolling ──
   const totalHeight = filtered.length * ROW_HEIGHT;
@@ -446,9 +506,10 @@ export default function App() {
       }
     } catch {}
     fetch(API + "/usage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sample_filepath: sample.id, action: "drag", session_id: currentSessionId }) }).catch(() => {});
-  }, [currentSessionId, bridge.connected, bridge.dawSync]);
+    logV2Feedback(sample, "drag");
+  }, [currentSessionId, bridge.connected, bridge.dawSync, logV2Feedback]);
 
-  const handleNew = () => { setScreen("home"); setActiveSample(null); audio.stop(); setAnalysisResult(null); setSelectedIdx(-1); setSimilarSamples(null); };
+  const handleNew = () => { setScreen("home"); setActiveSample(null); audio.stop(); setAnalysisResult(null); setSelectedIdx(-1); setSimilarSamples(null); setMixProfile(null); setV2Recommendations([]); setMixNeeds([]); setViewMode("smart"); };
 
   const analyzeFromBridge = useCallback(async () => {
     try {
@@ -666,6 +727,24 @@ export default function App() {
                 {sessions.length > 0 && <button onClick={() => setShowSessions(true)} style={{ flex: 1, fontSize: 8, padding: "4px 0", borderRadius: 4, border: "1px solid " + theme.border, background: "transparent", color: theme.textSec, cursor: "pointer", fontFamily: AF }}>History</button>}
               </div>
             </div>
+            {/* v2 Mix Needs */}
+            {mixNeeds.length > 0 && (
+              <div style={{ padding: 12, borderRadius: 8, marginBottom: 12, background: theme.bg, border: "1px solid " + theme.borderLight }}>
+                <div style={lbl}>Your Mix Needs</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {mixNeeds.slice(0, 8).map((need, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: NEED_CATEGORY_COLORS[need.category] || theme.textMuted, flexShrink: 0, marginTop: 4, opacity: 0.4 + need.severity * 0.6 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 10, color: theme.text, fontFamily: AF, lineHeight: 1.3 }}>{need.description}</div>
+                        {need.policy && <div style={{ fontSize: 8, color: theme.textFaint, fontFamily: AF, marginTop: 1 }}>{POLICY_LABELS[need.policy] || need.policy}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Bridge Status */}
             {bridge.connected && (
               <div style={{ padding: 10, borderRadius: 8, marginBottom: 12, background: isDark ? "rgba(34,197,94,0.06)" : "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.15)" }}>
@@ -806,13 +885,24 @@ export default function App() {
             {/* Tabs */}
             <div style={{ display: "flex", background: theme.surface, borderBottom: "1px solid " + theme.border, padding: "0 14px", alignItems: "center" }}>
               {[
-                { id: "matched", l: "AI Matched", c: samples.length },
+                { id: "matched", l: "AI Matched", c: displaySamples.length },
                 { id: "favorites", l: "Favorites", c: favorites.size },
               ].map(t => (
                 <button key={t.id} onClick={() => setTab(t.id)} style={{ padding: "10px 14px", border: "none", background: "transparent", color: tab === t.id ? (t.color || theme.text) : theme.textMuted, fontSize: 11, fontWeight: tab === t.id ? 600 : 400, cursor: "pointer", borderBottom: tab === t.id ? "2px solid " + (t.color || theme.accent) : "2px solid transparent", fontFamily: AF, transition: "all 0.2s ease" }}>
                   {t.l}<span style={{ marginLeft: 4, fontSize: 9, padding: "1px 4px", borderRadius: 4, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)" }}>{t.c}</span>
                 </button>
               ))}
+              {/* v2 view mode toggle */}
+              {v2Available && (
+                <div style={{ marginLeft: "auto", display: "flex", borderRadius: 5, overflow: "hidden", border: "1px solid " + theme.borderLight }}>
+                  <button onClick={() => setViewMode("smart")} style={{ padding: "5px 10px", border: "none", background: viewMode === "smart" ? (isDark ? "rgba(217,70,239,0.15)" : "rgba(217,70,239,0.1)") : "transparent", color: viewMode === "smart" ? "#D946EF" : theme.textMuted, fontSize: 9, fontWeight: viewMode === "smart" ? 700 : 400, cursor: "pointer", fontFamily: AF }}>
+                    Smart Match{v2Loading ? " ..." : ""}
+                  </button>
+                  <button onClick={() => setViewMode("all")} style={{ padding: "5px 10px", border: "none", borderLeft: "1px solid " + theme.borderLight, background: viewMode === "all" ? (isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)") : "transparent", color: viewMode === "all" ? theme.text : theme.textMuted, fontSize: 9, fontWeight: viewMode === "all" ? 700 : 400, cursor: "pointer", fontFamily: AF }}>
+                    Full Library
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Batch Export Toolbar */}

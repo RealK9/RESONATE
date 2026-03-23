@@ -16,6 +16,13 @@ const MOOD_COLORS = {
   neutral: { bg: "rgba(148,163,184,0.08)", text: "#94A3B8" },
 };
 
+const ROLE_COLORS = {
+  kick: "#F59E0B", snare_clap: "#EF4444", hats_tops: "#6366F1",
+  bass: "#8B5CF6", lead: "#EC4899", chord_support: "#14B8A6",
+  pad: "#06B6D4", vocal_texture: "#F472B6", fx_transitions: "#A78BFA",
+  ambience: "#34D399", percussion: "#FB923C",
+};
+
 export const SampleRow = memo(function SampleRow({ sample, isActive, isPlaying, onPlay, isSelected, isChecked, onCheck, onHoverWaveform, dawSync = false }) {
   const [hov, setHov] = useState(false);
   const rowRef = useRef(null);
@@ -52,7 +59,14 @@ export const SampleRow = memo(function SampleRow({ sample, isActive, isPlaying, 
           {mood !== "neutral" && (
             <span style={{ fontSize: 7, padding: "1px 4px", borderRadius: 3, background: moodStyle.bg, color: moodStyle.text, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, fontFamily: AF }}>{mood}</span>
           )}
-          {sample.match_reason && <span style={{ fontSize: 8, color: theme.textMuted, fontStyle: "italic" }}>{sample.match_reason}</span>}
+          {sample._isV2 && sample.v2_role && (
+            <span style={{ fontSize: 7, padding: "1px 4px", borderRadius: 3, background: (ROLE_COLORS[sample.v2_role] || "#888") + "18", color: ROLE_COLORS[sample.v2_role] || "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, fontFamily: AF }}>{sample.v2_role.replace("_", " ")}</span>
+          )}
+          {sample._isV2 && sample.v2_need_addressed ? (
+            <span style={{ fontSize: 8, color: theme.textMuted, fontStyle: "italic" }} title={sample.v2_explanation}>{sample.v2_need_addressed}</span>
+          ) : sample.match_reason && (
+            <span style={{ fontSize: 8, color: theme.textMuted, fontStyle: "italic" }}>{sample.match_reason}</span>
+          )}
         </div>
       </div>
       <span style={{ fontSize: 11, fontWeight: 700, color: (sample.match || 50) >= 70 ? "#D946EF" : (sample.match || 50) >= 55 ? theme.text : theme.textMuted, fontFamily: MONO }}>{Math.round(sample.match || 50)}%</span>
