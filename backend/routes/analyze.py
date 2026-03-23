@@ -23,6 +23,10 @@ try:
     from ml.recommendation.explanations import ExplanationEngine
     from ml.db.sample_store import SampleStore
     from ml.models.recommendation import RecommendationResult
+    from ml.models.preference import FeedbackEvent
+    from ml.training.preference_dataset import PreferenceDataset
+    from ml.training.preference_serving import PreferenceServer
+    from ml.training.train_ranker import RankerTrainer
     _HAS_V2_ML = True
 except ImportError as _v2_err:
     _HAS_V2_ML = False
@@ -292,9 +296,16 @@ async def recommend_v2(max_results: int = 20):
     generator = CandidateGenerator(sample_store=store)
     candidates = generator.generate(mix_profile, needs, max_candidates=max_results * 5)
 
-    # Stage 2: reranking
+    # Load preference server (Phase 5)
+    pref_db_path = str(PROFILE_DB_PATH).replace(".db", "_prefs.db")
+    pref_dataset = PreferenceDataset(pref_db_path)
+    pref_dataset.init()
+    pref_server = PreferenceServer(pref_dataset)
+    pref_server.load()
+
+    # Stage 2: reranking (with learned preferences if available)
     print(f"  [v2] Reranking {len(candidates)} candidates...")
-    reranker = Reranker(corpus=corpus)
+    reranker = Reranker(corpus=corpus, preference_server=pref_server)
     recommendations = reranker.rerank(candidates, mix_profile, needs)
 
     # Stage 3: explanations
@@ -323,3 +334,98 @@ async def get_latest_recommendations():
     if state.latest_recommendations is None:
         raise HTTPException(status_code=404, detail="No recommendations generated yet")
     return state.latest_recommendations.to_dict()
+
+
+# ---------------------------------------------------------------------------
+# v2 preference learning endpoints
+# ---------------------------------------------------------------------------
+
+def _get_pref_dataset() -> "PreferenceDataset":
+    """Get or create the preference dataset."""
+    from config import PROFILE_DB_PATH
+    pref_db_path = str(PROFILE_DB_PATH).replace(".db", "_prefs.db")
+    ds = PreferenceDataset(pref_db_path)
+    ds.init()
+    return ds
+
+
+@router.post("/feedback/v2")
+async def log_feedback(
+    sample_filepath: str,
+    action: str,
+    mix_filepath: str = "",
+    session_id: str = "",
+    rating: int | None = None,
+    recommendation_rank: int = 0,
+):
+    """Log a user interaction with a recommended sample.
+
+    Actions: click, audition, drag, keep, discard, rate, skip
+    """
+    _require_v2()
+    valid_actions = {"click", "audition", "drag", "keep", "discard", "rate", "skip"}
+    if action not in valid_actions:
+        raise HTTPException(status_code=400, detail=f"Invalid action. Must be one of: {valid_actions}")
+
+    if action == "rate" and (rating is None or not 1 <= rating <= 5):
+        raise HTTPException(status_code=400, detail="Rating must be 1-5 for 'rate' action")
+
+    import time
+    event = FeedbackEvent(
+        sample_filepath=sample_filepath,
+        mix_filepath=mix_filepath or (state.latest_mix_profile.filepath if state.latest_mix_profile else ""),
+        session_id=session_id,
+        action=action,
+        rating=rating,
+        recommendation_rank=recommendation_rank,
+        context_style=state.latest_mix_profile.style.primary_cluster if state.latest_mix_profile else "",
+        timestamp=time.time(),
+    )
+    ds = _get_pref_dataset()
+    ds.log_feedback(event)
+    return {"status": "ok"}
+
+
+@router.post("/feedback/v2/build-pairs")
+async def build_preference_pairs(session_id: str = ""):
+    """Construct preference pairs from logged feedback events."""
+    _require_v2()
+    ds = _get_pref_dataset()
+    pairs = ds.build_pairs(session_id=session_id)
+    return {"pairs_created": len(pairs)}
+
+
+@router.post("/preference/v2/train")
+async def train_preference_model(user_id: str = "default", min_pairs: int = 10):
+    """Train a per-user taste model from accumulated preference pairs."""
+    _require_v2()
+    from config import PROFILE_DB_PATH
+
+    ds = _get_pref_dataset()
+    store = SampleStore(str(PROFILE_DB_PATH))
+    store.init()
+
+    trainer = RankerTrainer(dataset=ds, sample_store=store)
+    model = trainer.train(user_id=user_id, min_pairs=min_pairs)
+
+    if model is None:
+        return {"status": "insufficient_data", "message": f"Need at least {min_pairs} preference pairs"}
+
+    return {
+        "status": "ok",
+        "model_version": model.model_version,
+        "training_pairs": model.training_pairs,
+        "role_biases": len(model.role_bias),
+        "style_biases": len(model.style_bias),
+    }
+
+
+@router.get("/preference/v2/model")
+async def get_preference_model(user_id: str = "default"):
+    """Return the current taste model for a user."""
+    _require_v2()
+    ds = _get_pref_dataset()
+    model = ds.load_taste_model(user_id)
+    if model is None:
+        raise HTTPException(status_code=404, detail="No taste model trained yet")
+    return model.to_dict()
