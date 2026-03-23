@@ -1,0 +1,18 @@
+# requirements-ml.txt — Phase 1 ML/DSP dependencies
+numpy>=1.24
+scipy>=1.11
+librosa>=0.10.1
+pyloudnorm>=0.1.1
+scikit-learn>=1.3
+faiss-cpu>=1.7.4
+torch>=2.1
+torchaudio>=2.1
+transformers>=4.35
+laion-clap>=1.1.4
+panns-inference>=0.1.1
+pytest>=7.4
+pytest-asyncio>=0.21
+soundfile>=0.12
+# Optional: crepe for neural pitch detection (requires tensorflow)
+# crepe>=0.0.16
+# tensorflow>=2.14

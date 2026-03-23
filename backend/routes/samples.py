@@ -357,3 +357,42 @@ async def get_audio(sample_path: str, sync: int = 0):
             return serve_audio(transposed)
 
     return serve_audio(fp)
+
+
+# ── V2 Pipeline Endpoints ─────────────────────────────────────────────────
+
+@router.get("/samples/v2/profile/{sample_path:path}")
+def get_sample_profile(sample_path: str):
+    """Get the full v2 analysis profile for a sample."""
+    from config import PROFILE_DB_PATH
+    from backend.ml.db.sample_store import SampleStore
+
+    store = SampleStore(str(PROFILE_DB_PATH))
+    store.init()
+
+    profile = store.load(sample_path)
+    if not profile:
+        # Try finding by filename
+        found = find_sample_file(sample_path)
+        if found:
+            profile = store.load(str(found))
+
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    return profile.to_dict()
+
+
+@router.get("/samples/v2/stats")
+def get_indexing_stats():
+    """Get v2 pipeline indexing statistics."""
+    from config import PROFILE_DB_PATH
+    from backend.ml.db.sample_store import SampleStore
+
+    store = SampleStore(str(PROFILE_DB_PATH))
+    store.init()
+
+    return {
+        "total_profiles": store.count(),
+        "pipeline_version": "phase1",
+    }
