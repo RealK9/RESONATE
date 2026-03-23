@@ -12,6 +12,7 @@ import math
 from dataclasses import dataclass
 
 from backend.ml.models.mix_profile import MixProfile, NeedOpportunity
+from backend.ml.models.reference_profile import ReferenceCorpus, StylePrior
 
 
 # ---------------------------------------------------------------------------
@@ -148,14 +149,39 @@ class NeedsEngine:
     5. Arrangement analysis (density variation, breathing room)
 
     Returns a list of NeedOpportunity objects sorted by severity (highest first).
+
+    Parameters
+    ----------
+    corpus:
+        Optional :class:`ReferenceCorpus` to pull style-aware priors from.
+        When provided, spectral norms are drawn from the corpus's
+        ``StylePrior`` for the mix's primary cluster, making the engine
+        upgrade automatically when better reference data is available.
+        Falls back to the built-in ``_STYLE_BAND_NORMS`` when the corpus
+        has no prior for a given cluster (or when *corpus* is ``None``).
     """
+
+    def __init__(self, corpus: ReferenceCorpus | None = None) -> None:
+        self._corpus = corpus
+
+    def _get_spectral_norm(self, primary_cluster: str) -> list[float]:
+        """Return the spectral band norm for *primary_cluster*.
+
+        Prefers the corpus prior when available, falling back to the
+        hardcoded ``_STYLE_BAND_NORMS`` dict.
+        """
+        if self._corpus is not None:
+            prior = self._corpus.get_prior(primary_cluster)
+            if prior is not None and len(prior.target_spectral_mean) == 10:
+                return prior.target_spectral_mean
+        return _get_norm(primary_cluster)
 
     def diagnose(self, mix_profile: MixProfile) -> list[NeedOpportunity]:
         """Analyze the profile and return a list of needs, sorted by severity."""
         needs: list[NeedOpportunity] = []
 
         primary = mix_profile.style.primary_cluster
-        norm = _get_norm(primary)
+        norm = self._get_spectral_norm(primary)
 
         needs.extend(self._spectral_analysis(mix_profile, norm, primary))
         needs.extend(self._role_analysis(mix_profile, primary))

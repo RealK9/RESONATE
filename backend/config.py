@@ -23,6 +23,7 @@ PROJECT_ROOT = BACKEND_DIR.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+REFERENCE_CORPUS_PATH = BACKEND_DIR / "reference_corpus.json"
 PROFILE_DB_PATH = BACKEND_DIR / "sample_profiles.db"
 VECTOR_INDEX_DIR = BACKEND_DIR / "vector_indexes"
 VECTOR_INDEX_DIR.mkdir(exist_ok=True)

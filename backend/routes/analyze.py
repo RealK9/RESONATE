@@ -17,6 +17,7 @@ try:
     from ml.analysis.mix_analyzer import analyze_mix
     from ml.analysis.style_classifier import StyleClassifier
     from ml.analysis.needs_engine import NeedsEngine
+    from ml.training.style_priors import StylePriorsTrainer
     _HAS_V2_ML = True
 except ImportError as _v2_err:
     _HAS_V2_ML = False
@@ -159,7 +160,7 @@ def _require_v2():
 async def analyze_v2(file: UploadFile = File(...)):
     """Full v2 mix analysis — audio features, style classification, and needs diagnosis."""
     _require_v2()
-    from config import UPLOAD_DIR
+    from config import UPLOAD_DIR, REFERENCE_CORPUS_PATH
 
     # Save uploaded file
     dest = UPLOAD_DIR / file.filename
@@ -174,8 +175,11 @@ async def analyze_v2(file: UploadFile = File(...)):
     print("  [v2] Classifying style...")
     StyleClassifier().classify(mix_profile)
 
+    print("  [v2] Loading reference corpus...")
+    corpus = StylePriorsTrainer(str(REFERENCE_CORPUS_PATH)).load_or_default()
+
     print("  [v2] Diagnosing needs...")
-    NeedsEngine().diagnose(mix_profile)
+    NeedsEngine(corpus=corpus).diagnose(mix_profile)
 
     state.latest_mix_profile = mix_profile
 
@@ -203,3 +207,47 @@ async def get_v2_profile():
     if state.latest_mix_profile is None:
         raise HTTPException(status_code=404, detail="No mix analyzed yet")
     return state.latest_mix_profile
+
+
+@router.post("/analyze/v2/reference")
+async def upload_reference(file: UploadFile = File(...), genre: str | None = None):
+    """Upload a reference track to improve style priors.
+
+    The file is saved to the uploads directory and stored for future
+    training.  If the full v2 ML pipeline is available the file is
+    immediately analyzed and added to the on-disk reference corpus.
+    """
+    _require_v2()
+    from config import UPLOAD_DIR, REFERENCE_CORPUS_PATH
+
+    dest = UPLOAD_DIR / f"ref_{file.filename}"
+    with open(dest, "wb") as f:
+        content = await file.read()
+        f.write(content)
+
+    print(f"\n  [v2] Reference track saved: {dest}")
+
+    # Analyze and fold into the corpus
+    trainer = StylePriorsTrainer(str(REFERENCE_CORPUS_PATH))
+
+    # Load existing corpus references (if any) by starting fresh and
+    # just training the new file.  The full retrain-from-all approach
+    # would require storing raw profiles; for now we just save the file
+    # and let a batch retrain pick it up later.
+    try:
+        trainer.add_reference_file(str(dest), genre=genre)
+        corpus = trainer.train()
+        print(f"  [v2] Reference corpus updated ({corpus.total_references} refs)")
+        return {
+            "status": "ok",
+            "filepath": str(dest),
+            "total_references": corpus.total_references,
+        }
+    except Exception as exc:
+        # Even if analysis fails, the file is saved for later
+        print(f"  [v2] Reference analysis failed ({exc}); file saved for batch retrain")
+        return {
+            "status": "saved",
+            "filepath": str(dest),
+            "error": str(exc),
+        }
