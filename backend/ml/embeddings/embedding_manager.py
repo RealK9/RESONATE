@@ -12,7 +12,15 @@ logger = logging.getLogger(__name__)
 class EmbeddingManager:
     """Manages all embedding extractors with lazy loading."""
 
-    def __init__(self, device: str | None = None):
+    def __init__(self, device: str = None):
+        if device is None:
+            import torch
+            if torch.backends.mps.is_available():
+                device = "mps"
+            elif torch.cuda.is_available():
+                device = "cuda"
+            else:
+                device = "cpu"
         self.device = device
         self._clap = None
         self._panns = None
