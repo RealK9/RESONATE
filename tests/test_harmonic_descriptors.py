@@ -1,7 +1,7 @@
 # tests/test_harmonic_descriptors.py
 import numpy as np
-from backend.ml.analysis.harmonic_descriptors import extract_harmonic_descriptors
-from backend.ml.models.sample_profile import HarmonicDescriptors
+from ml.analysis.harmonic_descriptors import extract_harmonic_descriptors
+from ml.models.sample_profile import HarmonicDescriptors
 
 
 def test_returns_harmonic_descriptors(sine_440hz):

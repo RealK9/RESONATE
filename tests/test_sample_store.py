@@ -1,6 +1,6 @@
 import pytest
-from backend.ml.db.sample_store import SampleStore
-from backend.ml.models.sample_profile import SampleProfile, CoreDescriptors, PredictedLabels
+from ml.db.sample_store import SampleStore
+from ml.models.sample_profile import SampleProfile, CoreDescriptors, PredictedLabels
 
 
 @pytest.fixture

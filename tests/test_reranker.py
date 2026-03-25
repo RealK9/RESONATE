@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from backend.ml.models.mix_profile import (
+from ml.models.mix_profile import (
     MixLevelAnalysis,
     MixProfile,
     NeedOpportunity,
@@ -17,7 +17,7 @@ from backend.ml.models.mix_profile import (
     SpectralOccupancy,
     StyleCluster,
 )
-from backend.ml.models.sample_profile import (
+from ml.models.sample_profile import (
     CoreDescriptors,
     HarmonicDescriptors,
     PredictedLabels,
@@ -25,9 +25,9 @@ from backend.ml.models.sample_profile import (
     SpectralDescriptors,
     TransientDescriptors,
 )
-from backend.ml.models.recommendation import Recommendation, ScoringBreakdown
-from backend.ml.models.reference_profile import ReferenceCorpus, StylePrior
-from backend.ml.recommendation.reranker import Reranker
+from ml.models.recommendation import Recommendation, ScoringBreakdown
+from ml.models.reference_profile import ReferenceCorpus, StylePrior
+from ml.recommendation.reranker import Reranker
 
 
 # ---------------------------------------------------------------------------

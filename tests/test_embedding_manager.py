@@ -1,7 +1,8 @@
+torch = __import__("pytest").importorskip("torch")
 """Tests for the EmbeddingManager orchestrator."""
 import pytest
-from backend.ml.embeddings.embedding_manager import EmbeddingManager
-from backend.ml.models.sample_profile import Embeddings
+from ml.embeddings.embedding_manager import EmbeddingManager
+from ml.models.sample_profile import Embeddings
 
 
 @pytest.fixture(scope="session")

@@ -1,4 +1,4 @@
-from backend.ml.classifiers.quality_scorer import QualityScorer
+from ml.classifiers.quality_scorer import QualityScorer
 
 
 def test_returns_float(kick_like):

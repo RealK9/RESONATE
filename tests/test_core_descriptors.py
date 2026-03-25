@@ -1,6 +1,6 @@
 import numpy as np
-from backend.ml.analysis.core_descriptors import extract_core_descriptors
-from backend.ml.models.sample_profile import CoreDescriptors
+from ml.analysis.core_descriptors import extract_core_descriptors
+from ml.models.sample_profile import CoreDescriptors
 
 
 def test_sine_duration(sine_440hz, sample_rate):

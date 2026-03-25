@@ -243,16 +243,34 @@ def background_index():
 
 # ── V2 Pipeline Indexing ──────────────────────────────────────────────────
 
-v2_indexing_status = {"done": False, "total": 0, "processed": 0}
+v2_indexing_status = {"done": False, "total": 0, "processed": 0, "phase": "dsp"}
+
+# Global vector index — loaded at startup, updated during embedding pass
+_vector_index = None
+
+
+def get_vector_index():
+    """Get the current vector index (may be None if not yet built)."""
+    return _vector_index
 
 
 def background_index_v2():
-    """Background indexing using the new Phase 1 analysis pipeline."""
-    global v2_indexing_status
+    """
+    Two-phase background indexing using the Phase 1 analysis pipeline.
+
+    Phase 1 (DSP): Extract core descriptors, spectral, harmonic, transient,
+    perceptual features + classify role/genre/style. Fast (~34k in minutes).
+
+    Phase 2 (Embeddings): Load CLAP/PANNs/AST models (~2-3GB download on
+    first use), extract embeddings, build FAISS vector index. Slow but
+    non-blocking — server is usable during this phase.
+    """
+    global v2_indexing_status, _vector_index
 
     try:
-        from backend.ml.pipeline.batch_processor import BatchProcessor
-        from backend.ml.db.sample_store import SampleStore
+        from ml.pipeline.batch_processor import BatchProcessor
+        from ml.db.sample_store import SampleStore
+        from ml.retrieval.vector_index import VectorIndex
     except ImportError as e:
         print(f"  ✗ V2 pipeline import error: {e}")
         v2_indexing_status["done"] = True
@@ -261,27 +279,89 @@ def background_index_v2():
     store = SampleStore(str(PROFILE_DB_PATH))
     store.init()
 
+    # ── Phase 1: DSP features (fast) ─────────────────────────────────────
+    v2_indexing_status["phase"] = "dsp"
+    print("  ⟳ V2 Phase 1: Extracting DSP features...")
+
     processor = BatchProcessor(
-        skip_embeddings=True,  # Start without embeddings for speed
+        skip_embeddings=True,
         db_path=str(PROFILE_DB_PATH),
         max_workers=4,
     )
 
-    # Index local samples
-    if SAMPLE_DIR.exists():
-        result = processor.process_directory(str(SAMPLE_DIR), source="local")
-        print(f"  ✓ Indexed {result['processed']} local samples (v2 pipeline)")
+    dirs_to_index = [("local", SAMPLE_DIR)]
+    dirs_to_index += [("splice", d) for d in SPLICE_DIRS if d.exists()]
+    dirs_to_index += [("loopcloud", d) for d in LOOPCLOUD_DIRS if d.exists()]
 
-    # Index external libraries
-    for d in SPLICE_DIRS:
+    for source, d in dirs_to_index:
         if d.exists():
-            result = processor.process_directory(str(d), source="splice")
-            print(f"  ✓ Indexed {result['processed']} Splice samples (v2 pipeline)")
-    for d in LOOPCLOUD_DIRS:
-        if d.exists():
-            result = processor.process_directory(str(d), source="loopcloud")
-            print(f"  ✓ Indexed {result['processed']} Loopcloud samples (v2 pipeline)")
+            result = processor.process_directory(str(d), source=source)
+            print(f"  ✓ DSP: {result['processed']} {source} samples")
+
+    total = store.count()
+    print(f"  ✓ Phase 1 complete: {total} profiles with DSP features")
+
+    # ── Load existing vector index if available ──────────────────────────
+    vector_index_path = str(VECTOR_INDEX_DIR / "clap")
+    try:
+        if (VECTOR_INDEX_DIR / "clap" / "index.faiss").exists():
+            _vector_index = VectorIndex.load(vector_index_path)
+            print(f"  ✓ Loaded FAISS index: {_vector_index.size()} vectors")
+    except Exception as e:
+        print(f"  ⚠ Could not load existing FAISS index: {e}")
+
+    # ── Phase 2: Embeddings (slow, models download on first use) ─────────
+    v2_indexing_status["phase"] = "embeddings"
+    print("  ⟳ V2 Phase 2: Loading ML models for embeddings...")
+    print("    (CLAP, PANNs, AST — ~2-3GB download on first use)")
+
+    try:
+        from ml.embeddings.embedding_manager import EmbeddingManager
+
+        emb_manager = EmbeddingManager()
+
+        # Re-run batch processor with embeddings enabled
+        processor_emb = BatchProcessor(
+            skip_embeddings=False,
+            embedding_manager=emb_manager,
+            db_path=str(PROFILE_DB_PATH),
+            max_workers=2,  # Fewer workers — models are memory-heavy
+        )
+
+        for source, d in dirs_to_index:
+            if d.exists():
+                result = processor_emb.process_directory(str(d), source=source)
+                print(f"  ✓ Embeddings: {result['processed']} {source} samples")
+
+        # ── Build FAISS vector index from CLAP embeddings ────────────────
+        print("  ⟳ Building FAISS vector index from CLAP embeddings...")
+        all_profiles = store.list_all()
+        clap_dim = 512  # CLAP produces 512-dim vectors
+
+        vi = VectorIndex(dim=clap_dim)
+        indexed = 0
+        for profile in all_profiles:
+            if profile.embeddings and profile.embeddings.clap_general:
+                import numpy as np
+                vec = np.array(profile.embeddings.clap_general, dtype=np.float32)
+                if vec.shape[0] == clap_dim:
+                    vi.add(profile.filepath, vec)
+                    indexed += 1
+
+        if indexed > 0:
+            vi.save(vector_index_path)
+            _vector_index = vi
+            print(f"  ✓ FAISS index built: {indexed} vectors ({clap_dim}-dim CLAP)")
+        else:
+            print("  ⚠ No CLAP embeddings found — vector index empty")
+
+    except Exception as e:
+        print(f"  ⚠ Embedding phase failed (non-fatal): {e}")
+        print("    Server will use filter-based recommendations without similarity search")
+        import traceback
+        traceback.print_exc()
 
     v2_indexing_status["done"] = True
+    v2_indexing_status["phase"] = "complete"
     total = store.count()
     print(f"\n  ✓ V2 indexing complete: {total} total profiles\n")

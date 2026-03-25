@@ -20,10 +20,10 @@ from __future__ import annotations
 
 import numpy as np
 
-from backend.ml.db.sample_store import SampleStore
-from backend.ml.models.mix_profile import MixProfile, NeedOpportunity
-from backend.ml.models.sample_profile import SampleProfile
-from backend.ml.retrieval.vector_index import VectorIndex
+from ml.db.sample_store import SampleStore
+from ml.models.mix_profile import MixProfile, NeedOpportunity
+from ml.models.sample_profile import SampleProfile
+from ml.retrieval.vector_index import VectorIndex
 
 
 # ---------------------------------------------------------------------------

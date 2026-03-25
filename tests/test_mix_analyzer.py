@@ -3,8 +3,8 @@ import numpy as np
 import pytest
 import soundfile as sf
 
-from backend.ml.analysis.mix_analyzer import analyze_mix
-from backend.ml.models.mix_profile import MixProfile
+from ml.analysis.mix_analyzer import analyze_mix
+from ml.models.mix_profile import MixProfile
 
 SR = 44100
 

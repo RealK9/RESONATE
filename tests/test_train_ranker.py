@@ -3,16 +3,16 @@ import time
 
 import pytest
 
-from backend.ml.db.sample_store import SampleStore
-from backend.ml.models.preference import PreferencePair, UserTasteModel
-from backend.ml.models.sample_profile import (
+from ml.db.sample_store import SampleStore
+from ml.models.preference import PreferencePair, UserTasteModel
+from ml.models.sample_profile import (
     PredictedLabels,
     SampleProfile,
     SpectralDescriptors,
     TransientDescriptors,
 )
-from backend.ml.training.preference_dataset import PreferenceDataset
-from backend.ml.training.train_ranker import RankerTrainer
+from ml.training.preference_dataset import PreferenceDataset
+from ml.training.train_ranker import RankerTrainer
 
 
 # ---------------------------------------------------------------------------

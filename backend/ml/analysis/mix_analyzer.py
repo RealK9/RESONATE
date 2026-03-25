@@ -12,7 +12,7 @@ import librosa
 import pyloudnorm as pyln
 from scipy.signal import butter, sosfilt
 
-from backend.ml.models.mix_profile import (
+from ml.models.mix_profile import (
     MixLevelAnalysis,
     MixProfile,
     SourceRolePresence,

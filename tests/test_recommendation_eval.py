@@ -5,15 +5,15 @@ import math
 
 import pytest
 
-from backend.ml.evaluation.recommendation_eval import (
+from ml.evaluation.recommendation_eval import (
     AcceptanceReport,
     DiversityReport,
     PrecisionAtKReport,
     RecommendationEval,
     WinRateReport,
 )
-from backend.ml.models.preference import FeedbackEvent, PreferencePair
-from backend.ml.models.recommendation import Recommendation, RecommendationResult
+from ml.models.preference import FeedbackEvent, PreferencePair
+from ml.models.recommendation import Recommendation, RecommendationResult
 
 
 # ---------------------------------------------------------------------------

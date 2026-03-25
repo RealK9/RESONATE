@@ -13,8 +13,8 @@ import math
 from collections import defaultdict
 from statistics import mean, stdev
 
-from backend.ml.models.mix_profile import MixProfile
-from backend.ml.models.reference_profile import ReferenceCorpus, StylePrior
+from ml.models.mix_profile import MixProfile
+from ml.models.reference_profile import ReferenceCorpus, StylePrior
 
 
 # ---------------------------------------------------------------------------

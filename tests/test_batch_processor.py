@@ -1,7 +1,7 @@
 import pytest
 import soundfile as sf
 import numpy as np
-from backend.ml.pipeline.batch_processor import BatchProcessor
+from ml.pipeline.batch_processor import BatchProcessor
 
 
 @pytest.fixture

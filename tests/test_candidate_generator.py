@@ -9,21 +9,21 @@ from __future__ import annotations
 
 import pytest
 
-from backend.ml.db.sample_store import SampleStore
-from backend.ml.models.mix_profile import (
+from ml.db.sample_store import SampleStore
+from ml.models.mix_profile import (
     MixLevelAnalysis,
     MixProfile,
     NeedOpportunity,
     SourceRolePresence,
     StyleCluster,
 )
-from backend.ml.models.sample_profile import (
+from ml.models.sample_profile import (
     CoreDescriptors,
     HarmonicDescriptors,
     PredictedLabels,
     SampleProfile,
 )
-from backend.ml.recommendation.candidate_generator import CandidateGenerator
+from ml.recommendation.candidate_generator import CandidateGenerator
 
 
 # ---------------------------------------------------------------------------

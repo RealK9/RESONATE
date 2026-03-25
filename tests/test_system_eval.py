@@ -6,14 +6,14 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from backend.ml.evaluation.system_eval import (
+from ml.evaluation.system_eval import (
     FallbackReport,
     LatencyReport,
     QuerySpeedReport,
     SystemEval,
 )
-from backend.ml.models.sample_profile import SampleProfile
-from backend.ml.retrieval.vector_index import VectorIndex
+from ml.models.sample_profile import SampleProfile
+from ml.retrieval.vector_index import VectorIndex
 
 
 # ---------------------------------------------------------------------------
@@ -21,7 +21,7 @@ from backend.ml.retrieval.vector_index import VectorIndex
 # ---------------------------------------------------------------------------
 
 class TestBenchmarkAnalysisLatency:
-    @patch("backend.ml.evaluation.system_eval.analyze_sample")
+    @patch("ml.evaluation.system_eval.analyze_sample")
     def test_timing_structure(self, mock_analyze):
         """Verify the latency report has valid timing fields."""
         evaluator = SystemEval()
@@ -43,14 +43,14 @@ class TestBenchmarkAnalysisLatency:
             assert fp in filepaths
             assert lat >= 0.0
 
-    @patch("backend.ml.evaluation.system_eval.analyze_sample")
+    @patch("ml.evaluation.system_eval.analyze_sample")
     def test_empty_filepaths(self, mock_analyze):
         evaluator = SystemEval()
         report = evaluator.benchmark_analysis_latency([])
         assert report.total_samples == 0
         assert report.per_file == []
 
-    @patch("backend.ml.evaluation.system_eval.analyze_sample")
+    @patch("ml.evaluation.system_eval.analyze_sample")
     def test_exception_still_records_latency(self, mock_analyze):
         """Even if analyze_sample raises, latency is still recorded."""
         evaluator = SystemEval()
@@ -117,11 +117,11 @@ class TestBenchmarkQuerySpeed:
 # ---------------------------------------------------------------------------
 
 class TestEvaluateFallbackSuccess:
-    @patch("backend.ml.analysis.perceptual_descriptors.extract_perceptual_descriptors")
-    @patch("backend.ml.analysis.transient_descriptors.extract_transient_descriptors")
-    @patch("backend.ml.analysis.harmonic_descriptors.extract_harmonic_descriptors")
-    @patch("backend.ml.analysis.spectral_descriptors.extract_spectral_descriptors")
-    @patch("backend.ml.analysis.core_descriptors.extract_core_descriptors")
+    @patch("ml.analysis.perceptual_descriptors.extract_perceptual_descriptors")
+    @patch("ml.analysis.transient_descriptors.extract_transient_descriptors")
+    @patch("ml.analysis.harmonic_descriptors.extract_harmonic_descriptors")
+    @patch("ml.analysis.spectral_descriptors.extract_spectral_descriptors")
+    @patch("ml.analysis.core_descriptors.extract_core_descriptors")
     def test_all_stages_succeed(
         self, mock_core, mock_spectral, mock_harmonic, mock_transient, mock_perceptual,
     ):
@@ -137,11 +137,11 @@ class TestEvaluateFallbackSuccess:
             assert stage_data["success"] == 2.0
             assert stage_data["fail"] == 0.0
 
-    @patch("backend.ml.analysis.perceptual_descriptors.extract_perceptual_descriptors")
-    @patch("backend.ml.analysis.transient_descriptors.extract_transient_descriptors")
-    @patch("backend.ml.analysis.harmonic_descriptors.extract_harmonic_descriptors")
-    @patch("backend.ml.analysis.spectral_descriptors.extract_spectral_descriptors")
-    @patch("backend.ml.analysis.core_descriptors.extract_core_descriptors")
+    @patch("ml.analysis.perceptual_descriptors.extract_perceptual_descriptors")
+    @patch("ml.analysis.transient_descriptors.extract_transient_descriptors")
+    @patch("ml.analysis.harmonic_descriptors.extract_harmonic_descriptors")
+    @patch("ml.analysis.spectral_descriptors.extract_spectral_descriptors")
+    @patch("ml.analysis.core_descriptors.extract_core_descriptors")
     def test_some_stages_fail(
         self, mock_core, mock_spectral, mock_harmonic, mock_transient, mock_perceptual,
     ):
@@ -171,11 +171,11 @@ class TestEvaluateFallbackSuccess:
         assert report.per_stage["transient"]["rate"] == 1.0
         assert report.per_stage["perceptual"]["rate"] == 0.0
 
-    @patch("backend.ml.analysis.perceptual_descriptors.extract_perceptual_descriptors")
-    @patch("backend.ml.analysis.transient_descriptors.extract_transient_descriptors")
-    @patch("backend.ml.analysis.harmonic_descriptors.extract_harmonic_descriptors")
-    @patch("backend.ml.analysis.spectral_descriptors.extract_spectral_descriptors")
-    @patch("backend.ml.analysis.core_descriptors.extract_core_descriptors")
+    @patch("ml.analysis.perceptual_descriptors.extract_perceptual_descriptors")
+    @patch("ml.analysis.transient_descriptors.extract_transient_descriptors")
+    @patch("ml.analysis.harmonic_descriptors.extract_harmonic_descriptors")
+    @patch("ml.analysis.spectral_descriptors.extract_spectral_descriptors")
+    @patch("ml.analysis.core_descriptors.extract_core_descriptors")
     def test_mixed_per_file_failures(
         self, mock_core, mock_spectral, mock_harmonic, mock_transient, mock_perceptual,
     ):
@@ -198,11 +198,11 @@ class TestEvaluateFallbackSuccess:
         assert report.per_stage["core"]["fail"] == 1.0
         assert report.per_stage["core"]["rate"] == 0.5
 
-    @patch("backend.ml.analysis.perceptual_descriptors.extract_perceptual_descriptors")
-    @patch("backend.ml.analysis.transient_descriptors.extract_transient_descriptors")
-    @patch("backend.ml.analysis.harmonic_descriptors.extract_harmonic_descriptors")
-    @patch("backend.ml.analysis.spectral_descriptors.extract_spectral_descriptors")
-    @patch("backend.ml.analysis.core_descriptors.extract_core_descriptors")
+    @patch("ml.analysis.perceptual_descriptors.extract_perceptual_descriptors")
+    @patch("ml.analysis.transient_descriptors.extract_transient_descriptors")
+    @patch("ml.analysis.harmonic_descriptors.extract_harmonic_descriptors")
+    @patch("ml.analysis.spectral_descriptors.extract_spectral_descriptors")
+    @patch("ml.analysis.core_descriptors.extract_core_descriptors")
     def test_embeddings_stage_included(
         self, mock_core, mock_spectral, mock_harmonic, mock_transient, mock_perceptual,
     ):
@@ -220,11 +220,11 @@ class TestEvaluateFallbackSuccess:
         assert report.per_stage["embeddings"]["fail"] == 1.0
         assert report.per_stage["embeddings"]["rate"] == 0.0
 
-    @patch("backend.ml.analysis.perceptual_descriptors.extract_perceptual_descriptors")
-    @patch("backend.ml.analysis.transient_descriptors.extract_transient_descriptors")
-    @patch("backend.ml.analysis.harmonic_descriptors.extract_harmonic_descriptors")
-    @patch("backend.ml.analysis.spectral_descriptors.extract_spectral_descriptors")
-    @patch("backend.ml.analysis.core_descriptors.extract_core_descriptors")
+    @patch("ml.analysis.perceptual_descriptors.extract_perceptual_descriptors")
+    @patch("ml.analysis.transient_descriptors.extract_transient_descriptors")
+    @patch("ml.analysis.harmonic_descriptors.extract_harmonic_descriptors")
+    @patch("ml.analysis.spectral_descriptors.extract_spectral_descriptors")
+    @patch("ml.analysis.core_descriptors.extract_core_descriptors")
     def test_embeddings_with_manager_success(
         self, mock_core, mock_spectral, mock_harmonic, mock_transient, mock_perceptual,
     ):
@@ -244,11 +244,11 @@ class TestEvaluateFallbackSuccess:
         assert report.per_stage["embeddings"]["success"] == 1.0
         assert report.per_stage["embeddings"]["rate"] == 1.0
 
-    @patch("backend.ml.analysis.perceptual_descriptors.extract_perceptual_descriptors")
-    @patch("backend.ml.analysis.transient_descriptors.extract_transient_descriptors")
-    @patch("backend.ml.analysis.harmonic_descriptors.extract_harmonic_descriptors")
-    @patch("backend.ml.analysis.spectral_descriptors.extract_spectral_descriptors")
-    @patch("backend.ml.analysis.core_descriptors.extract_core_descriptors")
+    @patch("ml.analysis.perceptual_descriptors.extract_perceptual_descriptors")
+    @patch("ml.analysis.transient_descriptors.extract_transient_descriptors")
+    @patch("ml.analysis.harmonic_descriptors.extract_harmonic_descriptors")
+    @patch("ml.analysis.spectral_descriptors.extract_spectral_descriptors")
+    @patch("ml.analysis.core_descriptors.extract_core_descriptors")
     def test_skip_embeddings_excludes_stage(
         self, mock_core, mock_spectral, mock_harmonic, mock_transient, mock_perceptual,
     ):

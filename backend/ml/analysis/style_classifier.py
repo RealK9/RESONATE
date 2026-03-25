@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from backend.ml.models.mix_profile import MixProfile, StyleCluster
+from ml.models.mix_profile import MixProfile, StyleCluster
 
 
 # ---------------------------------------------------------------------------

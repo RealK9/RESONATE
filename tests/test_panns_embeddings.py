@@ -1,6 +1,8 @@
+torch = __import__("pytest").importorskip("torch")
+panns_inference = __import__("pytest").importorskip("panns_inference")
 import numpy as np
 import pytest
-from backend.ml.embeddings.panns_embeddings import PANNsExtractor
+from ml.embeddings.panns_embeddings import PANNsExtractor
 
 
 @pytest.fixture(scope="session")

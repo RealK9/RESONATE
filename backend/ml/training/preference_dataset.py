@@ -24,7 +24,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from backend.ml.models.preference import (
+from ml.models.preference import (
     FeedbackEvent,
     PreferencePair,
     UserTasteModel,

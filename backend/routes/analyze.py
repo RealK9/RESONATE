@@ -293,9 +293,12 @@ async def recommend_v2(max_results: int = 20):
 
     corpus = StylePriorsTrainer(str(REFERENCE_CORPUS_PATH)).load_or_default()
 
-    # Stage 1: candidate generation
-    print("  [v2] Generating candidates...")
-    generator = CandidateGenerator(sample_store=store)
+    # Stage 1: candidate generation (with vector index if available)
+    from indexer import get_vector_index
+    vector_index = get_vector_index()
+
+    print(f"  [v2] Generating candidates... (vector index: {'yes' if vector_index else 'no'})")
+    generator = CandidateGenerator(sample_store=store, vector_index=vector_index)
     candidates = generator.generate(mix_profile, needs, max_candidates=max_results * 5)
 
     # Load preference server (Phase 5)

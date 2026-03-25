@@ -8,9 +8,9 @@ quick, confident advice -- not a computer spitting out numbers.
 """
 from __future__ import annotations
 
-from backend.ml.models.mix_profile import MixProfile, NeedOpportunity
-from backend.ml.models.recommendation import Recommendation, ScoringBreakdown
-from backend.ml.recommendation.candidate_generator import _POLICY_TO_ROLES
+from ml.models.mix_profile import MixProfile, NeedOpportunity
+from ml.models.recommendation import Recommendation, ScoringBreakdown
+from ml.recommendation.candidate_generator import _POLICY_TO_ROLES
 
 
 # ---------------------------------------------------------------------------

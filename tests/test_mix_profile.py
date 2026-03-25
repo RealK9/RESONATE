@@ -1,6 +1,6 @@
 import json
 import numpy as np
-from backend.ml.models.mix_profile import (
+from ml.models.mix_profile import (
     MixProfile,
     MixLevelAnalysis,
     SpectralOccupancy,

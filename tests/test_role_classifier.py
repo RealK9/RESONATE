@@ -1,5 +1,5 @@
 import pytest
-from backend.ml.classifiers.role_classifier import RoleClassifier
+from ml.classifiers.role_classifier import RoleClassifier
 
 
 @pytest.fixture(scope="module")

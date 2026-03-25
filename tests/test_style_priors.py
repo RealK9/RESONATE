@@ -15,12 +15,12 @@ from pathlib import Path
 
 import pytest
 
-from backend.ml.analysis.needs_engine import NeedsEngine
-from backend.ml.analysis.reference_profiles import (
+from ml.analysis.needs_engine import NeedsEngine
+from ml.analysis.reference_profiles import (
     DefaultPriors,
     ReferenceProfileBuilder,
 )
-from backend.ml.models.mix_profile import (
+from ml.models.mix_profile import (
     MixLevelAnalysis,
     MixProfile,
     NeedOpportunity,
@@ -29,8 +29,8 @@ from backend.ml.models.mix_profile import (
     StereoWidth,
     StyleCluster,
 )
-from backend.ml.models.reference_profile import ReferenceCorpus, StylePrior
-from backend.ml.training.style_priors import StylePriorsTrainer
+from ml.models.reference_profile import ReferenceCorpus, StylePrior
+from ml.training.style_priors import StylePriorsTrainer
 
 
 # ---------------------------------------------------------------------------

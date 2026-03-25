@@ -5,13 +5,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from backend.ml.evaluation.mix_eval import (
+from ml.evaluation.mix_eval import (
     MixAnalysisEval,
     NeedInferenceReport,
     RoleDetectionReport,
     StyleClassificationReport,
 )
-from backend.ml.models.mix_profile import (
+from ml.models.mix_profile import (
     MixProfile,
     NeedOpportunity,
     SourceRolePresence,

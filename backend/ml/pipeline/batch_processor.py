@@ -8,8 +8,8 @@ import logging
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable
-from backend.ml.pipeline.ingestion import analyze_sample
-from backend.ml.db.sample_store import SampleStore
+from ml.pipeline.ingestion import analyze_sample
+from ml.db.sample_store import SampleStore
 
 logger = logging.getLogger(__name__)
 

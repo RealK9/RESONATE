@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from backend.ml.evaluation.sample_eval import (
+from ml.evaluation.sample_eval import (
     ClassificationReport,
     KeyEstimationReport,
     RetrievalCoherenceReport,
@@ -15,7 +15,7 @@ from backend.ml.evaluation.sample_eval import (
     StabilityReport,
     _cof_distance,
 )
-from backend.ml.models.sample_profile import (
+from ml.models.sample_profile import (
     Embeddings,
     PredictedLabels,
     SampleProfile,

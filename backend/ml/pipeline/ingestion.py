@@ -4,17 +4,17 @@ Single-sample analysis pipeline. Orchestrates all extractors into a complete Sam
 from __future__ import annotations
 import logging
 from pathlib import Path
-from backend.ml.models.sample_profile import SampleProfile
-from backend.ml.analysis.core_descriptors import extract_core_descriptors
-from backend.ml.analysis.spectral_descriptors import extract_spectral_descriptors
-from backend.ml.analysis.harmonic_descriptors import extract_harmonic_descriptors
-from backend.ml.analysis.transient_descriptors import extract_transient_descriptors
-from backend.ml.analysis.perceptual_descriptors import extract_perceptual_descriptors
-from backend.ml.analysis.loop_detection import detect_loop
-from backend.ml.classifiers.role_classifier import RoleClassifier
-from backend.ml.classifiers.genre_era_classifier import GenreEraClassifier
-from backend.ml.classifiers.style_tagger import StyleTagger
-from backend.ml.classifiers.quality_scorer import QualityScorer
+from ml.models.sample_profile import SampleProfile
+from ml.analysis.core_descriptors import extract_core_descriptors
+from ml.analysis.spectral_descriptors import extract_spectral_descriptors
+from ml.analysis.harmonic_descriptors import extract_harmonic_descriptors
+from ml.analysis.transient_descriptors import extract_transient_descriptors
+from ml.analysis.perceptual_descriptors import extract_perceptual_descriptors
+from ml.analysis.loop_detection import detect_loop
+from ml.classifiers.role_classifier import RoleClassifier
+from ml.classifiers.genre_era_classifier import GenreEraClassifier
+from ml.classifiers.style_tagger import StyleTagger
+from ml.classifiers.quality_scorer import QualityScorer
 
 logger = logging.getLogger(__name__)
 

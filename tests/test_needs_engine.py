@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from backend.ml.models.mix_profile import (
+from ml.models.mix_profile import (
     MixLevelAnalysis,
     MixProfile,
     NeedOpportunity,
@@ -18,7 +18,7 @@ from backend.ml.models.mix_profile import (
     StereoWidth,
     StyleCluster,
 )
-from backend.ml.analysis.needs_engine import (
+from ml.analysis.needs_engine import (
     NeedsEngine,
     VALID_CATEGORIES,
     VALID_POLICIES,

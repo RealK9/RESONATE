@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from backend.ml.retrieval.vector_index import VectorIndex
+from ml.retrieval.vector_index import VectorIndex
 
 
 @pytest.fixture

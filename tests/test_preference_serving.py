@@ -1,9 +1,9 @@
 """Tests for backend.ml.training.preference_serving — PreferenceServer."""
 import pytest
 
-from backend.ml.models.preference import UserTasteModel
-from backend.ml.training.preference_dataset import PreferenceDataset
-from backend.ml.training.preference_serving import PreferenceServer
+from ml.models.preference import UserTasteModel
+from ml.training.preference_dataset import PreferenceDataset
+from ml.training.preference_serving import PreferenceServer
 
 
 # ---------------------------------------------------------------------------

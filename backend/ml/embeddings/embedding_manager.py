@@ -4,7 +4,7 @@ for a given audio file in one call.
 """
 from __future__ import annotations
 import logging
-from backend.ml.models.sample_profile import Embeddings
+from ml.models.sample_profile import Embeddings
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class EmbeddingManager:
     @property
     def clap(self):
         if self._clap is None:
-            from backend.ml.embeddings.clap_embeddings import CLAPExtractor
+            from ml.embeddings.clap_embeddings import CLAPExtractor
             self._clap = CLAPExtractor(device=self.device)
             logger.info("CLAP model loaded")
         return self._clap
@@ -29,7 +29,7 @@ class EmbeddingManager:
     @property
     def panns(self):
         if self._panns is None:
-            from backend.ml.embeddings.panns_embeddings import PANNsExtractor
+            from ml.embeddings.panns_embeddings import PANNsExtractor
             self._panns = PANNsExtractor(device=self.device)
             logger.info("PANNs model loaded")
         return self._panns
@@ -37,7 +37,7 @@ class EmbeddingManager:
     @property
     def ast(self):
         if self._ast is None:
-            from backend.ml.embeddings.ast_embeddings import ASTExtractor
+            from ml.embeddings.ast_embeddings import ASTExtractor
             self._ast = ASTExtractor(device=self.device)
             logger.info("AST model loaded")
         return self._ast

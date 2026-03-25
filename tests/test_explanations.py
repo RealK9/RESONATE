@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from backend.ml.models.mix_profile import (
+from ml.models.mix_profile import (
     MixLevelAnalysis,
     MixProfile,
     NeedOpportunity,
@@ -18,8 +18,8 @@ from backend.ml.models.mix_profile import (
     SpectralOccupancy,
     StyleCluster,
 )
-from backend.ml.models.recommendation import Recommendation, ScoringBreakdown
-from backend.ml.recommendation.explanations import (
+from ml.models.recommendation import Recommendation, ScoringBreakdown
+from ml.recommendation.explanations import (
     ExplanationEngine,
     _match_need,
 )

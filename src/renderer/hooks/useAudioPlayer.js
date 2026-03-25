@@ -249,7 +249,15 @@ export function useAudioPlayer() {
     if (!nm) {
       // Turning mix OFF — stop the track channel
       if (tSourceRef.current) { try { tSourceRef.current.stop(); } catch (_) {} tSourceRef.current = null; }
-    } else if (playing && trackBufferRef.current && ctxRef.current) {
+    } else if (playing && ctxRef.current) {
+      if (!trackBufferRef.current) {
+        console.warn("MIX: Track not loaded yet — loading now...");
+        // Attempt to load track on the fly
+        fetchBuffer(ctxRef.current, API + "/track/audio")
+          .then(buf => { trackBufferRef.current = buf; })
+          .catch(e => console.warn("MIX: Failed to load track:", e));
+        return;
+      }
       // Turning mix ON while sample is playing — start track in sync
       const ctx = ctxRef.current;
       const elapsed = (ctx.currentTime - startTimeRef.current) * playbackRateRef.current;
