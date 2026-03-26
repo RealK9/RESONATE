@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 RESONATE Production Model — Spotify Audio Feature Enrichment
 
@@ -196,21 +197,35 @@ class SpotifyEnricher:
         spotify_id: str,
         features_dict: dict,
     ) -> None:
-        """Write spotify_id and spotify_features back to chart_entries."""
+        """Write spotify_id and audio features back to chart_entries."""
+        # Update spotify_id always
         self._conn.execute(
-            """
-            UPDATE chart_entries
-            SET spotify_id = ?, spotify_features = ?
-            WHERE title = ? AND artist = ? AND chart_name = ?
-            """,
-            (
-                spotify_id,
-                json.dumps(features_dict),
-                title,
-                artist,
-                chart_name,
-            ),
+            "UPDATE chart_entries SET spotify_id = ? WHERE title = ? AND artist = ? AND chart_name = ?",
+            (spotify_id, title, artist, chart_name),
         )
+        # Update individual feature columns if we have data
+        if features_dict:
+            feature_cols = [
+                "key", "mode", "tempo", "time_signature", "duration_ms",
+                "danceability", "energy", "speechiness", "acousticness",
+                "instrumentalness", "liveness", "valence", "loudness",
+            ]
+            set_parts = []
+            values = []
+            for col in feature_cols:
+                if col in features_dict and features_dict[col] is not None:
+                    set_parts.append(f"{col} = ?")
+                    values.append(features_dict[col])
+            if "preview_url" in features_dict:
+                set_parts.append("preview_url = ?")
+                values.append(features_dict["preview_url"])
+            if set_parts:
+                values.extend([title, artist, chart_name])
+                self._conn.execute(
+                    f"UPDATE chart_entries SET {', '.join(set_parts)} "
+                    f"WHERE title = ? AND artist = ? AND chart_name = ?",
+                    values,
+                )
         self._conn.commit()
 
     # ------------------------------------------------------------------

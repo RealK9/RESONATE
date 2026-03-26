@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 RESONATE Production Model — Billboard Chart Intelligence Scraper
 
