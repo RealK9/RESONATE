@@ -68,10 +68,9 @@ class SpotifyEnricher:
     optional 30-second preview MP3 downloads.
     """
 
-    # Spotify rate limit: ~180 requests / minute ≈ 1 per 333 ms.
-    # We use 100 ms as the *minimum* inter-request gap; the actual
-    # throughput is usually limited by network latency anyway.
-    _MIN_REQUEST_INTERVAL_S = 0.1
+    # Spotify rate limit: be conservative to avoid 24hr bans.
+    # New apps get lower limits. 1 req / 500ms = 120/min, well under threshold.
+    _MIN_REQUEST_INTERVAL_S = 0.5
 
     # Feature keys we extract from the Spotify audio-features endpoint
     _FEATURE_KEYS = [
@@ -273,11 +272,9 @@ class SpotifyEnricher:
         """
         Fetch Spotify audio features for a single track.
 
-        Returns a dict with keys: key, mode, tempo, time_signature,
-        duration_ms, danceability, energy, speechiness, acousticness,
-        instrumentalness, liveness, valence, loudness.
-
-        Returns None if the track has no audio features available.
+        NOTE: As of Nov 2024, Spotify deprecated the audio-features endpoint
+        for new developer apps.  This method is kept for backwards compatibility
+        but will gracefully return None on 403 errors.
         """
         self._rate_limit()
         try:
@@ -287,6 +284,9 @@ class SpotifyEnricher:
             raw = results[0]
             return {k: raw[k] for k in self._FEATURE_KEYS if k in raw}
         except spotipy.exceptions.SpotifyException as exc:
+            if exc.http_status == 403:
+                # Deprecated endpoint — silently skip
+                return None
             if exc.http_status == 429:
                 retry_after = int(exc.headers.get("Retry-After", 5))
                 logger.warning("Rate limited on audio_features. Sleeping %ds.", retry_after)
@@ -296,6 +296,39 @@ class SpotifyEnricher:
             return None
         except Exception as exc:
             logger.warning("Unexpected audio_features error: %s", exc)
+            return None
+
+    def get_track_metadata(self, track_id: str) -> Optional[dict]:
+        """
+        Fetch track metadata from the /tracks endpoint.
+
+        Returns popularity, duration_ms, explicit, release_date, album_name.
+        This works for all apps (unlike audio_features which is deprecated).
+        """
+        self._rate_limit()
+        try:
+            track = self.sp.track(track_id)
+            if not track:
+                return None
+            album = track.get("album", {})
+            return {
+                "popularity": track.get("popularity", 0),
+                "duration_ms": track.get("duration_ms", 0),
+                "explicit": track.get("explicit", False),
+                "release_date": album.get("release_date", ""),
+                "album_name": album.get("name", ""),
+                "preview_url": track.get("preview_url"),
+            }
+        except spotipy.exceptions.SpotifyException as exc:
+            if exc.http_status == 429:
+                retry_after = int(exc.headers.get("Retry-After", 5))
+                logger.warning("Rate limited on track endpoint. Sleeping %ds.", retry_after)
+                time.sleep(retry_after)
+                return self.get_track_metadata(track_id)
+            logger.warning("Track metadata error for %s: %s", track_id, exc)
+            return None
+        except Exception as exc:
+            logger.warning("Unexpected track metadata error: %s", exc)
             return None
 
     def get_preview_url(self, track_id: str) -> Optional[str]:
@@ -395,39 +428,36 @@ class SpotifyEnricher:
 
             entry.spotify_id = track_id
 
-            # --- Step 2: Audio features ---
-            # Check feature cache first
+            # --- Step 2: Track metadata (always works, unlike audio_features) ---
+            metadata = self.get_track_metadata(track_id)
+            features_dict = {}
+            if metadata:
+                features_dict = metadata.copy()
+                # Store popularity in chart_entries
+                self._conn.execute(
+                    "UPDATE chart_entries SET popularity = ?, duration_ms = ? "
+                    "WHERE title = ? AND artist = ? AND chart_name = ?",
+                    (metadata.get("popularity", 0), metadata.get("duration_ms", 0),
+                     entry.title, entry.artist, entry.chart_name),
+                )
+                self._conn.commit()
+
+            # --- Step 3: Audio features (may fail with 403 on new apps) ---
             cached_feat = self._features_cached(track_id)
             if cached_feat:
-                features_dict = asdict(cached_feat)
+                features_dict.update(asdict(cached_feat))
             else:
                 raw_features = self.get_audio_features(track_id)
-                if raw_features is None:
-                    # Still save the track ID even without features
-                    self._update_chart_entry(
-                        entry.title, entry.artist, entry.chart_name, track_id, {},
+                if raw_features:
+                    features_dict.update(raw_features)
+                    preview_url = metadata.get("preview_url") if metadata else None
+                    sf = SpotifyFeatures(
+                        track_id=track_id,
+                        preview_url=preview_url,
+                        preview_path=None,
+                        **raw_features,
                     )
-                    not_found += 1
-                    continue
-
-                features_dict = raw_features.copy()
-
-                # --- Step 3: Preview ---
-                preview_url = None
-                preview_path = None
-                if download_previews:
-                    preview_path = self.download_preview(track_id, output_dir)
-                    if preview_path:
-                        preview_url = self.get_preview_url(track_id)
-
-                sf = SpotifyFeatures(
-                    track_id=track_id,
-                    preview_url=preview_url,
-                    preview_path=preview_path,
-                    **raw_features,
-                )
-                self._save_features(sf)
-                features_dict = asdict(sf)
+                    self._save_features(sf)
 
             entry.spotify_features = features_dict
 
