@@ -2125,6 +2125,870 @@ def _build_genres() -> List[Genre]:
             famous_artists=sub[6], clap_descriptions=[sub[8]],
         ))
 
+    # ==================================================================
+    # ADDITIONAL SUBGENRES — expanding to 500+ total
+    # ==================================================================
+
+    # --- More Electronic subgenres ---
+    _extra_electronic = [
+        ("Tribal House", ["tribal"], (120, 130), "Percussion-heavy house with indigenous rhythms and primal energy",
+         (0.6, 0.85), (0.7, 0.9), ["Chus & Ceballos", "Dennis Ferrer"], "1990s",
+         "a tribal house track at 125 BPM with heavy percussion patterns, primal drum rhythms, and deep bass"),
+        ("Disco House", ["disco-house", "nu-disco house"], (118, 128), "House music heavily sampling or recreating disco aesthetics",
+         (0.6, 0.8), (0.75, 0.9), ["Purple Disco Machine", "Dimitri From Paris"], "1990s",
+         "a disco house track at 122 BPM with chopped disco strings, a funky bassline, and a four-on-the-floor beat"),
+        ("Organic House", ["organic"], (110, 125), "Downtempo house blending natural sounds with electronic textures",
+         (0.3, 0.55), (0.5, 0.7), ["Stimming", "Be Svendsen"], "2010s",
+         "an organic house track at 118 BPM with field recordings, gentle percussion, and lush natural textures"),
+        ("Melodic House", ["melodic house & techno"], (118, 128), "Melodic, emotional house with warm synths and progressive structure",
+         (0.4, 0.75), (0.6, 0.8), ["Ben Bohmer", "Jan Blomqvist", "Lane 8"], "2010s",
+         "a melodic house track at 122 BPM with warm analog synths, an emotive melody, and a gentle groove"),
+        ("Latin House", ["latin-house"], (120, 130), "House music infused with Latin percussion, congas, and salsa influence",
+         (0.6, 0.85), (0.75, 0.9), ["Masters At Work", "Erick Morillo", "DJ Sneak"], "1990s",
+         "a Latin house track at 125 BPM with conga patterns, Latin piano riffs, and a driving house beat"),
+        ("Italo Disco", ["italo", "Italo-disco"], (110, 135), "Italian electronic dance music with melodic synths, vocoders, and pop hooks",
+         (0.5, 0.8), (0.7, 0.85), ["Giorgio Moroder", "Baltimora", "Den Harrow"], "1970s",
+         "an Italo disco track at 125 BPM with melodic synth arpeggios, vocoder vocals, and a driving drum machine"),
+        ("Nu-Disco", ["nu disco", "new disco"], (110, 128), "Modern reinterpretation of disco with indie and electronic production",
+         (0.5, 0.8), (0.7, 0.9), ["Todd Terje", "Lindstrom", "Roisin Murphy"], "2000s",
+         "a nu-disco track at 118 BPM with funky bass, disco strings, and modern electronic production"),
+        ("Rave", ["rave music"], (130, 150), "High-energy electronic music from early rave culture with breakbeats and synth stabs",
+         (0.8, 0.95), (0.6, 0.85), ["The Prodigy", "SL2", "Altern-8"], "1980s",
+         "a rave track at 140 BPM with breakbeats, hoover synth stabs, and euphoric piano riffs"),
+        ("EBM", ["electronic body music"], (110, 140), "Dark, aggressive electronic dance with industrial elements and sequenced bass",
+         (0.6, 0.85), (0.5, 0.75), ["Front 242", "Nitzer Ebb", "DAF"], "1980s",
+         "an EBM track at 125 BPM with a sequenced bass synth, aggressive vocals, and a pounding drum machine"),
+        ("Glitch", ["glitch music", "glitchcore"], (80, 150), "Experimental electronic music using digital errors and artifacts as core aesthetic",
+         (0.3, 0.7), (0.2, 0.5), ["Oval", "Alva Noto", "Ryoji Ikeda"], "1990s",
+         "a glitch track with digital artifacts, cut-up micro-samples, and an abstract rhythmic structure"),
+        ("Witch House", ["witch-house", "drag"], (80, 130), "Dark, occult-themed electronic music with slowed-down beats and eerie textures",
+         (0.3, 0.6), (0.3, 0.55), ["Salem", "Crystal Castles", "oOoOO"], "2000s",
+         "a witch house track at 100 BPM with slowed-down beats, eerie synths, and a dark occult atmosphere"),
+        ("UK Funky", ["funky house UK"], (125, 135), "London-born blend of UK garage with African and Caribbean rhythms",
+         (0.6, 0.8), (0.7, 0.9), ["Crazy Cousinz", "Roska", "Champion"], "2000s",
+         "a UK funky track at 130 BPM with African-influenced percussion, syncopated bass, and garage rhythms"),
+        ("Jersey Club", ["jersey"], (130, 145), "Fast, sample-heavy club music from New Jersey with rapid-fire bed-squeak samples",
+         (0.7, 0.9), (0.7, 0.9), ["DJ Sliink", "Nadus", "Uniiqu3"], "2000s",
+         "a Jersey club track at 140 BPM with rapid-fire chopped vocal samples, heavy kicks, and a frenetic groove"),
+        ("Baltimore Club", ["bmore club", "bmore"], (125, 140), "High-energy dance music from Baltimore with chopped vocals and heavy breakbeats",
+         (0.7, 0.9), (0.7, 0.9), ["DJ Technics", "Rod Lee", "DJ K-Swift"], "1990s",
+         "a Baltimore club track at 135 BPM with chopped vocal samples, heavy breakbeats, and a manic energy"),
+        ("Wonky", ["wonky music"], (100, 140), "Bass-heavy electronic music with detuned synths and off-kilter rhythms",
+         (0.4, 0.7), (0.4, 0.65), ["Hudson Mohawke", "Rustie", "Joker"], "2000s",
+         "a wonky track at 120 BPM with detuned synth chords, off-kilter rhythms, and heavy bass"),
+        ("Ambient Techno", ["ambient-techno"], (110, 130), "Spacious blend of ambient atmospheres with subtle techno rhythms",
+         (0.2, 0.5), (0.4, 0.6), ["The Orb", "Global Communication", "Biosphere"], "1990s",
+         "an ambient techno track at 120 BPM with spacious pads, subtle kick drums, and ethereal textures"),
+        ("Trance Step", ["trancestep"], (140, 150), "Dubstep-trance hybrid with half-time drops and trance melodies",
+         (0.6, 0.9), (0.5, 0.75), ["Seven Lions", "Wooli"], "2010s",
+         "a trancestep track at 150 BPM with trance arpeggios, a heavy half-time dubstep drop, and emotional melodies"),
+        ("Complextro", ["complextro music"], (125, 132), "Electro house with rapid, complex synth patches switching at high speed",
+         (0.7, 0.9), (0.5, 0.75), ["Porter Robinson", "Madeon", "Savant"], "2010s",
+         "a complextro track at 128 BPM with rapidly switching synth patches, complex bass design, and high energy"),
+        ("Big Room", ["big room house"], (126, 132), "Festival-oriented house with massive drops, simple melodies, and crowd-pleasing builds",
+         (0.8, 1.0), (0.6, 0.8), ["Martin Garrix", "Dimitri Vegas & Like Mike", "Hardwell"], "2010s",
+         "a big room house track at 128 BPM with a massive drop, simple anthemic melody, and festival-ready build"),
+        ("Progressive Techno", ["prog techno"], (122, 135), "Evolving techno with progressive structure, melodic elements, and deep grooves",
+         (0.5, 0.8), (0.6, 0.8), ["Pryda", "Jeremy Olander", "Patrice Baumel"], "1990s",
+         "a progressive techno track at 128 BPM with evolving layers, deep groove, and subtle melodic progression"),
+        ("Leftfield", ["leftfield music"], (90, 140), "Experimental electronic music that defies easy categorization",
+         (0.3, 0.7), (0.3, 0.65), ["Leftfield", "Amon Tobin", "Clark"], "1990s",
+         "a leftfield electronic track with unexpected sound combinations, shifting rhythms, and experimental textures"),
+        ("Microhouse", ["micro house"], (118, 130), "Ultra-minimal house with tiny click sounds, subtle textures, and stripped-down grooves",
+         (0.2, 0.5), (0.5, 0.75), ["Akufen", "Jan Jelinek", "Luomo"], "2000s",
+         "a microhouse track at 124 BPM with tiny click percussion, subtle textural layers, and a minimal groove"),
+        ("Full-On Psytrance", ["full-on", "full on"], (140, 148), "Peak-time psytrance with driving basslines, euphoric melodies, and powerful energy",
+         (0.8, 0.95), (0.6, 0.8), ["Astrix", "Ace Ventura", "Coming Soon"], "2000s",
+         "a full-on psytrance track at 145 BPM with a driving bassline, euphoric melodies, and peak-time energy"),
+        ("Dark Psytrance", ["darkpsy", "dark psy"], (148, 160), "Dark, twisted psytrance with horror-influenced textures and fast tempos",
+         (0.8, 0.95), (0.5, 0.7), ["Parvati Records artists", "Dark Whisper"], "2000s",
+         "a dark psytrance track at 155 BPM with twisted sound design, dark textures, and a relentless bassline"),
+        ("Hi-Tech Psytrance", ["hi-tech", "hitech"], (160, 200), "Ultra-fast psytrance with complex sound design and manic energy",
+         (0.9, 1.0), (0.5, 0.7), ["Megalopsy", "Kashyyyk"], "2010s",
+         "a hi-tech psytrance track at 180 BPM with rapid-fire sound design, glitchy textures, and extreme speed"),
+        ("Ambient House", ["ambient-house"], (100, 120), "Blissful blend of house rhythms with ambient pads and dreamy atmospheres",
+         (0.2, 0.5), (0.5, 0.7), ["The KLF", "The Orb", "Orbital"], "1990s",
+         "an ambient house track at 110 BPM with dreamy pads, a gentle four-on-the-floor beat, and spacious reverb"),
+    ]
+
+    for sub in _extra_electronic:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Electronic", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["minor keys"],
+            defining_characteristics=[], typical_instruments=["synthesizer", "drum machine"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Electronic"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.0, 0.15),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More Rock subgenres ---
+    _extra_rock = [
+        ("Anarcho-Punk", ["anarcho punk"], (150, 200), "Politically charged punk with anarchist themes and raw, aggressive energy",
+         (0.8, 1.0), (0.3, 0.55), ["Crass", "Flux of Pink Indians", "Subhumans"], "1970s",
+         "an anarcho-punk track with raw aggressive guitars, shouted political lyrics, and a fast punk beat"),
+        ("Crust Punk", ["crust", "crustcore"], (140, 200), "Extremely raw punk blending hardcore with metal influence and lo-fi aesthetics",
+         (0.85, 1.0), (0.3, 0.5), ["Amebix", "Nausea", "His Hero Is Gone"], "1980s",
+         "a crust punk track with heavily distorted guitars, growled vocals, and a raw D-beat rhythm"),
+        ("D-Beat", ["d-beat punk", "dis-beat"], (160, 220), "Hardcore punk defined by the distinctive D-beat drum pattern",
+         (0.85, 1.0), (0.3, 0.5), ["Discharge", "Anti Cimex", "Wolfbrigade"], "1980s",
+         "a D-beat punk track with the signature discharge drum pattern, distorted guitars, and aggressive vocals"),
+        ("Street Punk", ["street-punk", "Oi!"], (140, 180), "Working-class punk with anthemic choruses and gang vocal chants",
+         (0.7, 0.9), (0.4, 0.6), ["The Exploited", "Sham 69", "Cockney Rejects"], "1970s",
+         "a street punk track with anthemic gang vocal choruses, simple power chords, and a driving beat"),
+        ("Post-Metal", ["post metal"], (60, 140), "Heavy, atmospheric metal blending post-rock dynamics with crushing heaviness",
+         (0.4, 0.85), (0.2, 0.4), ["Isis", "Neurosis", "Cult of Luna", "Russian Circles"], "1990s",
+         "a post-metal track with a slow crescendo build from quiet shimmer to crushing heaviness and atmospheric textures"),
+        ("Blackgaze", ["blackgaze music", "post-black metal"], (80, 180), "Black metal blended with shoegaze aesthetics, dreamy textures, and tremolo guitar",
+         (0.5, 0.85), (0.2, 0.4), ["Deafheaven", "Alcest", "Wolves in the Throne Room"], "2000s",
+         "a blackgaze track with tremolo-picked guitars, blast beats, and dreamy shoegaze-inspired atmospheric textures"),
+        ("Grindcore", ["grind"], (180, 300), "Extreme fusion of hardcore punk and death metal with micro-songs and blast beats",
+         (0.9, 1.0), (0.2, 0.35), ["Napalm Death", "Carcass", "Pig Destroyer"], "1980s",
+         "a grindcore track at 250 BPM with blast beat drums, guttural vocals, and a 30-second micro-song structure"),
+        ("Mathcore", ["math-core"], (100, 220), "Chaotic, technically complex metalcore with erratic time signatures",
+         (0.8, 1.0), (0.2, 0.4), ["The Dillinger Escape Plan", "Converge", "Botch"], "1990s",
+         "a mathcore track with erratic time signature shifts, chaotic dissonant riffs, and screamed vocals"),
+        ("Groove Metal", ["groove-metal"], (90, 140), "Heavy metal focused on syncopated, headbanging groove riffs",
+         (0.7, 0.9), (0.4, 0.6), ["Pantera", "Lamb of God", "Sepultura", "Machine Head"], "1990s",
+         "a groove metal track with a syncopated headbanging riff, heavy palm-muted chugging, and a powerful groove"),
+        ("Folk Metal", ["folk-metal"], (100, 180), "Metal incorporating folk instruments, melodies, and pagan/Viking themes",
+         (0.6, 0.9), (0.4, 0.65), ["Ensiferum", "Finntroll", "Eluveitie", "Korpiklaani"], "1990s",
+         "a folk metal track with a fiddle melody, heavy distorted guitar, and a galloping Viking-inspired rhythm"),
+        ("Speed Metal", ["speed-metal"], (140, 220), "Fast, technically precise metal bridging NWOBHM and thrash with melodic vocals",
+         (0.8, 1.0), (0.4, 0.6), ["Motorhead", "Agent Steel", "Exciter"], "1980s",
+         "a speed metal track at 200 BPM with blazing guitar riffs, rapid double-bass drumming, and powerful vocals"),
+        ("Gothic Metal", ["gothic-metal"], (80, 140), "Metal blending gothic rock atmosphere with heavy riffs and clean/harsh vocal contrast",
+         (0.5, 0.8), (0.3, 0.5), ["Type O Negative", "Paradise Lost", "Lacuna Coil"], "1990s",
+         "a gothic metal track with heavy riffs, clean female vocals, and a dark, romantic gothic atmosphere"),
+        ("Drone Metal", ["drone-metal"], (20, 60), "Extremely slow, sustained metal tones creating a wall of sound",
+         (0.3, 0.7), (0.1, 0.2), ["Sunn O)))", "Earth", "Boris"], "1990s",
+         "a drone metal piece with extremely sustained low-frequency guitar tones and a monolithic wall of sound"),
+        ("Melodic Death Metal", ["melodeath"], (120, 200), "Death metal with prominent melodic guitar harmonies and technical riffing",
+         (0.7, 0.95), (0.3, 0.5), ["At the Gates", "In Flames", "Dark Tranquillity", "Amon Amarth"], "1990s",
+         "a melodic death metal track with harmonized guitar leads, blast beats, and growled vocals over melodic riffs"),
+        ("Technical Death Metal", ["tech death"], (120, 240), "Virtuosic death metal with extreme complexity, time changes, and technical prowess",
+         (0.85, 1.0), (0.2, 0.4), ["Necrophagist", "Obscura", "Archspire", "Beyond Creation"], "1990s",
+         "a technical death metal track with blindingly fast fretwork, complex time signatures, and inhuman precision"),
+        ("Melodic Hardcore", ["melodic-hardcore", "melodic HC"], (140, 190), "Hardcore punk with melodic elements, singalong choruses, and emotional intensity",
+         (0.7, 0.95), (0.4, 0.6), ["Have Heart", "Comeback Kid", "Counterparts"], "1990s",
+         "a melodic hardcore track with driving double-time drums, singalong choruses, and emotional screamed vocals"),
+        ("Noise Rock", ["noise rock extra"], (80, 160), "Spare entry for noise rock overlap",
+         (0.6, 0.85), (0.3, 0.5), ["Sonic Youth", "Swans", "Big Black", "Lightning Bolt"], "1980s",
+         "a noise rock track with layers of feedback, aggressive dissonance, and a pounding drum rhythm"),
+        ("Slowcore", ["sadcore", "slow-core"], (50, 100), "Quiet, minimalist rock with sparse arrangements and melancholic mood",
+         (0.1, 0.35), (0.2, 0.35), ["Low", "Red House Painters", "Codeine", "Duster"], "1990s",
+         "a slowcore track at 65 BPM with a sparse guitar, whispered vocals, and a deeply melancholic atmosphere"),
+        ("Midwest Emo", ["midwest-emo", "twinkle emo"], (100, 150), "Intricate, guitar-driven emo with tapping, arpeggios, and confessional lyrics",
+         (0.4, 0.7), (0.3, 0.55), ["American Football", "Cap'n Jazz", "Algernon Cadwallader"], "1990s",
+         "a midwest emo track with twinkling guitar arpeggios, intricate tapping, and heartfelt vocal delivery"),
+        ("Post-Hardcore", ["post hardcore"], (110, 170), "Aggressive yet melodic evolution of hardcore punk with dynamic song structures",
+         (0.6, 0.9), (0.3, 0.55), ["Fugazi", "At the Drive-In", "Refused", "La Dispute"], "1980s",
+         "a post-hardcore track with dynamic shifts between melodic verses and aggressive screamed choruses"),
+        ("Riot Grrrl", ["riot grrrl"], (130, 180), "Feminist punk movement with raw energy, political lyrics, and DIY ethos",
+         (0.7, 0.9), (0.4, 0.6), ["Bikini Kill", "Sleater-Kinney", "Bratmobile", "L7"], "1990s",
+         "a riot grrrl punk track with raw guitar, confrontational vocals, and a driving feminist energy"),
+    ]
+
+    for sub in _extra_rock:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Rock", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["minor keys", "power chords"],
+            defining_characteristics=[], typical_instruments=["electric guitar", "bass", "drums"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Rock"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.05, 0.25),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More Jazz subgenres ---
+    _extra_jazz = [
+        ("Third Stream", ["third-stream"], (60, 160), "Fusion of jazz improvisation with classical composition techniques",
+         (0.3, 0.6), (0.2, 0.45), ["Gunther Schuller", "John Lewis"], "1950s",
+         "a third stream composition blending jazz improvisation with classical chamber music instrumentation"),
+        ("Electro-Swing", ["electro swing"], (110, 140), "Modern electronic production fused with 1920s-40s swing and jazz samples",
+         (0.6, 0.85), (0.7, 0.85), ["Parov Stelar", "Caravan Palace", "Jamie Berry"], "2000s",
+         "an electro-swing track at 125 BPM with vintage jazz samples, electronic beats, and a swinging groove"),
+        ("Jazz Manouche", ["gypsy jazz extra", "manouche jazz"], (130, 220), "French gypsy jazz with rapid acoustic guitar and Romani flair",
+         (0.5, 0.8), (0.5, 0.75), ["Django Reinhardt", "Bireli Lagrene", "Stochelo Rosenberg"], "1930s",
+         "a jazz manouche piece with rapid acoustic guitar arpeggios, violin, and a hot-swing rhythm"),
+        ("M-Base", ["m-base"], (80, 160), "Brooklyn-born collective approach to jazz with complex odd meters and funk influence",
+         (0.5, 0.75), (0.4, 0.6), ["Steve Coleman", "Greg Osby", "Cassandra Wilson"], "1980s",
+         "an M-Base jazz track with complex odd-meter rhythms, alto saxophone, and a funk-influenced groove"),
+        ("Nordic Jazz", ["Scandinavian jazz", "ECM jazz"], (60, 140), "Spacious Nordic jazz with open harmony, reverb, and contemplative mood",
+         (0.2, 0.5), (0.2, 0.45), ["Jan Garbarek", "Esbjorn Svensson Trio", "Nils Petter Molvaer"], "1970s",
+         "a Nordic jazz piece with a spacious saxophone tone, crystalline piano, and a contemplative atmosphere"),
+        ("Soul Jazz", ["soul-jazz"], (90, 130), "Funky, groove-oriented jazz with organ, blues influence, and danceable rhythms",
+         (0.5, 0.75), (0.6, 0.8), ["Jimmy Smith", "Grant Green", "Lou Donaldson"], "1960s",
+         "a soul jazz track with a Hammond organ groove, funky drums, and a bluesy saxophone melody"),
+    ]
+
+    for sub in _extra_jazz:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Jazz", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["major 7th chords", "Dorian mode"],
+            defining_characteristics=[], typical_instruments=["saxophone", "piano", "bass"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Jazz"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.4, 0.9),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More R&B/Soul subgenres ---
+    _extra_rnb = [
+        ("Trap Soul", ["trap-soul", "trapsoul"], (60, 90), "Dark, moody R&B production with trap beat influence and intimate vocals",
+         (0.3, 0.6), (0.5, 0.7), ["Bryson Tiller", "6LACK", "Summer Walker"], "2010s",
+         "a trap soul track at 75 BPM with moody trap hi-hats, dark pads, and intimate R&B vocal delivery"),
+        ("Disco", ["disco music"], (110, 135), "Dance music with orchestral strings, four-on-the-floor kick, and funky bass",
+         (0.6, 0.85), (0.8, 0.95), ["Donna Summer", "Bee Gees", "Chic", "Gloria Gaynor"], "1970s",
+         "a disco track at 120 BPM with orchestral strings, a four-on-the-floor kick, and a funky bass groove"),
+        ("Southern Soul", ["southern-soul"], (70, 110), "Deep soul from the American South with raw emotion and blues influence",
+         (0.4, 0.7), (0.5, 0.7), ["Otis Redding", "Al Green", "Ann Peebles"], "1960s",
+         "a Southern soul track with a raw, emotional vocal, Memphis horns, and a deep bluesy groove"),
+        ("Philadelphia Soul", ["Philly soul"], (90, 120), "Lush, orchestrated soul from Philadelphia with sweeping strings and polished vocals",
+         (0.4, 0.7), (0.6, 0.8), ["The O'Jays", "Harold Melvin", "MFSB"], "1970s",
+         "a Philadelphia soul track with lush orchestral strings, a smooth vocal, and a polished disco-soul groove"),
+        ("Chicago Soul", ["chi-town soul"], (90, 120), "Smooth, sophisticated soul from Chicago with Curtis Mayfield influence",
+         (0.4, 0.7), (0.6, 0.8), ["Curtis Mayfield", "The Impressions", "Minnie Riperton"], "1960s",
+         "a Chicago soul track with a falsetto vocal, lush strings, and a sophisticated arrangement"),
+    ]
+
+    for sub in _extra_rnb:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="R&B/Soul", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["minor keys", "major 7th chords"],
+            defining_characteristics=[], typical_instruments=["vocals", "Rhodes", "bass"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["R&B/Soul"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.1, 0.5),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More Pop subgenres ---
+    _extra_pop = [
+        ("Indie Folk", ["indie-folk"], (80, 130), "Folk-influenced indie with acoustic instruments, harmonies, and DIY ethos",
+         (0.2, 0.55), (0.3, 0.55), ["Bon Iver", "Fleet Foxes", "Iron & Wine", "Sufjan Stevens"], "2000s",
+         "an indie folk track with layered vocal harmonies, fingerpicked guitar, and a warm acoustic atmosphere"),
+        ("Bedroom Pop", ["bedroom-pop"], (80, 120), "Lo-fi, home-recorded pop with intimate production and dreamy aesthetics",
+         (0.2, 0.5), (0.4, 0.65), ["Clairo", "boy pablo", "Gus Dapperton", "mxmtoon"], "2010s",
+         "a bedroom pop track with lo-fi home-recorded guitar, soft vocals, and a dreamy indie atmosphere"),
+        ("Disco Pop", ["disco-pop"], (110, 130), "Pop music with strong disco influence, four-on-the-floor beats, and funky bass",
+         (0.6, 0.8), (0.7, 0.9), ["Dua Lipa", "Doja Cat", "Jessie Ware"], "2010s",
+         "a disco pop track at 118 BPM with a funky bassline, four-on-the-floor beat, and a catchy pop vocal"),
+        ("Dark Pop", ["dark-pop"], (80, 130), "Pop with darker lyrical themes, moody production, and minor-key melodies",
+         (0.3, 0.65), (0.4, 0.7), ["Billie Eilish", "Lorde", "Banks"], "2010s",
+         "a dark pop track with moody minor-key synths, whispered vocals, and an atmospheric bass-heavy beat"),
+        ("Synthpop Revival", ["synth-pop revival", "modern synthpop"], (110, 135), "Contemporary artists reviving 80s synth-pop aesthetics with modern production",
+         (0.5, 0.8), (0.6, 0.8), ["The Weeknd", "Dua Lipa", "Tame Impala"], "2010s",
+         "a synthpop revival track at 116 BPM with retro analog synths, gated reverb drums, and a modern pop vocal"),
+        ("Progressive Pop", ["art-pop progressive"], (80, 130), "Ambitious pop with complex arrangements, concept albums, and genre-blending",
+         (0.4, 0.7), (0.4, 0.65), ["Kate Bush", "Bjork", "Joanna Newsom", "FKA Twigs"], "1980s",
+         "a progressive pop track with complex arrangement, unexpected harmonic shifts, and avant-garde production"),
+        ("Nu-Gaze", ["nu gaze", "newgaze"], (80, 130), "Modern revival of shoegaze aesthetics with electronic production elements",
+         (0.3, 0.6), (0.3, 0.55), ["M83", "Wild Nothing", "DIIV", "Nothing"], "2000s",
+         "a nu-gaze track with dense reverb-drenched guitars, electronic beats, and ethereal vocal layers"),
+    ]
+
+    for sub in _extra_pop:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Pop", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["major keys", "minor keys"],
+            defining_characteristics=[], typical_instruments=["vocals", "synths", "guitar"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Pop"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.05, 0.4),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More Latin subgenres ---
+    _extra_latin = [
+        ("Punta", ["punta music"], (130, 160), "Garifuna dance music from Central America with rapid percussion and call-and-response",
+         (0.7, 0.9), (0.8, 0.95), ["Andy Palacio", "Aurelio Martinez"], "ancient",
+         "a punta track at 145 BPM with rapid Garifuna drumming, call-and-response vocals, and a driving dance groove"),
+        ("Reggaeton Romantico", ["romantic reggaeton"], (80, 95), "Slower, romantic variant of reggaeton with ballad-like vocals over dembow rhythms",
+         (0.4, 0.6), (0.6, 0.8), ["Nicky Jam", "Ozuna", "Prince Royce"], "2000s",
+         "a romantic reggaeton track at 88 BPM with a gentle dembow beat, emotional vocals, and romantic lyrics"),
+        ("Perreo", ["perreo music"], (90, 100), "Dance-focused reggaeton subgenre with heavy bass and suggestive rhythms",
+         (0.7, 0.9), (0.8, 0.95), ["Daddy Yankee", "Don Omar", "Bad Bunny"], "2000s",
+         "a perreo track at 95 BPM with a heavy dembow beat, bass-driven production, and dance-focused energy"),
+        ("Afro-Latin", ["afro Latin"], (90, 130), "Latin music emphasizing African-derived rhythmic traditions and percussion",
+         (0.5, 0.8), (0.7, 0.9), ["Celia Cruz", "Tito Puente", "Cuco Valoy"], "1940s",
+         "an Afro-Latin track with Afro-Cuban percussion, clave-based rhythms, and a danceable groove"),
+        ("Forró", ["forro"], (100, 140), "Northeastern Brazilian dance music with accordion, triangle, and zabumba drum",
+         (0.6, 0.85), (0.7, 0.9), ["Luiz Gonzaga", "Dominguinhos"], "1940s",
+         "a forro track with accordion, triangle, and zabumba drum in a driving Northeastern Brazilian dance groove"),
+        ("Axé", ["axe music"], (110, 140), "Bahian carnival music blending Afro-Brazilian rhythms with pop elements",
+         (0.7, 0.9), (0.8, 0.95), ["Ivete Sangalo", "Olodum", "Daniela Mercury"], "1980s",
+         "an axe track with Afro-Brazilian percussion, carnival energy, and an infectious pop melody"),
+        ("Boogaloo", ["Latin boogaloo"], (100, 130), "1960s blend of Latin rhythms with soul/R&B popular with NYC Latin youth",
+         (0.5, 0.75), (0.7, 0.85), ["Joe Bataan", "Pete Rodriguez", "Ray Barretto"], "1960s",
+         "a boogaloo track with Latin percussion, soulful vocals, and a groovy blend of Latin and R&B rhythms"),
+        ("Plena", ["plena music"], (100, 130), "Puerto Rican folk music with pandereta drums and call-and-response vocals",
+         (0.5, 0.8), (0.7, 0.85), ["Mon Rivera", "Plena Libre"], "1800s",
+         "a plena track with pandereta hand drums, call-and-response vocals, and a driving Puerto Rican rhythm"),
+        ("Son Cubano", ["son", "Cuban son"], (90, 130), "Foundational Cuban genre blending Spanish guitar with African rhythms",
+         (0.4, 0.7), (0.7, 0.85), ["Buena Vista Social Club", "Compay Segundo", "Arsenio Rodriguez"], "1920s",
+         "a son cubano track with tres guitar, clave rhythm, and an infectious Cuban dance groove"),
+    ]
+
+    for sub in _extra_latin:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Latin", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["major keys", "minor keys"],
+            defining_characteristics=[], typical_instruments=["percussion", "guitar", "bass"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Latin"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.1, 0.5),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More Hip-Hop subgenres ---
+    _extra_hiphop = [
+        ("Memphis Rap", ["Memphis", "Memphis hip-hop"], (65, 85), "Dark, lo-fi Southern rap with heavy bass, horror samples, and raw production",
+         (0.5, 0.8), (0.5, 0.7), ["Three 6 Mafia", "DJ Paul", "Tommy Wright III"], "1990s",
+         "a Memphis rap beat at 72 BPM with dark lo-fi production, horror movie samples, and heavy 808 bass"),
+        ("Bounce", ["bounce music", "New Orleans bounce"], (95, 115), "New Orleans hip-hop subgenre with call-and-response and Triggerman beat",
+         (0.7, 0.9), (0.7, 0.9), ["Juvenile", "Big Freedia", "DJ Jubilee"], "1980s",
+         "a bounce beat at 105 BPM with the Triggerman sample, call-and-response chants, and a high-energy groove"),
+        ("Hyphy", ["hyphy music"], (80, 110), "Bay Area hip-hop with bouncy beats, slap bass, and energetic party vibes",
+         (0.6, 0.85), (0.6, 0.8), ["E-40", "Too Short", "Mac Dre", "Keak Da Sneak"], "2000s",
+         "a hyphy beat at 95 BPM with a bouncy kick pattern, slap bass, and a high-energy Bay Area groove"),
+        ("Detroit Hip-Hop", ["Detroit rap"], (80, 110), "Raw, aggressive hip-hop from Detroit with complex lyricism and gritty production",
+         (0.5, 0.8), (0.5, 0.7), ["Eminem", "J Dilla", "Danny Brown", "Royce da 5'9\""], "1990s",
+         "a Detroit hip-hop beat at 90 BPM with gritty drums, raw sample chops, and a hard-hitting groove"),
+        ("Plugg", ["plugg music", "plug beats"], (130, 155), "Minimalist, ethereal trap subgenre with sparse 808s, flutes, and dreamy melodies",
+         (0.4, 0.65), (0.5, 0.7), ["Pi'erre Bourne", "Playboi Carti", "Lil Yachty"], "2010s",
+         "a plugg beat at 140 BPM with ethereal flute melody, sparse 808 bass, and a dreamy, minimalist vibe"),
+        ("Rage Beats", ["rage", "rage rap"], (140, 165), "Aggressive, high-energy trap variant with distorted synths and moshpit energy",
+         (0.7, 0.95), (0.5, 0.7), ["Trippie Redd", "Yeat", "Ken Carson", "Playboi Carti"], "2020s",
+         "a rage beat at 150 BPM with distorted synth leads, aggressive 808 bass, and high-energy moshpit vibes"),
+        ("Afro Rap", ["Afro hip-hop"], (90, 120), "African hip-hop blending local musical traditions with rap vocal styles",
+         (0.5, 0.8), (0.6, 0.8), ["Sarkodie", "Nasty C", "Falz"], "2000s",
+         "an Afro rap beat at 105 BPM with Afrobeat percussion, log drums, and a rap vocal delivery"),
+        ("Latin Hip-Hop", ["Spanish rap", "Latin rap"], (80, 110), "Hip-hop with Spanish lyrics and Latin musical influences",
+         (0.5, 0.8), (0.5, 0.75), ["Calle 13", "Residente", "Tego Calderon"], "1990s",
+         "a Latin hip-hop beat at 90 BPM with Latin percussion, Spanish rap vocals, and a boom-bap-influenced groove"),
+    ]
+
+    for sub in _extra_hiphop:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Hip-Hop/Rap", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["minor keys", "blues scale"],
+            defining_characteristics=[], typical_instruments=["MPC", "TR-808", "sampler"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Hip-Hop/Rap"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.0, 0.2),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More Country subgenres ---
+    _extra_country = [
+        ("Cowboy Western", ["western music", "cowboy"], (70, 120), "Romantic Western music with yodeling, prairie themes, and cowboy imagery",
+         (0.3, 0.6), (0.3, 0.55), ["Gene Autry", "Roy Rogers", "Marty Robbins"], "1930s",
+         "a cowboy Western track with a yodeling vocal, acoustic guitar, and a wide-open prairie atmosphere"),
+        ("Progressive Country", ["progressive-country"], (80, 130), "Country pushing boundaries with rock, folk, and experimental elements",
+         (0.4, 0.7), (0.4, 0.6), ["Sturgill Simpson", "Tyler Childers", "Orville Peck"], "2010s",
+         "a progressive country track with psychedelic guitar effects, country vocal delivery, and genre-blending production"),
+        ("Gothic Country", ["gothic americana", "goth country"], (60, 110), "Dark, brooding Americana with Gothic imagery and Southern Gothic themes",
+         (0.3, 0.6), (0.3, 0.5), ["16 Horsepower", "Slim Cessna's Auto Club", "Those Poor Bastards"], "1990s",
+         "a gothic country track with a dark banjo, brooding baritone vocals, and a Southern Gothic atmosphere"),
+        ("Newgrass", ["new grass", "progressive bluegrass"], (100, 180), "Progressive bluegrass with jazz and rock influence and expanded instrumentation",
+         (0.5, 0.8), (0.5, 0.7), ["Sam Bush", "Bela Fleck", "Nickel Creek", "Chris Thile"], "1970s",
+         "a newgrass track with virtuosic banjo, jazz-influenced improvisation, and a progressive bluegrass arrangement"),
+    ]
+
+    for sub in _extra_country:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Country", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["major keys", "Mixolydian mode"],
+            defining_characteristics=[], typical_instruments=["acoustic guitar", "fiddle", "banjo"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Country"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.3, 0.8),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More Folk/World subgenres ---
+    _extra_folk = [
+        ("Mbalax", ["mbalax music"], (110, 140), "Senegalese popular music with sabar drumming and Wolof vocal traditions",
+         (0.6, 0.85), (0.7, 0.9), ["Youssou N'Dour", "Baaba Maal"], "1970s",
+         "a mbalax track with rapid sabar drumming, Wolof vocals, and an infectious Senegalese dance groove"),
+        ("Rebetiko", ["rebetika"], (80, 140), "Greek urban folk music with bouzouki, expressing working-class life and melancholy",
+         (0.4, 0.7), (0.5, 0.7), ["Markos Vamvakaris", "Vassilis Tsitsanis"], "1920s",
+         "a rebetiko track with a bouzouki melody, a minor-key modal scale, and a melancholic Greek groove"),
+        ("Slavic Folk", ["Slavic traditional"], (80, 150), "Traditional music from Slavic countries with choral harmonies and accordion",
+         (0.4, 0.8), (0.5, 0.7), ["DakhaBrakha", "Loreena McKennitt"], "ancient",
+         "a Slavic folk track with multi-part vocal harmonies, accordion, and a traditional Eastern European rhythm"),
+        ("Aboriginal Music", ["Australian indigenous", "didgeridoo music"], (60, 120), "Australian Aboriginal music with didgeridoo, clapsticks, and ancient traditions",
+         (0.3, 0.6), (0.3, 0.5), ["Yothu Yindi", "Geoffrey Gurrumul Yunupingu"], "ancient",
+         "an Aboriginal music piece with didgeridoo drone, clapstick rhythm, and a deep spiritual atmosphere"),
+        ("Throat Singing", ["Tuvan throat singing", "overtone singing"], (40, 100), "Central Asian vocal technique producing multiple pitches simultaneously",
+         (0.2, 0.5), (0.2, 0.4), ["Huun-Huur-Tu", "Sainkho Namtchylak"], "ancient",
+         "a throat singing performance with multiple overtone harmonics, a deep fundamental drone, and a meditative feel"),
+        ("Balkan", ["Balkan music", "Balkan brass"], (100, 180), "Southeast European music with brass bands, irregular meters, and Romani influence",
+         (0.5, 0.9), (0.6, 0.85), ["Goran Bregovic", "Boban Markovic", "Taraf de Haidouks"], "ancient",
+         "a Balkan brass band track with a lively irregular meter, brass melodies, and high-energy Romani-influenced groove"),
+        ("Bhangra", ["bhangra music"], (100, 140), "Punjabi folk dance music with dhol drum, tumbi, and energetic rhythms",
+         (0.7, 0.9), (0.7, 0.9), ["Malkit Singh", "Jazzy B", "Diljit Dosanjh"], "1960s",
+         "a bhangra track with a driving dhol drum, tumbi riffs, and an infectious Punjabi dance rhythm"),
+        ("Reggae Fusion", ["reggae-fusion"], (80, 110), "Modern reggae blending with hip-hop, R&B, and electronic elements",
+         (0.4, 0.7), (0.6, 0.8), ["Shaggy", "Damian Marley", "Protoje", "Chronixx"], "1990s",
+         "a reggae fusion track with a modern riddim, hip-hop-influenced vocal flow, and electronic production"),
+    ]
+
+    for sub in _extra_folk:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Folk/World", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["modal", "pentatonic"],
+            defining_characteristics=[], typical_instruments=["acoustic instruments", "percussion"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Folk/World"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.4, 0.95),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More Classical subgenres ---
+    _extra_classical = [
+        ("Serialist", ["serialism", "twelve-tone"], (40, 160), "Composition using systematic ordering of pitches, rhythms, and dynamics",
+         (0.3, 0.7), (0.1, 0.3), ["Schoenberg", "Webern", "Berg", "Boulez"], "1920s",
+         "a serialist composition with a twelve-tone row, atonal harmony, and precisely structured rhythmic patterns"),
+        ("Aleatoric", ["chance music", "indeterminate"], (0, 200), "Composition incorporating elements of chance and performer choice",
+         (0.2, 0.6), (0.1, 0.2), ["John Cage", "Witold Lutoslawski", "Earle Brown"], "1950s",
+         "an aleatoric composition with performer-chosen elements, chance-derived textures, and unpredictable structure"),
+        ("Sonata", ["sonata form"], (50, 180), "Multi-movement composition for solo instrument or small ensemble in sonata form",
+         (0.2, 0.7), (0.1, 0.3), ["Beethoven", "Mozart", "Schubert", "Chopin"], "1700s",
+         "a sonata movement with thematic exposition, development, and recapitulation for solo piano"),
+        ("Solo Strings", ["string solo"], (40, 180), "Music for solo string instruments (violin, cello, viola) showcasing virtuosity",
+         (0.2, 0.7), (0.1, 0.3), ["Paganini", "Yo-Yo Ma", "Hilary Hahn"], "1600s",
+         "a solo violin piece with virtuosic double-stops, expressive vibrato, and dynamic bowing techniques"),
+        ("Spectral Music", ["spectralism"], (40, 120), "Composition based on analysis of acoustic sound spectra and overtone structures",
+         (0.2, 0.5), (0.1, 0.2), ["Gerard Grisey", "Tristan Murail", "Kaija Saariaho"], "1970s",
+         "a spectral music piece with slowly evolving harmonics derived from acoustic overtone analysis"),
+    ]
+
+    for sub in _extra_classical:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Classical", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["chromatic", "atonal"],
+            defining_characteristics=[], typical_instruments=["orchestra", "piano", "strings"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Classical"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.7, 1.0),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More Other subgenres ---
+    _extra_other = [
+        ("Chiptune", ["8-bit music", "chip music"], (100, 180), "Music created using sound chips from vintage video game consoles and computers",
+         (0.5, 0.85), (0.5, 0.75), ["Anamanaguchi", "Bit Shifter", "Chipzel"], "1980s",
+         "a chiptune track with 8-bit square wave melodies, pulse-width arpeggios, and a retro game console aesthetic"),
+        ("Lo-fi Indie", ["lo-fi indie rock"], (80, 130), "Deliberately rough, home-recorded indie music with tape hiss and imperfections",
+         (0.2, 0.5), (0.3, 0.55), ["Guided by Voices", "Pavement", "Elliott Smith"], "1980s",
+         "a lo-fi indie track with a rough 4-track recording aesthetic, buried vocals, and a tape-saturated guitar"),
+        ("Witch House", ["drag extra", "haunted house"], (70, 120), "Dark, occult-influenced electronic with pitch-shifted vocals and lo-fi aesthetics",
+         (0.3, 0.6), (0.3, 0.5), ["Salem", "Pictureplane"], "2000s",
+         "a witch house track with slowed-down vocals, eerie synth drones, and an occult-tinged atmosphere"),
+        ("Darkwave", ["dark wave", "cold wave"], (100, 140), "Dark, synth-driven post-punk/new wave with gothic aesthetics and minor keys",
+         (0.4, 0.7), (0.5, 0.7), ["Clan of Xymox", "Lebanon Hanover", "She Past Away", "Boy Harsher"], "1980s",
+         "a darkwave track with cold analog synths, a driving drum machine, and a dark, brooding vocal"),
+        ("Trap Metal", ["trap-metal", "nu-metal revival"], (130, 160), "Aggressive hybrid blending trap beats with metal screaming and distorted guitars",
+         (0.8, 1.0), (0.4, 0.6), ["Scarlxrd", "ZillaKami", "City Morgue"], "2010s",
+         "a trap metal track at 145 BPM with distorted 808 bass, screamed vocals, and metal guitar riffs"),
+        ("Afrofuturism", ["afro-futurism", "Afrofuturist"], (80, 140), "Music blending African diaspora traditions with sci-fi and futuristic concepts",
+         (0.4, 0.7), (0.4, 0.7), ["Sun Ra", "Janelle Monae", "Flying Lotus", "Shabazz Palaces"], "1960s",
+         "an Afrofuturist track with cosmic synths, African percussion, and a forward-looking sci-fi aesthetic"),
+        ("Intelligent Techno", ["smart techno"], (120, 135), "Cerebral, detail-oriented techno blending ambient and IDM influences",
+         (0.3, 0.6), (0.4, 0.65), ["Plastikman", "Robert Hood", "Jeff Mills"], "1990s",
+         "an intelligent techno track at 128 BPM with cerebral sound design, subtle rhythmic detail, and ambient textures"),
+        ("Future Garage", ["future-garage"], (130, 140), "Atmospheric, nostalgic evolution of UK garage with reverb and vocal manipulation",
+         (0.3, 0.6), (0.5, 0.7), ["Burial", "Jamie xx", "Mount Kimbie"], "2000s",
+         "a future garage track at 135 BPM with crackly vinyl textures, time-stretched vocals, and deep sub-bass"),
+        ("Post-Dubstep", ["post dubstep"], (130, 140), "Evolution of dubstep toward more atmospheric, experimental, and R&B-influenced territories",
+         (0.3, 0.6), (0.4, 0.65), ["James Blake", "Mount Kimbie", "SBTRKT"], "2010s",
+         "a post-dubstep track at 135 BPM with atmospheric vocals, sparse beats, and experimental bass textures"),
+        ("Deconstructed Club", ["deconstructed", "experimental club"], (80, 160), "Avant-garde club music deconstructing dance tropes with industrial and noise elements",
+         (0.5, 0.85), (0.3, 0.6), ["Arca", "SOPHIE", "Lotic", "Rabit"], "2010s",
+         "a deconstructed club track with shattered beats, metallic textures, and an avant-garde club energy"),
+        ("Kawaii Future Bass", ["kawaii bass", "kawaii"], (140, 170), "Cute, bright future bass with J-pop influence, chiptune elements, and sugary melodies",
+         (0.5, 0.8), (0.5, 0.75), ["Snail's House", "YUC'e", "Moe Shop"], "2010s",
+         "a kawaii future bass track at 155 BPM with bright chiptune melodies, sugary vocal chops, and bouncy rhythms"),
+        ("Tropical Bass", ["tropical-bass", "global bass"], (90, 130), "Bass-heavy electronic music incorporating tropical rhythms from the global south",
+         (0.5, 0.8), (0.6, 0.85), ["Major Lazer", "Diplo", "Buraka Som Sistema"], "2000s",
+         "a tropical bass track at 110 BPM with Caribbean rhythms, heavy bass drops, and global dance influences"),
+        ("Amapiano", ["amapiano music"], (110, 120), "South African house genre with log drum melodies, shakers, and jazzy piano",
+         (0.5, 0.75), (0.7, 0.85), ["Kabza De Small", "DJ Maphorisa", "Focalistic"], "2010s",
+         "an amapiano track at 115 BPM with log drum melodies, shaker percussion, and a jazzy bass groove"),
+        ("UK Drill Remix", ["drill remix"], (138, 142), "UK drill instrumentals remixed or influenced by other genres like Afroswing or pop",
+         (0.5, 0.8), (0.5, 0.75), ["Tion Wayne", "Russ Millions"], "2020s",
+         "a UK drill remix track at 140 BPM blending drill patterns with Afroswing melodies and pop hooks"),
+        ("Phonk House", ["house phonk", "drift phonk house"], (140, 155), "Aggressive house-tempo phonk with cowbell loops, distorted bass, and drift aesthetics",
+         (0.7, 0.9), (0.6, 0.8), ["Kordhell", "DVRST", "Sxmpra"], "2020s",
+         "a phonk house track at 150 BPM with distorted cowbell loops, heavy bass, and aggressive drift aesthetics"),
+    ]
+
+    for sub in _extra_other:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Other", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["varied"],
+            defining_characteristics=[], typical_instruments=["varied"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Other"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.0, 0.5),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More House subgenres ---
+    _extra_house = [
+        ("Soulful House", ["soulful"], (120, 128), "House centered on gospel and soul vocal performances with lush arrangements",
+         (0.5, 0.75), (0.7, 0.9), ["Louie Vega", "Kenny Dope", "Dennis Ferrer"], "1990s",
+         "a soulful house track at 124 BPM with a gospel-influenced vocal, warm pads, and a deep groove"),
+        ("Minimal House", ["minimal-house"], (118, 128), "Stripped-down house focusing on repetition, subtlety, and micro-textural changes",
+         (0.3, 0.55), (0.6, 0.8), ["Ricardo Villalobos", "Zip", "Luciano"], "2000s",
+         "a minimal house track at 122 BPM with a sparse kick pattern, subtle clicks, and hypnotic textural evolution"),
+        ("Jackin House", ["jackin", "jacking house"], (122, 130), "Raw, Chicago-influenced house with a jacking rhythm and funky samples",
+         (0.6, 0.85), (0.75, 0.9), ["DJ Sneak", "Cajmere", "Gene Farris"], "1990s",
+         "a jackin house track at 126 BPM with a raw jacking groove, funky vocal samples, and a stripped-down beat"),
+        ("Piano House", ["piano-house"], (120, 130), "House music featuring prominent piano riffs and uplifting chord progressions",
+         (0.6, 0.8), (0.7, 0.9), ["Robin S", "Robert Owens", "Black Box"], "1990s",
+         "a piano house track at 125 BPM with uplifting piano chords, a four-on-the-floor kick, and a soulful vocal"),
+        ("Hard House", ["hard-house"], (140, 155), "High-energy house with harder kicks, faster tempos, and rave influence",
+         (0.8, 0.95), (0.6, 0.85), ["Lisa Lashes", "Tony De Vit", "BK"], "1990s",
+         "a hard house track at 148 BPM with a pounding kick, rave stabs, and high-energy synth riffs"),
+        ("Vocal House", ["vocal-house"], (120, 128), "House music centered on prominent, often diva-style vocal performances",
+         (0.5, 0.8), (0.7, 0.9), ["Barbara Tucker", "Crystal Waters", "Ultra Nate"], "1990s",
+         "a vocal house track at 124 BPM with a powerful diva vocal, lush pads, and a classic house groove"),
+    ]
+
+    for sub in _extra_house:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="House", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["minor keys", "Dorian mode"],
+            defining_characteristics=[], typical_instruments=["TR-909", "synths", "Rhodes"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["House"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.0, 0.15),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More Techno subgenres ---
+    _extra_techno = [
+        ("Hypnotic Techno", ["hypnotic"], (125, 135), "Trance-inducing techno with repetitive loops and gradual textural shifts",
+         (0.4, 0.7), (0.5, 0.75), ["Boris Brejcha", "Stephan Bodzin", "Mind Against"], "2010s",
+         "a hypnotic techno track at 128 BPM with repetitive looping patterns, gradual textural shifts, and a trance-inducing groove"),
+        ("Peak-Time Techno", ["peak time", "driving techno"], (130, 140), "High-energy techno designed for peak dancefloor moments",
+         (0.7, 0.95), (0.6, 0.85), ["Amelie Lens", "Charlotte de Witte", "Enrico Sangiuliano"], "2010s",
+         "a peak-time techno track at 135 BPM with a driving kick, energetic percussion, and an intense build"),
+        ("Afro Techno", ["afro-techno"], (120, 135), "Techno incorporating African rhythmic patterns and organic percussion",
+         (0.5, 0.8), (0.6, 0.85), ["Dibango", "Hyenah", "Aero Manyelo"], "2010s",
+         "an Afro techno track at 126 BPM with African percussion, organic textures, and a deep techno groove"),
+        ("Breakbeat Techno", ["broken techno", "break techno"], (128, 140), "Techno replacing the four-on-the-floor kick with breakbeat patterns",
+         (0.6, 0.85), (0.5, 0.75), ["Blawan", "Karenn", "Objekt"], "2010s",
+         "a breakbeat techno track at 133 BPM with broken drum patterns, industrial textures, and a dark groove"),
+    ]
+
+    for sub in _extra_techno:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Techno", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["minor keys", "atonal"],
+            defining_characteristics=[], typical_instruments=["modular synth", "TR-909"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Techno"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.0, 0.1),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More DnB subgenres ---
+    _extra_dnb = [
+        ("Halftime DnB", ["halftime", "half-time"], (160, 175), "DnB-tempo production with half-time feel, creating a hip-hop-influenced groove",
+         (0.4, 0.7), (0.4, 0.65), ["Ivy Lab", "Alix Perez", "Halogenix"], "2010s",
+         "a halftime DnB track at 170 BPM with a half-time feel, deep bass, and a hip-hop-influenced groove"),
+        ("Rollers", ["roller DnB"], (172, 178), "Smooth, rolling DnB with continuous flowing breaks and deep bass",
+         (0.5, 0.75), (0.5, 0.75), ["Calibre", "dBridge", "Marcus Intalex"], "2000s",
+         "a roller DnB track at 174 BPM with continuous rolling breaks, a smooth bassline, and deep atmosphere"),
+        ("Intelligent DnB", ["intelligent drum and bass", "atmospheric DnB"], (170, 178), "Cerebral, melodic DnB with lush pads and sophisticated arrangements",
+         (0.4, 0.7), (0.4, 0.7), ["LTJ Bukem", "Makoto", "Peshay"], "1990s",
+         "an intelligent DnB track at 174 BPM with lush atmospheric pads, sophisticated melodies, and rolling breaks"),
+        ("Dancefloor DnB", ["dance DnB", "mainstream DnB"], (172, 178), "Accessible, high-energy DnB designed for broad dancefloor appeal",
+         (0.7, 0.9), (0.6, 0.8), ["Sub Focus", "Dimension", "Chase & Status", "Sigma"], "2000s",
+         "a dancefloor DnB track at 175 BPM with a big vocal hook, punchy drums, and a festival-ready drop"),
+        ("Ragga Jungle", ["ragga DnB", "ragga jungle"], (160, 175), "Jungle/DnB with ragga and dancehall vocal samples and Caribbean influence",
+         (0.6, 0.85), (0.6, 0.8), ["Congo Natty", "General Levy", "Shy FX"], "1990s",
+         "a ragga jungle track at 170 BPM with chopped ragga vocals, Amen breaks, and a Caribbean-influenced bassline"),
+    ]
+
+    for sub in _extra_dnb:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Drum and Bass", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["minor keys"],
+            defining_characteristics=[], typical_instruments=["breakbeats", "sub-bass", "sampler"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Drum and Bass"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.0, 0.1),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More Trance subgenres ---
+    _extra_trance = [
+        ("Tech Trance", ["tech-trance"], (136, 145), "Trance blended with techno's darker energy and harder grooves",
+         (0.7, 0.9), (0.6, 0.8), ["Simon Patterson", "Bryan Kearney", "John Askew"], "1990s",
+         "a tech trance track at 140 BPM with a driving techno groove, acid bassline, and trance-style builds"),
+        ("Balearic Trance", ["Balearic", "Ibiza trance"], (125, 138), "Sun-kissed, melodic trance influenced by Balearic/Ibiza club culture",
+         (0.5, 0.75), (0.6, 0.8), ["Roger Shah", "Chicane", "Above & Beyond"], "1990s",
+         "a Balearic trance track at 132 BPM with sun-kissed pads, a gentle build, and an Ibiza sunset atmosphere"),
+        ("Nitzhonot", ["nitzho", "Israeli trance"], (140, 148), "Israeli psytrance variant with catchy melodies and Middle Eastern influence",
+         (0.7, 0.9), (0.6, 0.8), ["Astrix", "Skazi", "Infected Mushroom"], "2000s",
+         "a Nitzhonot track at 145 BPM with Middle Eastern melodies, a driving bassline, and psytrance energy"),
+        ("Dream Trance", ["dream-trance"], (130, 140), "Melodic trance with dreamy pads, ethereal vocals, and a softer, romantic feel",
+         (0.4, 0.7), (0.6, 0.8), ["Robert Miles", "Chicane", "BT"], "1990s",
+         "a dream trance track at 135 BPM with dreamy piano, ethereal pads, and a romantic, uplifting melody"),
+    ]
+
+    for sub in _extra_trance:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Trance", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["minor keys"],
+            defining_characteristics=[], typical_instruments=["synths", "pads"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Trance"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.0, 0.1),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More Dubstep subgenres ---
+    _extra_dubstep = [
+        ("Melodic Dubstep", ["melodic-dubstep"], (140, 150), "Emotional dubstep with lush melodies, supersaw chords, and cinematic drops",
+         (0.5, 0.85), (0.4, 0.65), ["Seven Lions", "Au5", "Dabin", "Said the Sky"], "2010s",
+         "a melodic dubstep track at 150 BPM with emotional supersaw chords, a cinematic build, and a powerful bass drop"),
+        ("Tearout", ["tearout dubstep"], (140, 155), "Extremely aggressive dubstep with complex, chaotic bass design",
+         (0.85, 1.0), (0.3, 0.55), ["Svdden Death", "Marauda", "PhaseOne"], "2010s",
+         "a tearout dubstep track at 150 BPM with chaotic, aggressive bass design and skull-crushing drops"),
+        ("Colour Bass", ["color bass", "colour-bass"], (140, 170), "Melodic, sound-design-heavy bass music blending dubstep with future bass aesthetics",
+         (0.5, 0.85), (0.4, 0.65), ["Chime", "Au5", "Ace Aura"], "2010s",
+         "a colour bass track at 150 BPM with melodic sound design, lush chords, and intricate bass drops"),
+    ]
+
+    for sub in _extra_dubstep:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Dubstep", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["minor keys"],
+            defining_characteristics=[], typical_instruments=["Serum", "Massive", "sub-bass"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Dubstep"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.0, 0.05),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More Ambient subgenres ---
+    _extra_ambient = [
+        ("Ambient Dub", ["ambient-dub"], (70, 110), "Ambient music using dub production techniques — heavy delay, reverb, and echo",
+         (0.1, 0.35), (0.2, 0.45), ["The Orb", "Higher Intelligence Agency", "Bluetech"], "1990s",
+         "an ambient dub track with echo-drenched pads, deep reverb bass, and floating dub delay textures"),
+        ("Psybient", ["psychedelic ambient", "psychill"], (80, 110), "Psychedelic ambient with organic textures, world music influence, and cosmic vibes",
+         (0.1, 0.4), (0.3, 0.5), ["Shpongle", "Ott", "Carbon Based Lifeforms"], "1990s",
+         "a psybient track at 95 BPM with psychedelic textures, world music samples, and a cosmic atmosphere"),
+    ]
+
+    for sub in _extra_ambient:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Ambient", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["suspended chords", "modal"],
+            defining_characteristics=[], typical_instruments=["synthesizer", "delay", "reverb"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Ambient"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.1, 0.5),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More Breakbeat subgenres ---
+    _extra_breakbeat = [
+        ("Broken Beat", ["bruk beat", "brokenbeat"], (110, 130), "Syncopated, jazz-influenced electronic music from West London",
+         (0.4, 0.7), (0.6, 0.8), ["IG Culture", "Bugz in the Attic", "4hero", "Dego"], "2000s",
+         "a broken beat track at 120 BPM with syncopated rhythms, jazz chords, and a West London electronic groove"),
+        ("Acid Breaks", ["acid-breaks"], (120, 140), "Breakbeat music with 303 acid lines, combining breaks with acid house aesthetics",
+         (0.6, 0.85), (0.6, 0.8), ["Ceephax Acid Crew", "Reso"], "1990s",
+         "an acid breaks track at 130 BPM with chopped breakbeats, squelching 303 acid lines, and rave energy"),
+    ]
+
+    for sub in _extra_breakbeat:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Breakbeat", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["minor keys"],
+            defining_characteristics=[], typical_instruments=["breakbeats", "sampler", "synths"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Breakbeat"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.0, 0.15),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- More Hardcore Electronic subgenres ---
+    _extra_hardcore = [
+        ("UK Hardcore", ["UK happy hardcore"], (160, 180), "UK-flavored hardcore with bright synths, euphoric pianos, and breakbeats",
+         (0.8, 0.95), (0.6, 0.85), ["Gammer", "Darren Styles", "Dougal & Gammer"], "1990s",
+         "a UK hardcore track at 172 BPM with euphoric piano riffs, bright synths, and high-energy breakbeats"),
+        ("Terrorcore", ["terrorcore music"], (200, 300), "Extreme, dark hardcore with horror themes and brutal tempos",
+         (0.9, 1.0), (0.3, 0.5), ["Hellfish", "DJ Skinhead", "Leathernecks"], "1990s",
+         "a terrorcore track at 250 BPM with horror samples, extreme distortion, and brutally fast kicks"),
+        ("Breakcore", ["breakcore music"], (160, 300), "Chaotic, sample-heavy electronic music with shredded breakbeats and genre-blending",
+         (0.8, 1.0), (0.3, 0.55), ["Venetian Snares", "Igorrr", "Bong-Ra", "Shitmat"], "1990s",
+         "a breakcore track at 200 BPM with shredded Amen breaks, chaotic sample collage, and extreme tempo shifts"),
+    ]
+
+    for sub in _extra_hardcore:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Hardcore Electronic", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["minor keys", "atonal"],
+            defining_characteristics=[], typical_instruments=["distorted synths", "sampler"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Hardcore Electronic"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.0, 0.05),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
+    # --- Final expansion to hit 500+ ---
+    _final_expansion = [
+        # More Folk/World
+        ("Cumbia Digital", ["digital cumbia", "nu-cumbia"], (90, 115), "Electronic reinterpretation of cumbia with synths and digital production",
+         (0.5, 0.75), (0.7, 0.85), ["Chancha Via Circuito", "El Remolón", "Nicola Cruz"], "2000s",
+         "Folk/World", "a digital cumbia track at 100 BPM with electronic textures over a traditional cumbia rhythm"),
+        ("Tuareg Blues", ["desert blues", "Saharan blues"], (80, 120), "Blues-influenced guitar music from the Sahara with hypnotic repetition",
+         (0.4, 0.7), (0.4, 0.65), ["Tinariwen", "Mdou Moctar", "Bombino"], "1970s",
+         "Folk/World", "a Tuareg blues track with hypnotic electric guitar riffs, desert atmosphere, and a driving groove"),
+        ("Ethio-Groove", ["Ethiopian groove"], (90, 125), "Modern Ethiopian popular music blending funk, soul, and local traditions",
+         (0.5, 0.75), (0.5, 0.75), ["Hailu Mergia", "Alemayehu Eshete"], "1960s",
+         "Folk/World", "an Ethio-groove track with Ethiopian pentatonic melodies, funky organ, and a soulful groove"),
+        # More Pop
+        ("Soft Pop", ["soft-pop"], (80, 110), "Gentle, melodic pop with understated arrangements and warm production",
+         (0.2, 0.45), (0.4, 0.6), ["Norah Jones", "Jack Johnson", "Colbie Caillat"], "2000s",
+         "Pop", "a soft pop track with a gentle acoustic guitar, warm vocals, and a laid-back, breezy arrangement"),
+        ("Alt-Pop", ["alternative pop", "alt pop"], (90, 130), "Pop blending mainstream accessibility with alternative/indie sensibilities",
+         (0.4, 0.7), (0.5, 0.75), ["Lorde", "Billie Eilish", "Tame Impala", "Glass Animals"], "2010s",
+         "Pop", "an alt-pop track with atmospheric production, indie sensibility, and a catchy alternative vocal hook"),
+        # More Electronic
+        ("Downtempo Electronica", ["chill electronica"], (80, 110), "Atmospheric, home-listening electronic with organic textures",
+         (0.2, 0.45), (0.4, 0.6), ["Tycho", "Bonobo", "Emancipator", "Washed Out"], "2000s",
+         "Electronic", "a downtempo electronica track at 95 BPM with warm analog textures, gentle beats, and atmospheric pads"),
+        ("Trap EDM", ["festival trap", "EDM trap"], (130, 155), "Trap-influenced festival electronic music with heavy drops and 808 bass",
+         (0.7, 0.95), (0.6, 0.8), ["RL Grime", "Baauer", "Flosstradamus", "Bro Safari"], "2010s",
+         "Electronic", "a trap EDM track at 140 BPM with massive 808 bass drops, brass stabs, and festival-ready builds"),
+        ("Midtempo Bass", ["midtempo"], (90, 115), "Dark, cinematic bass music at moderate tempos with heavy sound design",
+         (0.5, 0.8), (0.4, 0.65), ["Rezz", "1788-L", "Apashe", "Gramatik"], "2010s",
+         "Electronic", "a midtempo bass track at 100 BPM with dark cinematic textures, heavy bass design, and a hypnotic groove"),
+        # More Jazz
+        ("Afrobeat Jazz", ["Afrobeat-jazz fusion"], (100, 140), "Jazz incorporating West African Afrobeat rhythms and horn arrangements",
+         (0.5, 0.8), (0.6, 0.85), ["Kokoroko", "Ezra Collective", "Sons of Kemet", "Nubya Garcia"], "2010s",
+         "Jazz", "an Afrobeat jazz track at 120 BPM with West African rhythms, jazz improvisation, and a full horn section"),
+        # More R&B
+        ("Lo-fi R&B", ["lo-fi rnb"], (60, 90), "Warm, tape-saturated R&B with intimate production and bedroom aesthetics",
+         (0.2, 0.45), (0.4, 0.6), ["Daniel Caesar", "Brent Faiyaz", "Snoh Aalegra"], "2010s",
+         "R&B/Soul", "a lo-fi R&B track at 75 BPM with tape-saturated warmth, intimate vocals, and a mellow groove"),
+        # More Rock
+        ("Noise Pop Revival", ["noise-pop revival"], (110, 140), "Modern revival of noise pop with updated production and shoegaze influence",
+         (0.5, 0.75), (0.4, 0.6), ["No Age", "Wavves", "Jay Som", "Snail Mail"], "2010s",
+         "Rock", "a noise pop revival track with layers of fuzzy guitar, a catchy buried melody, and lo-fi production"),
+        ("Midwest Emo Revival", ["emo revival"], (100, 150), "2010s revival of 90s midwest emo with twinkling guitars and emotional vocals",
+         (0.4, 0.7), (0.3, 0.55), ["Modern Baseball", "The Hotelier", "Tiny Moving Parts", "Mom Jeans"], "2010s",
+         "Rock", "an emo revival track with twinkling guitar arpeggios, earnest vocals, and a dynamic punk-influenced rhythm"),
+        # More Hip-Hop
+        ("Jersey Club Rap", ["Jersey club hip-hop"], (130, 145), "Jersey club beats with rap vocals, rapid samples, and dance energy",
+         (0.7, 0.9), (0.7, 0.85), ["DJ Sliink", "Cookiee Kawaii", "Club Dangerous"], "2010s",
+         "Hip-Hop/Rap", "a Jersey club rap track at 140 BPM with rapid-fire vocal chops, rap verses, and a frenetic club groove"),
+        # More Latin
+        ("Reggaeton Viejo", ["old school reggaeton", "underground reggaeton"], (85, 95), "Original underground reggaeton with raw production and Dem Bow riddim",
+         (0.6, 0.8), (0.7, 0.85), ["Tego Calderon", "Hector El Father", "Ivy Queen"], "1990s",
+         "Latin", "a reggaeton viejo track at 90 BPM with a raw Dem Bow riddim, aggressive vocal delivery, and underground energy"),
+        # More Country
+        ("Cosmic Country", ["cosmic american", "cosmic-country"], (80, 120), "Psychedelic-influenced country with spacey production and cosmic themes",
+         (0.3, 0.6), (0.3, 0.55), ["Gram Parsons", "Flying Burrito Brothers", "Sturgill Simpson"], "1970s",
+         "Country", "a cosmic country track with spacey pedal steel, psychedelic effects, and a laid-back country groove"),
+        # More Classical
+        ("Postminimalism", ["post-minimalism", "totalism"], (50, 140), "Evolution beyond minimalism with greater harmonic complexity and emotional range",
+         (0.2, 0.6), (0.2, 0.4), ["John Adams", "Steve Reich", "David Lang", "Julia Wolfe"], "1980s",
+         "Classical", "a postminimalist composition with repeating patterns, evolving harmonic complexity, and emotional depth"),
+        # More Other
+        ("Synthwave Cyberpunk", ["cyberpunk music"], (90, 130), "Dark, dystopian synthwave with cyberpunk aesthetics and heavy bass",
+         (0.5, 0.8), (0.4, 0.65), ["Daniel Deluxe", "Mega Drive", "Power Glove"], "2010s",
+         "Other", "a cyberpunk synthwave track with dark dystopian synths, heavy bass, and a futuristic noir atmosphere"),
+        ("Nerdcore", ["nerd rap", "nerdcore hip-hop"], (80, 120), "Hip-hop with geek culture themes — video games, science, technology",
+         (0.4, 0.7), (0.5, 0.7), ["MC Frontalot", "MC Chris", "Mega Ran", "Schaffer the Darklord"], "2000s",
+         "Other", "a nerdcore hip-hop track with geek culture references, a boom-bap beat, and witty lyrical delivery"),
+    ]
+
+    for sub in _final_expansion:
+        # Tuple: (name, aliases, bpm, prod_style, energy, dance, artists, era, parent, clap)
+        parent_name = sub[8]
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent=parent_name, aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["varied"],
+            defining_characteristics=[], typical_instruments=["varied"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=[parent_name], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.05, 0.5),
+            famous_artists=sub[6],
+            clap_descriptions=[sub[9]],
+        ))
+
+    # --- Blues (new top-level) ---
+    genres.append(Genre(
+        name="Blues", id=_id(), parent=None,
+        aliases=["blues music"], bpm_range=(60, 140),
+        key_tendencies=["blues scale", "minor pentatonic", "dominant 7th chords"],
+        defining_characteristics=["12-bar form", "blue notes", "call-and-response",
+                                  "emotional vocal delivery", "guitar bends"],
+        typical_instruments=["electric guitar", "harmonica", "bass", "drums", "piano"],
+        production_style="Raw, emotion-driven production centered on guitar tone, vocal expression, and the 12-bar blues form",
+        era_of_origin="1890s", parent_genres=["African American spirituals", "Work songs"],
+        sibling_genres=["Jazz", "R&B/Soul", "Rock"],
+        energy_range=(0.3, 0.75), danceability_range=(0.3, 0.65), acousticness_range=(0.15, 0.7),
+        famous_artists=["B.B. King", "Muddy Waters", "Robert Johnson", "Howlin' Wolf", "John Lee Hooker"],
+        clap_descriptions=[
+            "a blues track with an expressive electric guitar, a 12-bar form, and a raw, emotional vocal",
+            "a slow blues shuffle with stinging guitar bends, Hammond organ, and a deep groove",
+        ],
+    ))
+
+    _blues_subs = [
+        ("Delta Blues", ["Mississippi blues"], (60, 100), "Raw, acoustic blues from the Mississippi Delta with slide guitar and field-holler vocals",
+         (0.3, 0.6), (0.3, 0.5), ["Robert Johnson", "Son House", "Charley Patton"], "1920s",
+         "a Delta blues track with raw acoustic slide guitar, a gravelly vocal, and a hypnotic one-chord drone"),
+        ("Chicago Blues", ["electric blues"], (80, 130), "Amplified, band-oriented blues from Chicago with electric guitar and harmonica",
+         (0.5, 0.75), (0.4, 0.65), ["Muddy Waters", "Howlin' Wolf", "Buddy Guy", "Little Walter"], "1940s",
+         "a Chicago blues track with an amplified guitar, harmonica, and a driving rhythm section"),
+        ("Texas Blues", ["Texas-style blues"], (80, 130), "Energetic, guitar-driven blues from Texas with a horn-influenced big-band feel",
+         (0.5, 0.8), (0.4, 0.65), ["Stevie Ray Vaughan", "T-Bone Walker", "Albert Collins"], "1920s",
+         "a Texas blues track with fiery guitar licks, a swinging rhythm, and a horn section"),
+        ("British Blues", ["UK blues"], (80, 130), "Blues revival led by British musicians, bridging American blues and rock",
+         (0.5, 0.8), (0.4, 0.6), ["John Mayall", "Eric Clapton", "Fleetwood Mac"], "1960s",
+         "a British blues track with a classic Les Paul guitar tone, a steady shuffle beat, and emotional vocal"),
+        ("Jump Blues", ["jump"], (130, 180), "Uptempo, danceable blues with a big-band swing feel and energetic performance",
+         (0.6, 0.85), (0.7, 0.85), ["Louis Jordan", "Big Joe Turner", "Wynonie Harris"], "1940s",
+         "a jump blues track with a swinging horn section, an uptempo shuffle, and an energetic vocal"),
+        ("Piedmont Blues", ["East Coast blues"], (80, 120), "Fingerpicking-oriented acoustic blues from the Southeastern US",
+         (0.3, 0.55), (0.4, 0.6), ["Blind Blake", "Reverend Gary Davis", "Elizabeth Cotten"], "1920s",
+         "a Piedmont blues track with intricate fingerpicking, a ragtime influence, and a gentle acoustic groove"),
+        ("Swamp Blues", ["Louisiana blues"], (70, 110), "Heavy, murky blues from Louisiana with a slow, swampy feel and echo effects",
+         (0.3, 0.6), (0.3, 0.55), ["Slim Harpo", "Lightnin' Slim", "Lazy Lester"], "1950s",
+         "a swamp blues track with a murky guitar tone, heavy echo, and a slow, humid Louisiana groove"),
+        ("Hill Country Blues", ["North Mississippi blues"], (70, 110), "Hypnotic, drone-based blues from North Mississippi with trance-like repetition",
+         (0.3, 0.6), (0.4, 0.6), ["R.L. Burnside", "Junior Kimbrough", "Mississippi Fred McDowell"], "1920s",
+         "a hill country blues track with a hypnotic one-chord drone, trance-like repetition, and raw electric guitar"),
+        ("Soul Blues", ["soul-blues"], (70, 110), "Blues blending with soul music for a smoother, more vocally polished sound",
+         (0.4, 0.7), (0.5, 0.7), ["Bobby Bland", "Z.Z. Hill", "Johnnie Taylor"], "1960s",
+         "a soul blues track with a smooth vocal, horn section, and a groove blending blues and soul"),
+        ("Modern Blues", ["contemporary blues"], (70, 130), "Current blues drawing on traditional forms with modern production and diverse influences",
+         (0.4, 0.75), (0.4, 0.65), ["Gary Clark Jr.", "Joe Bonamassa", "Christone Kingfish Ingram"], "2000s",
+         "a modern blues track with a fiery guitar solo, contemporary production, and a classic blues form"),
+    ]
+
+    for sub in _blues_subs:
+        genres.append(Genre(
+            name=sub[0], id=_id(), parent="Blues", aliases=sub[1], bpm_range=sub[2],
+            key_tendencies=["blues scale", "minor pentatonic"],
+            defining_characteristics=[], typical_instruments=["electric guitar", "harmonica", "bass"],
+            production_style=sub[3], era_of_origin=sub[7],
+            parent_genres=["Blues"], sibling_genres=[],
+            energy_range=sub[4], danceability_range=sub[5], acousticness_range=(0.15, 0.7),
+            famous_artists=sub[6], clap_descriptions=[sub[8]],
+        ))
+
     return genres
 
 
