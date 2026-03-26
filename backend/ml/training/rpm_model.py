@@ -356,6 +356,13 @@ class RPMModel(nn.Module):
             if self.cfg.freeze_backbone:
                 for param in self._backbone.parameters():
                     param.requires_grad = False
+            # Move backbone to same device as the rest of the model
+            # (handles lazy loading after model.to(device))
+            try:
+                device = next(self.neck.parameters()).device
+                self._backbone = self._backbone.to(device)
+            except StopIteration:
+                pass
         return self._backbone
 
     @property

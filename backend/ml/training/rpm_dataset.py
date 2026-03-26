@@ -118,6 +118,8 @@ class LocalSampleLoader:
         }
 
         for pf in profile_files:
+            if pf.name.startswith("._"):
+                continue  # skip ExFAT resource fork files
             try:
                 with open(pf) as f:
                     profile = json.load(f)
@@ -131,11 +133,20 @@ class LocalSampleLoader:
                     source="local",
                 )
 
-                # Role label
-                labels = profile.get("labels", {})
-                role_str = labels.get("role", "unknown")
+                # Role label — check both precomputed format (top-level) and
+                # full profile format (inside "labels" sub-dict)
+                role_str = profile.get("role")  # precomputed format
+                if role_str is None:
+                    labels = profile.get("labels", {})
+                    role_str = labels.get("role", "unknown")
+                else:
+                    labels = profile.get("labels", {})
                 if role_str in role_map:
                     sample.role = role_map[role_str]
+
+                # Also use role_id directly if available (precomputed format)
+                if sample.role is None and "role_id" in profile:
+                    sample.role = profile["role_id"]
 
                 # Genre affinity → top genre
                 genre_affinity = labels.get("genre_affinity", {})

@@ -138,6 +138,7 @@ def main():
         local_profiles_dir=str(PRECOMPUTED_DIR),
         batch_size=16,  # conservative for MPS/CPU
         num_workers=0,  # safer for MPS
+        pin_memory=False,  # not supported on MPS
     )
 
     train_ds = RPMDataset(train_samples, data_cfg, feature_extractor, augment=True)

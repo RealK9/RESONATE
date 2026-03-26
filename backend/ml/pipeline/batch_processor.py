@@ -21,10 +21,12 @@ class BatchProcessor:
 
     def __init__(self, skip_embeddings: bool = False,
                  embedding_manager=None,
+                 rpm_extractor=None,
                  db_path: str | None = None,
                  max_workers: int = 4):
         self.skip_embeddings = skip_embeddings
         self.embedding_manager = embedding_manager
+        self.rpm_extractor = rpm_extractor
         self.max_workers = max_workers
         self.store = None
         if db_path:
@@ -62,6 +64,7 @@ class BatchProcessor:
                     filepath,
                     skip_embeddings=self.skip_embeddings,
                     embedding_manager=self.embedding_manager,
+                    rpm_extractor=self.rpm_extractor,
                     file_hash=file_hash,
                     source=source,
                 )
