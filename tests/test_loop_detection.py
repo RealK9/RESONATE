@@ -1,6 +1,6 @@
 import numpy as np
 import soundfile as sf
-from backend.ml.analysis.loop_detection import detect_loop
+from ml.analysis.loop_detection import detect_loop
 
 
 def test_oneshot_kick(kick_like):

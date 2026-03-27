@@ -1,15 +1,16 @@
 #pragma once
 #include <JuceHeader.h>
+#include <mutex>
 
 /**
  * RESONATE Bridge — TCP client.
  * Sends DAW transport state (BPM, time sig, position) to the RESONATE app.
- * Receives key change and capture requests from RESONATE.
+ * Receives key change requests and capture commands from RESONATE.
  *
- * Thread-safe design:
- *   - `socketLock` protects all socket access (timer thread, bg thread, caller thread)
- *   - `stateLock` protects transport state reads/writes
- *   - `connected` atomic for fast non-blocking checks
+ * THREAD SAFETY:
+ *   - updateTransport() called from audio thread timer — takes stateLock only
+ *   - sendJson()/sendRawBytes() may be called from any thread — take socketMutex
+ *   - run() loop reads socket — takes socketMutex for read operations
  */
 class BridgeClient : public juce::Thread,
                      public juce::Timer
@@ -36,13 +37,13 @@ public:
     std::function<void(const juce::String&)> onKeyChange;
     std::function<void()> onCaptureRequest;
 
-    // Thread-safe send methods (used by PluginProcessor for audio capture)
+    // Thread-safe send methods
     void sendJson(const juce::String& json);
     void sendRawBytes(const void* data, int size);
 
 private:
-    void run() override;           // Thread: connection + read loop
-    void timerCallback() override;  // Timer: send throttled updates
+    void run() override;
+    void timerCallback() override;
 
     void connectToServer();
     bool readResponse(juce::String& out);
@@ -52,7 +53,7 @@ private:
     std::atomic<bool> connected { false };
     TransportState latestState;
     juce::CriticalSection stateLock;
-    juce::CriticalSection socketLock;   // Protects ALL socket access
+    std::mutex socketMutex;  // protects all socket reads/writes
     std::unique_ptr<juce::StreamingSocket> socket;
 
     static constexpr int PORT = 9876;

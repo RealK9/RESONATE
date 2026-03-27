@@ -10,9 +10,9 @@ import statistics
 import time
 from collections import defaultdict
 
-from backend.ml.db.sample_store import SampleStore
-from backend.ml.models.preference import PreferencePair, UserTasteModel
-from backend.ml.training.preference_dataset import PreferenceDataset
+from ml.db.sample_store import SampleStore
+from ml.models.preference import PreferencePair, UserTasteModel
+from ml.training.preference_dataset import PreferenceDataset
 
 
 # Maximum absolute value for a weight delta.

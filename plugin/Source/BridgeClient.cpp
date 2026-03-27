@@ -1,7 +1,7 @@
 #include "BridgeClient.h"
 
 BridgeClient::BridgeClient()
-    : Thread("ResonateBridge")
+    : Thread("ResonateBridge-TCP")
 {
     startThread();
     startTimer(SEND_INTERVAL_MS);
@@ -33,7 +33,7 @@ juce::String BridgeClient::getStatus() const
 // ---------------------------------------------------------------------------
 void BridgeClient::disconnect()
 {
-    const juce::ScopedLock sl(socketLock);
+    std::lock_guard<std::mutex> lock(socketMutex);
     connected.store(false);
     if (socket != nullptr)
     {
@@ -86,6 +86,7 @@ void BridgeClient::run()
             connectToServer();
         }
 
+        // Check for incoming messages (key changes, capture requests)
         if (connected.load())
         {
             juce::String response;
@@ -102,14 +103,11 @@ void BridgeClient::run()
                 }
                 else if (response.contains("captureAudio"))
                 {
+                    // Fire capture on a detached thread to avoid blocking the read loop
                     if (onCaptureRequest)
                     {
-                        // Invoke on a separate thread to avoid blocking the read loop
-                        juce::MessageManager::callAsync([this]()
-                        {
-                            if (onCaptureRequest)
-                                onCaptureRequest();
-                        });
+                        auto cb = onCaptureRequest;
+                        std::thread([cb]() { cb(); }).detach();
                     }
                 }
             }
@@ -129,7 +127,7 @@ void BridgeClient::connectToServer()
     if (newSocket->connect("127.0.0.1", PORT, 1000))
     {
         {
-            const juce::ScopedLock sl(socketLock);
+            std::lock_guard<std::mutex> lock(socketMutex);
             socket = std::move(newSocket);
         }
         connected.store(true);
@@ -137,7 +135,7 @@ void BridgeClient::connectToServer()
     }
     else
     {
-        // Wait before retry (interruptible)
+        // Wait before retry — but check for exit periodically
         for (int i = 0; i < RECONNECT_DELAY_MS / 50 && !threadShouldExit(); ++i)
             wait(50);
     }
@@ -171,11 +169,11 @@ void BridgeClient::timerCallback()
 }
 
 // ---------------------------------------------------------------------------
-// Thread-safe send (protected by socketLock)
+// Thread-safe send (protected by socketMutex)
 // ---------------------------------------------------------------------------
 void BridgeClient::sendJson(const juce::String& json)
 {
-    const juce::ScopedLock sl(socketLock);
+    std::lock_guard<std::mutex> lock(socketMutex);
 
     if (socket == nullptr || !socket->isConnected())
     {
@@ -193,10 +191,10 @@ void BridgeClient::sendJson(const juce::String& json)
         int written = socket->write(data + totalWritten, len - totalWritten);
         if (written <= 0)
         {
-            DBG("ResonateBridge: Write failed, disconnecting");
             connected.store(false);
             socket->close();
             socket.reset();
+            DBG("ResonateBridge: Connection lost (write failed)");
             return;
         }
         totalWritten += written;
@@ -205,7 +203,7 @@ void BridgeClient::sendJson(const juce::String& json)
 
 void BridgeClient::sendRawBytes(const void* data, int size)
 {
-    const juce::ScopedLock sl(socketLock);
+    std::lock_guard<std::mutex> lock(socketMutex);
 
     if (socket == nullptr || !socket->isConnected())
     {
@@ -213,30 +211,34 @@ void BridgeClient::sendRawBytes(const void* data, int size)
         return;
     }
 
-    const auto* bytes = static_cast<const char*>(data);
-    int totalWritten = 0;
+    // Send in chunks to avoid blocking too long
+    const int CHUNK = 32768;
+    const char* ptr = static_cast<const char*>(data);
+    int remaining = size;
 
-    while (totalWritten < size)
+    while (remaining > 0)
     {
-        int written = socket->write(bytes + totalWritten, size - totalWritten);
+        int toSend = juce::jmin(remaining, CHUNK);
+        int written = socket->write(ptr, toSend);
         if (written <= 0)
         {
-            DBG("ResonateBridge: Raw write failed, disconnecting");
             connected.store(false);
             socket->close();
             socket.reset();
+            DBG("ResonateBridge: Connection lost (raw write failed)");
             return;
         }
-        totalWritten += written;
+        ptr += written;
+        remaining -= written;
     }
 }
 
 // ---------------------------------------------------------------------------
-// Non-blocking read (protected by socketLock)
+// Non-blocking read (protected by socketMutex)
 // ---------------------------------------------------------------------------
 bool BridgeClient::readResponse(juce::String& out)
 {
-    const juce::ScopedLock sl(socketLock);
+    std::lock_guard<std::mutex> lock(socketMutex);
 
     if (socket == nullptr || !socket->isConnected())
     {

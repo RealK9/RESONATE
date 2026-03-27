@@ -4,8 +4,8 @@ scoring for the reranker's ``user_preference`` (theta) component.
 """
 from __future__ import annotations
 
-from backend.ml.models.preference import UserTasteModel
-from backend.ml.training.preference_dataset import PreferenceDataset
+from ml.models.preference import UserTasteModel
+from ml.training.preference_dataset import PreferenceDataset
 
 
 def _rescale_bias(bias_value: float) -> float:

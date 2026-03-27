@@ -1,6 +1,8 @@
+torch = __import__("pytest").importorskip("torch")
+transformers = __import__("pytest").importorskip("transformers")
 import numpy as np
 import pytest
-from backend.ml.embeddings.ast_embeddings import ASTExtractor
+from ml.embeddings.ast_embeddings import ASTExtractor
 
 
 @pytest.fixture(scope="session")

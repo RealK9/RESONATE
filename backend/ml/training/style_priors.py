@@ -11,11 +11,11 @@ import json
 import os
 from pathlib import Path
 
-from backend.ml.analysis.reference_profiles import (
+from ml.analysis.reference_profiles import (
     DefaultPriors,
     ReferenceProfileBuilder,
 )
-from backend.ml.models.reference_profile import ReferenceCorpus
+from ml.models.reference_profile import ReferenceCorpus
 
 
 # Supported audio extensions (same set as backend/config.py)
@@ -63,8 +63,8 @@ class StylePriorsTrainer:
         """
         # Import lazily so the module can be loaded even when heavy
         # audio dependencies (librosa, etc.) are not installed.
-        from backend.ml.analysis.mix_analyzer import analyze_mix
-        from backend.ml.analysis.style_classifier import StyleClassifier
+        from ml.analysis.mix_analyzer import analyze_mix
+        from ml.analysis.style_classifier import StyleClassifier
 
         mix_profile = analyze_mix(filepath)
 

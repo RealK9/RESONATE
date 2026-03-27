@@ -1,6 +1,6 @@
 import json
 import numpy as np
-from backend.ml.models.sample_profile import (
+from ml.models.sample_profile import (
     SampleProfile, CoreDescriptors, SpectralDescriptors,
     HarmonicDescriptors, TransientDescriptors, PerceptualDescriptors,
     Embeddings, PredictedLabels,

@@ -5,12 +5,12 @@ import time
 
 import pytest
 
-from backend.ml.models.preference import (
+from ml.models.preference import (
     FeedbackEvent,
     PreferencePair,
     UserTasteModel,
 )
-from backend.ml.training.preference_dataset import PreferenceDataset
+from ml.training.preference_dataset import PreferenceDataset
 
 
 @pytest.fixture

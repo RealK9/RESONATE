@@ -4,17 +4,17 @@ Single-sample analysis pipeline. Orchestrates all extractors into a complete Sam
 from __future__ import annotations
 import logging
 from pathlib import Path
-from backend.ml.models.sample_profile import SampleProfile
-from backend.ml.analysis.core_descriptors import extract_core_descriptors
-from backend.ml.analysis.spectral_descriptors import extract_spectral_descriptors
-from backend.ml.analysis.harmonic_descriptors import extract_harmonic_descriptors
-from backend.ml.analysis.transient_descriptors import extract_transient_descriptors
-from backend.ml.analysis.perceptual_descriptors import extract_perceptual_descriptors
-from backend.ml.analysis.loop_detection import detect_loop
-from backend.ml.classifiers.role_classifier import RoleClassifier
-from backend.ml.classifiers.genre_era_classifier import GenreEraClassifier
-from backend.ml.classifiers.style_tagger import StyleTagger
-from backend.ml.classifiers.quality_scorer import QualityScorer
+from ml.models.sample_profile import SampleProfile
+from ml.analysis.core_descriptors import extract_core_descriptors
+from ml.analysis.spectral_descriptors import extract_spectral_descriptors
+from ml.analysis.harmonic_descriptors import extract_harmonic_descriptors
+from ml.analysis.transient_descriptors import extract_transient_descriptors
+from ml.analysis.perceptual_descriptors import extract_perceptual_descriptors
+from ml.analysis.loop_detection import detect_loop
+from ml.classifiers.role_classifier import RoleClassifier
+from ml.classifiers.genre_era_classifier import GenreEraClassifier
+from ml.classifiers.style_tagger import StyleTagger
+from ml.classifiers.quality_scorer import QualityScorer
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,8 @@ _quality_scorer = QualityScorer()
 
 
 def analyze_sample(filepath: str, skip_embeddings: bool = False,
-                   embedding_manager=None, file_hash: str = "",
+                   embedding_manager=None, rpm_extractor=None,
+                   file_hash: str = "",
                    source: str = "local") -> SampleProfile:
     """
     Run the complete analysis pipeline on a single audio file.
@@ -83,8 +84,59 @@ def analyze_sample(filepath: str, skip_embeddings: bool = False,
     except Exception as e:
         logger.error(f"Loop detection failed for {filepath}: {e}")
 
+    # Stage 3: Embeddings + Classification
+    # If RPM extractor is available, use it (replaces CLAP+PANNs+AST+classifiers)
+    if not skip_embeddings and rpm_extractor is not None:
+        try:
+            rpm_result = rpm_extractor.extract(filepath)
+
+            # Store the unified 768-d RPM embedding
+            profile.embeddings.rpm = rpm_result.embedding.tolist()
+
+            # RPM replaces all classifiers with one forward pass
+            profile.labels.role = rpm_result.role
+            profile.labels.role_confidence = rpm_result.role_confidence
+            profile.labels.rpm_genre_top = rpm_result.genre_top
+            profile.labels.rpm_genre_sub = rpm_result.genre_sub
+            profile.labels.rpm_instruments = rpm_result.instruments
+            profile.labels.rpm_key = rpm_result.key
+            profile.labels.rpm_chord_quality = rpm_result.chord_quality
+            profile.labels.rpm_mode = rpm_result.mode
+            profile.labels.rpm_era = rpm_result.era
+            profile.labels.rpm_chart_potential = rpm_result.chart_potential
+
+            # Map RPM outputs to legacy fields for backward compatibility
+            profile.labels.genre_affinity = rpm_result.role_distribution  # genre dist
+            profile.labels.era_affinity = rpm_result.era_distribution
+            profile.labels.commercial_readiness = rpm_result.chart_potential
+
+            # RPM perceptual descriptors override DSP-based ones
+            if rpm_result.perceptual:
+                for key, val in rpm_result.perceptual.items():
+                    if hasattr(profile.perceptual, key):
+                        setattr(profile.perceptual, key, val)
+
+            profile.labels.tonal = profile.harmonic.tonalness > 0.5
+
+            logger.info(f"RPM analysis: {rpm_result.role} ({rpm_result.role_confidence:.0%}), "
+                       f"genre={rpm_result.genre_top}, key={rpm_result.key}, "
+                       f"era={rpm_result.era}, chart={rpm_result.chart_potential:.2f}")
+
+        except Exception as e:
+            logger.error(f"RPM extraction failed for {filepath}: {e}")
+            # Fall back to legacy pipeline
+            _run_legacy_analysis(profile, filepath, path, embedding_manager)
+    elif not skip_embeddings:
+        _run_legacy_analysis(profile, filepath, path, embedding_manager)
+
+    return profile
+
+
+def _run_legacy_analysis(profile: SampleProfile, filepath: str, path: Path,
+                         embedding_manager=None):
+    """Legacy analysis pipeline using CLAP + PANNs + AST + separate classifiers."""
     # Stage 3: Embeddings (optional, requires ML models)
-    if not skip_embeddings and embedding_manager is not None:
+    if embedding_manager is not None:
         try:
             profile.embeddings = embedding_manager.extract_all(filepath)
         except Exception as e:
@@ -120,5 +172,3 @@ def analyze_sample(filepath: str, skip_embeddings: bool = False,
         profile.labels.commercial_readiness = _quality_scorer.score(filepath)
     except Exception as e:
         logger.error(f"Quality scoring failed for {filepath}: {e}")
-
-    return profile

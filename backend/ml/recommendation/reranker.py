@@ -23,16 +23,16 @@ from __future__ import annotations
 
 import math
 
-from backend.ml.models.mix_profile import MixProfile, NeedOpportunity, SpectralOccupancy
-from backend.ml.models.sample_profile import SampleProfile
-from backend.ml.models.recommendation import (
+from ml.models.mix_profile import MixProfile, NeedOpportunity, SpectralOccupancy
+from ml.models.sample_profile import SampleProfile
+from ml.models.recommendation import (
     Recommendation,
     ScoringBreakdown,
     RecommendationResult,
 )
-from backend.ml.models.reference_profile import ReferenceCorpus
-from backend.ml.training.preference_serving import PreferenceServer
-from backend.ml.recommendation.candidate_generator import (
+from ml.models.reference_profile import ReferenceCorpus
+from ml.training.preference_serving import PreferenceServer
+from ml.recommendation.candidate_generator import (
     _POLICY_TO_ROLES,
     _normalize_key,
     _root_of,

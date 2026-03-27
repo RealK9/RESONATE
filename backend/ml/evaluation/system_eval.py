@@ -15,9 +15,9 @@ from pathlib import Path
 
 import numpy as np
 
-from backend.ml.pipeline.batch_processor import BatchProcessor
-from backend.ml.pipeline.ingestion import analyze_sample
-from backend.ml.retrieval.vector_index import VectorIndex
+from ml.pipeline.batch_processor import BatchProcessor
+from ml.pipeline.ingestion import analyze_sample
+from ml.retrieval.vector_index import VectorIndex
 
 logger = logging.getLogger(__name__)
 
@@ -296,11 +296,11 @@ class SystemEval:
         """
         # Lazy imports for stage extractors — avoids import errors if a
         # particular extractor has unmet dependencies in the test env.
-        from backend.ml.analysis.core_descriptors import extract_core_descriptors
-        from backend.ml.analysis.spectral_descriptors import extract_spectral_descriptors
-        from backend.ml.analysis.harmonic_descriptors import extract_harmonic_descriptors
-        from backend.ml.analysis.transient_descriptors import extract_transient_descriptors
-        from backend.ml.analysis.perceptual_descriptors import extract_perceptual_descriptors
+        from ml.analysis.core_descriptors import extract_core_descriptors
+        from ml.analysis.spectral_descriptors import extract_spectral_descriptors
+        from ml.analysis.harmonic_descriptors import extract_harmonic_descriptors
+        from ml.analysis.transient_descriptors import extract_transient_descriptors
+        from ml.analysis.perceptual_descriptors import extract_perceptual_descriptors
 
         stage_extractors: dict[str, object] = {
             "core": extract_core_descriptors,

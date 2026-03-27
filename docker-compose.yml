@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/samples:/app/samples
+      - resonate-vectors:/app/vector_indexes
+      - resonate-db:/app
+      - model-cache:/root/.cache  # HuggingFace + PyTorch model cache
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - CYANITE_API_KEY=${CYANITE_API_KEY:-}
+    restart: unless-stopped
+
+volumes:
+  resonate-vectors:
+  resonate-db:
+  model-cache:

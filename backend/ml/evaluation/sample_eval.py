@@ -12,9 +12,9 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from backend.ml.classifiers.role_classifier import RoleClassifier
-from backend.ml.models.sample_profile import SampleProfile
-from backend.ml.pipeline.ingestion import analyze_sample
+from ml.classifiers.role_classifier import RoleClassifier
+from ml.models.sample_profile import SampleProfile
+from ml.pipeline.ingestion import analyze_sample
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +219,7 @@ class SampleAnalysisEval:
                 profile = analyze_sample(filepath, skip_embeddings=True)
                 # The ingestion pipeline stores chroma but not a key label
                 # directly on SampleProfile; fall back to mix-level detection.
-                from backend.ml.analysis.mix_analyzer import _detect_key
+                from ml.analysis.mix_analyzer import _detect_key
                 import soundfile as sf
 
                 audio, sr = sf.read(filepath, dtype="float32", always_2d=True)

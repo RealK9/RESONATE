@@ -1,6 +1,8 @@
+torch = __import__("pytest").importorskip("torch")
+laion_clap = __import__("pytest").importorskip("laion_clap")
 import numpy as np
 import pytest
-from backend.ml.embeddings.clap_embeddings import CLAPExtractor
+from ml.embeddings.clap_embeddings import CLAPExtractor
 
 
 @pytest.fixture(scope="session")

@@ -7,7 +7,19 @@ from __future__ import annotations
 import sqlite3
 import json
 from contextlib import contextmanager
-from backend.ml.models.sample_profile import SampleProfile
+import numpy as np
+from ml.models.sample_profile import SampleProfile
+
+
+def _numpy_serializer(obj):
+    """Handle numpy types for JSON serialization."""
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, (np.floating,)):
+        return float(obj)
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    raise TypeError(f"Not serializable: {type(obj)}")
 
 
 class SampleStore:
@@ -87,10 +99,13 @@ class SampleStore:
                     updated_at=strftime('%s','now')
             """, (
                 d["filepath"], d["filename"], d["file_hash"], d["source"],
-                json.dumps(d["core"]), json.dumps(d["spectral"]),
-                json.dumps(d["harmonic"]), json.dumps(d["transients"]),
-                json.dumps(d["perceptual"]), json.dumps(d["embeddings"]),
-                json.dumps(d["labels"]),
+                json.dumps(d["core"], default=_numpy_serializer),
+                json.dumps(d["spectral"], default=_numpy_serializer),
+                json.dumps(d["harmonic"], default=_numpy_serializer),
+                json.dumps(d["transients"], default=_numpy_serializer),
+                json.dumps(d["perceptual"], default=_numpy_serializer),
+                json.dumps(d["embeddings"], default=_numpy_serializer),
+                json.dumps(d["labels"], default=_numpy_serializer),
             ))
 
     def load(self, filepath: str) -> SampleProfile | None:

@@ -11,8 +11,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from backend.ml.models.mix_profile import MixProfile, NeedOpportunity
-from backend.ml.models.reference_profile import ReferenceCorpus, StylePrior
+from ml.models.mix_profile import MixProfile, NeedOpportunity
+from ml.models.reference_profile import ReferenceCorpus, StylePrior
 
 
 # ---------------------------------------------------------------------------

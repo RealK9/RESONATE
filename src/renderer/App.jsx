@@ -272,7 +272,7 @@ export default function App() {
         }
       }
       clearInterval(tmr.current); setStage(STAGES[STAGES.length - 1]); setProgress(100);
-      await loadSamples(); audio.loadTrack();
+      await loadSamples(); await audio.loadTrack();
 
       // Fetch v2 recommendations in the background if not already loaded
       if (v2Success && v2Recommendations.length === 0) {
@@ -397,7 +397,7 @@ export default function App() {
       setCurrentSessionId(d.id);
       setShowSessions(false);
       await loadSamples();
-      audio.loadTrack();
+      await audio.loadTrack();
       setScreen("results");
       toast.success("Session loaded: " + d.name);
     } catch { toast.error("Failed to load session"); }
@@ -431,7 +431,9 @@ export default function App() {
     return true;
   }).sort((a, b) => (b.match || 0) - (a.match || 0)), [displaySamples, category, selectedKey, search, tab, favorites, sourceFilter, moodFilter]);
 
-  const isSynced = bridge.connected && bridge.dawSync;
+  // Auto-sync to track key/BPM whenever we have an analysis (like Splice).
+  // Also syncs when DAW bridge is connected with dawSync enabled.
+  const isSynced = !!analysisResult || (bridge.connected && bridge.dawSync);
   const handlePlay = s => { setActiveSample(s); audio.toggle(s.path, s.id, isSynced); const idx = filtered.findIndex(x => x.id === s.id); if (idx >= 0) setSelectedIdx(idx); logV2Feedback(s, "audition"); };
   const selectAllVisible = useCallback(() => { setCheckedSamples(new Set(filtered.map(s => s.id))); }, [filtered]);
 
@@ -550,7 +552,7 @@ export default function App() {
         const d = await r.json();
         setAnalysisResult(d); setStage(STAGES[STAGES.length - 1]); setProgress(100);
         setFileName(d.filename || "DAW Master");
-        await loadSamples(); audio.loadTrack();
+        await loadSamples(); await audio.loadTrack();
         setTimeout(() => { setScreen("results"); toast.success("Bridge analysis complete"); }, 500);
       } else { setScreen("home"); toast.error("Bridge analysis failed — play some audio first"); }
     } catch { setScreen("home"); toast.error("Bridge analysis failed"); }

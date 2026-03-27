@@ -8,7 +8,7 @@ from __future__ import annotations
 import numpy as np
 import librosa
 import soundfile as sf
-from backend.ml.models.sample_profile import HarmonicDescriptors
+from ml.models.sample_profile import HarmonicDescriptors
 
 
 def extract_harmonic_descriptors(filepath: str) -> HarmonicDescriptors:

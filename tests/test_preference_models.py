@@ -4,7 +4,7 @@ import json
 import numpy as np
 import pytest
 
-from backend.ml.models.preference import (
+from ml.models.preference import (
     FeedbackEvent,
     PreferencePair,
     UserTasteModel,

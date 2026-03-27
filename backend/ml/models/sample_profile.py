@@ -97,6 +97,7 @@ class Embeddings:
     panns_music: list[float] = field(default_factory=list)      # 2048-dim
     ast_spectrogram: list[float] = field(default_factory=list)  # 768-dim
     panns_tags: dict[str, float] = field(default_factory=dict)  # tag -> confidence
+    rpm: list[float] = field(default_factory=list)              # 768-dim RPM unified embedding
 
 
 @dataclass
@@ -110,6 +111,16 @@ class PredictedLabels:
     era_affinity: dict[str, float] = field(default_factory=dict)     # decade -> 0-1
     commercial_readiness: float = 0.0  # 0-1
     style_tags: dict[str, float] = field(default_factory=dict)       # tag -> confidence
+
+    # RPM model predictions (replaces above when RPM is active)
+    rpm_genre_top: str = ""                                          # top-level genre
+    rpm_genre_sub: str = ""                                          # sub-genre
+    rpm_instruments: list[tuple[str, float]] = field(default_factory=list)  # detected instruments
+    rpm_key: str = ""                                                # detected key
+    rpm_chord_quality: str = ""                                      # dominant chord quality
+    rpm_mode: str = ""                                               # detected mode
+    rpm_era: str = ""                                                # decade estimate
+    rpm_chart_potential: float = 0.0                                 # 0-1 chart potential
 
 
 @dataclass

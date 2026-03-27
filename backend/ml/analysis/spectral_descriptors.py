@@ -9,7 +9,7 @@ import librosa
 import soundfile as sf
 from scipy import stats as scipy_stats
 from scipy.signal import find_peaks
-from backend.ml.models.sample_profile import SpectralDescriptors
+from ml.models.sample_profile import SpectralDescriptors
 
 
 def extract_spectral_descriptors(filepath: str) -> SpectralDescriptors:

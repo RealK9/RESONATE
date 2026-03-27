@@ -1,60 +1,68 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <thread>
+#include <mutex>
 
 ResonateBridgeProcessor::ResonateBridgeProcessor()
     : AudioProcessor(BusesProperties()
                      .withInput("Input", juce::AudioChannelSet::stereo(), true)
                      .withOutput("Output", juce::AudioChannelSet::stereo(), true))
 {
-    // When RESONATE requests audio capture, send the ring buffer.
-    // This callback is invoked via MessageManager::callAsync (not audio thread).
+    // When RESONATE requests audio capture:
+    // 1. Snapshot the ring buffer (under snapshotMutex — NOT captureLock)
+    // 2. Dispatch WAV encode + socket send to a detached thread
+    // processBlock is NEVER blocked by any of this.
     bridge.onCaptureRequest = [this]()
     {
-        juce::AudioBuffer<float> captured;
-        double sampleRate;
-        getCapturedAudio(captured, sampleRate);
+        juce::AudioBuffer<float> snapshot;
+        double sr;
+        getCapturedAudio(snapshot, sr);
 
-        if (captured.getNumSamples() == 0)
+        if (snapshot.getNumSamples() == 0)
         {
             bridge.sendJson("{\"type\":\"audioCapture\",\"error\":\"no audio captured\"}\n");
             return;
         }
 
-        // Write WAV to memory
-        juce::MemoryOutputStream wavStream;
+        // Heap-allocate the snapshot so the detached thread owns it
+        auto* heapBuf = new juce::AudioBuffer<float>(std::move(snapshot));
+        auto sampleRate = sr;
+        auto* bridgePtr = &bridge;
+
+        std::thread([heapBuf, sampleRate, bridgePtr]()
         {
-            auto writer = std::unique_ptr<juce::AudioFormatWriter>(
-                juce::WavAudioFormat().createWriterFor(
-                    &wavStream, sampleRate, captured.getNumChannels(),
-                    16, {}, 0));
-            if (writer)
-            {
-                writer->writeFromAudioSampleBuffer(captured, 0, captured.getNumSamples());
-                writer->flush();
-            }
-            else
-            {
-                bridge.sendJson("{\"type\":\"audioCapture\",\"error\":\"WAV encoding failed\"}\n");
-                return;
-            }
-        }
+            std::unique_ptr<juce::AudioBuffer<float>> buf(heapBuf);
 
-        auto headerJson = juce::String::formatted(
-            "{\"type\":\"audioCapture\",\"sampleRate\":%.0f,\"channels\":%d,"
-            "\"samples\":%d,\"wavSize\":%d}\n",
-            sampleRate,
-            captured.getNumChannels(),
-            captured.getNumSamples(),
-            (int)wavStream.getDataSize());
+            juce::MemoryOutputStream wavStream;
+            {
+                auto writer = std::unique_ptr<juce::AudioFormatWriter>(
+                    juce::WavAudioFormat().createWriterFor(
+                        &wavStream, sampleRate, buf->getNumChannels(),
+                        16, {}, 0));
+                if (writer)
+                {
+                    writer->writeFromAudioSampleBuffer(*buf, 0, buf->getNumSamples());
+                    writer->flush();
+                }
+            }
 
-        bridge.sendJson(headerJson);
-        bridge.sendRawBytes(wavStream.getData(), (int)wavStream.getDataSize());
+            auto headerJson = juce::String::formatted(
+                "{\"type\":\"audioCapture\",\"sampleRate\":%.0f,\"channels\":%d,"
+                "\"samples\":%d,\"wavSize\":%d}\n",
+                sampleRate,
+                buf->getNumChannels(),
+                buf->getNumSamples(),
+                (int)wavStream.getDataSize());
+
+            bridgePtr->sendJson(headerJson);
+            bridgePtr->sendRawBytes(wavStream.getData(), (int)wavStream.getDataSize());
+        }).detach();
     };
 }
 
 ResonateBridgeProcessor::~ResonateBridgeProcessor()
 {
-    // Clear callback before bridge destructor runs
+    // Clear callbacks before bridge destructor runs
     bridge.onCaptureRequest = nullptr;
     bridge.onKeyChange = nullptr;
 }
@@ -66,20 +74,22 @@ void ResonateBridgeProcessor::prepareToPlay(double sampleRate, int /*samplesPerB
     const int totalSamples = static_cast<int>(sampleRate * CAPTURE_SECONDS);
     captureBuffer.setSize(2, totalSamples);
     captureBuffer.clear();
-    captureWritePos = 0;
-    captureWrapped = false;
+    writePos.store(0, std::memory_order_relaxed);
+    samplesWritten.store(0, std::memory_order_release);
 }
 
 void ResonateBridgeProcessor::releaseResources()
 {
     const juce::ScopedLock sl(captureLock);
     captureBuffer.setSize(0, 0);
-    captureWritePos = 0;
-    captureWrapped = false;
+    writePos.store(0, std::memory_order_relaxed);
+    samplesWritten.store(0, std::memory_order_release);
 }
 
-void ResonateBridgeProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& /*midiMessages*/)
+void ResonateBridgeProcessor::processBlock(juce::AudioBuffer<float>& buffer,
+                                            juce::MidiBuffer& /*midiMessages*/)
 {
+    // ── Pure pass-through — never modify audio ──
     juce::ScopedNoDenormals noDenormals;
 
     // Read transport from DAW host
@@ -105,7 +115,7 @@ void ResonateBridgeProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
 
             lastTransport = state;
 
-            // Throttle: only send every ~10 blocks (~100ms at 44100/512)
+            // Throttle: only push to bridge every ~10 blocks (~100ms at 44100/512)
             if (++blockCounter >= 10)
             {
                 bridge.updateTransport(state);
@@ -114,90 +124,95 @@ void ResonateBridgeProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
         }
     }
 
-    // Capture audio into ring buffer
+    // ── Lock-free ring buffer write ──
+    // Only this thread writes writePos/captureBuffer — no lock needed.
+    const int numSamples = buffer.getNumSamples();
+    const int bufferSize = captureBuffer.getNumSamples();
+
+    if (bufferSize > 0 && numSamples > 0)
     {
-        const juce::ScopedTryLock sl(captureLock);
-        if (sl.isLocked())
+        const int numChannels = juce::jmin(buffer.getNumChannels(), 2);
+        int wp = writePos.load(std::memory_order_relaxed);
+
+        for (int ch = 0; ch < numChannels; ++ch)
         {
-            const int numSamples = buffer.getNumSamples();
-            const int bufferSize = captureBuffer.getNumSamples();
+            const float* src = buffer.getReadPointer(ch);
+            float* dst = captureBuffer.getWritePointer(ch);
 
-            if (bufferSize > 0 && numSamples > 0)
+            if (wp + numSamples <= bufferSize)
             {
-                const int numChannels = juce::jmin(buffer.getNumChannels(), 2);
-
-                // Clamp numSamples to bufferSize to prevent overflow
-                const int samplesToWrite = juce::jmin(numSamples, bufferSize);
-                int writePos = captureWritePos;
-
-                for (int ch = 0; ch < numChannels; ++ch)
-                {
-                    const float* src = buffer.getReadPointer(ch);
-                    float* dst = captureBuffer.getWritePointer(ch);
-
-                    if (writePos + samplesToWrite <= bufferSize)
-                    {
-                        std::memcpy(dst + writePos, src, sizeof(float) * samplesToWrite);
-                    }
-                    else
-                    {
-                        const int firstPart = bufferSize - writePos;
-                        std::memcpy(dst + writePos, src, sizeof(float) * firstPart);
-                        std::memcpy(dst, src + firstPart, sizeof(float) * (samplesToWrite - firstPart));
-                    }
-                }
-
-                int newPos = (writePos + samplesToWrite) % bufferSize;
-                if (newPos < writePos || (writePos + samplesToWrite) >= bufferSize)
-                    captureWrapped = true;
-
-                captureWritePos = newPos;
+                std::memcpy(dst + wp, src, sizeof(float) * numSamples);
+            }
+            else
+            {
+                const int firstPart = bufferSize - wp;
+                std::memcpy(dst + wp, src, sizeof(float) * firstPart);
+                std::memcpy(dst, src + firstPart, sizeof(float) * (numSamples - firstPart));
             }
         }
-        // If lock not acquired, skip this block (no audio glitch, just a gap in capture)
+
+        int newPos = (wp + numSamples) % bufferSize;
+        writePos.store(newPos, std::memory_order_release);
+        samplesWritten.fetch_add(numSamples, std::memory_order_release);
     }
 
-    // Ensure output matches input (pass-through)
+    // Clear any extra output channels
     for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 }
 
-void ResonateBridgeProcessor::getCapturedAudio(juce::AudioBuffer<float>& output, double& outSampleRate)
+void ResonateBridgeProcessor::getCapturedAudio(juce::AudioBuffer<float>& output,
+                                                double& outSampleRate)
 {
-    const juce::ScopedLock sl(captureLock);
+    // This runs on the bridge thread — take snapshotMutex (never held by audio thread)
+    std::lock_guard<std::mutex> lock(snapshotMutex);
+
     outSampleRate = currentSampleRate;
     const int bufferSize = captureBuffer.getNumSamples();
 
-    if (bufferSize == 0 || (captureWritePos == 0 && !captureWrapped))
+    if (bufferSize == 0)
     {
         output.setSize(2, 0);
         return;
     }
 
-    if (!captureWrapped)
+    // Read atomics with acquire to see latest audio thread writes
+    const int64_t totalWritten = samplesWritten.load(std::memory_order_acquire);
+    const int wp = writePos.load(std::memory_order_acquire);
+
+    if (totalWritten == 0)
     {
-        // Buffer hasn't wrapped — we have [0, captureWritePos) of valid data
-        const int totalSamples = captureWritePos;
-        output.setSize(2, totalSamples);
+        output.setSize(2, 0);
+        return;
+    }
+
+    // How much valid data do we have?
+    const bool wrapped = totalWritten >= bufferSize;
+
+    if (!wrapped)
+    {
+        // Haven't filled the buffer yet — copy 0..wp
+        const int validSamples = static_cast<int>(juce::jmin((int64_t)bufferSize, totalWritten));
+        output.setSize(2, validSamples);
         for (int ch = 0; ch < 2; ++ch)
             std::memcpy(output.getWritePointer(ch),
                         captureBuffer.getReadPointer(ch),
-                        sizeof(float) * totalSamples);
+                        sizeof(float) * validSamples);
     }
     else
     {
-        // Buffer has wrapped — read from writePos→end, then 0→writePos (chronological)
+        // Buffer has wrapped — full bufferSize of audio available
+        // Read chronologically: wp..end, then 0..wp
         output.setSize(2, bufferSize);
-        const int startPos = captureWritePos;
-        const int firstPart = bufferSize - startPos;
+        const int firstPart = bufferSize - wp;
         for (int ch = 0; ch < 2; ++ch)
         {
             std::memcpy(output.getWritePointer(ch),
-                        captureBuffer.getReadPointer(ch) + startPos,
+                        captureBuffer.getReadPointer(ch) + wp,
                         sizeof(float) * firstPart);
             std::memcpy(output.getWritePointer(ch) + firstPart,
                         captureBuffer.getReadPointer(ch),
-                        sizeof(float) * startPos);
+                        sizeof(float) * wp);
         }
     }
 }

@@ -60,6 +60,22 @@ try:
 except ImportError:
     pass
 
+# ── Cloudflare R2 Storage ─────────────────────────────────────────────────
+R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID", "")
+R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID", "")
+R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY", "")
+R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME", "resonate-data")
+R2_ENDPOINT_URL = os.environ.get(
+    "R2_ENDPOINT_URL",
+    f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com" if R2_ACCOUNT_ID else "",
+)
+HAS_R2 = bool(R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY)
+
+# ── Spotify API ───────────────────────────────────────────────────────────
+SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID", "")
+SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET", "")
+HAS_SPOTIFY = bool(SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET)
+
 # ── Claude client ──────────────────────────────────────────────────────────
 claude_client = None
 HAS_CLAUDE = False

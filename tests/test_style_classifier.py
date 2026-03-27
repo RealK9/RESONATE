@@ -2,8 +2,8 @@
 import numpy as np
 import pytest
 
-from backend.ml.analysis.style_classifier import StyleClassifier
-from backend.ml.models.mix_profile import (
+from ml.analysis.style_classifier import StyleClassifier
+from ml.models.mix_profile import (
     MixLevelAnalysis,
     MixProfile,
     SourceRolePresence,

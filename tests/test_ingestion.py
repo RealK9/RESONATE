@@ -1,6 +1,6 @@
 import pytest
-from backend.ml.pipeline.ingestion import analyze_sample
-from backend.ml.models.sample_profile import SampleProfile
+from ml.pipeline.ingestion import analyze_sample
+from ml.models.sample_profile import SampleProfile
 
 
 def test_analyze_sample_returns_profile(kick_like):

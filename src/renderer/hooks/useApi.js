@@ -3,7 +3,9 @@
  * Centralized backend API calls.
  */
 
-const API = "http://localhost:8000";
+// Configurable API URL — set VITE_RESONATE_API_URL for remote server
+const API = (typeof import.meta !== "undefined" && import.meta.env?.VITE_RESONATE_API_URL)
+  || "http://localhost:8000";
 
 export function useApi() {
   const checkHealth = async () => {

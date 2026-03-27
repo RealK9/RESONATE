@@ -1,6 +1,6 @@
 import numpy as np
-from backend.ml.analysis.transient_descriptors import extract_transient_descriptors
-from backend.ml.models.sample_profile import TransientDescriptors
+from ml.analysis.transient_descriptors import extract_transient_descriptors
+from ml.models.sample_profile import TransientDescriptors
 
 
 def test_returns_transient_descriptors(kick_like):

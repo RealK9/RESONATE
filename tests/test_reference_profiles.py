@@ -6,12 +6,12 @@ import json
 
 import pytest
 
-from backend.ml.analysis.reference_profiles import (
+from ml.analysis.reference_profiles import (
     ALL_CLUSTERS,
     DefaultPriors,
     ReferenceProfileBuilder,
 )
-from backend.ml.models.mix_profile import (
+from ml.models.mix_profile import (
     MixLevelAnalysis,
     MixProfile,
     SourceRolePresence,
@@ -19,7 +19,7 @@ from backend.ml.models.mix_profile import (
     StereoWidth,
     StyleCluster,
 )
-from backend.ml.models.reference_profile import ReferenceCorpus, StylePrior
+from ml.models.reference_profile import ReferenceCorpus, StylePrior
 
 
 # ---------------------------------------------------------------------------

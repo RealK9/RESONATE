@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import librosa
 import soundfile as sf
-from backend.ml.models.sample_profile import PerceptualDescriptors
+from ml.models.sample_profile import PerceptualDescriptors
 
 
 def extract_perceptual_descriptors(filepath: str) -> PerceptualDescriptors:

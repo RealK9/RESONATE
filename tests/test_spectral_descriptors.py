@@ -1,6 +1,6 @@
 import numpy as np
-from backend.ml.analysis.spectral_descriptors import extract_spectral_descriptors
-from backend.ml.models.sample_profile import SpectralDescriptors
+from ml.analysis.spectral_descriptors import extract_spectral_descriptors
+from ml.models.sample_profile import SpectralDescriptors
 
 
 def test_returns_spectral_descriptors(sine_440hz):

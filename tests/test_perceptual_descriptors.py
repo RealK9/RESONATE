@@ -1,6 +1,6 @@
 import numpy as np
-from backend.ml.analysis.perceptual_descriptors import extract_perceptual_descriptors
-from backend.ml.models.sample_profile import PerceptualDescriptors
+from ml.analysis.perceptual_descriptors import extract_perceptual_descriptors
+from ml.models.sample_profile import PerceptualDescriptors
 
 
 def test_returns_perceptual_descriptors(sine_440hz):

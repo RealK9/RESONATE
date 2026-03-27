@@ -1,4 +1,4 @@
-from backend.ml.classifiers.genre_era_classifier import GenreEraClassifier
+from ml.classifiers.genre_era_classifier import GenreEraClassifier
 
 
 def test_genre_affinity_returns_dict(kick_like):

@@ -3,6 +3,7 @@ RESONATE — Track analysis route.
 Supports file upload and bridge (DAW master) analysis.
 """
 
+from typing import Optional
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
 from config import HAS_CLAUDE
@@ -220,7 +221,7 @@ async def get_v2_profile():
 
 
 @router.post("/analyze/v2/reference")
-async def upload_reference(file: UploadFile = File(...), genre: str | None = None):
+async def upload_reference(file: UploadFile = File(...), genre: Optional[str] = None):
     """Upload a reference track to improve style priors.
 
     The file is saved to the uploads directory and stored for future
@@ -292,9 +293,12 @@ async def recommend_v2(max_results: int = 20):
 
     corpus = StylePriorsTrainer(str(REFERENCE_CORPUS_PATH)).load_or_default()
 
-    # Stage 1: candidate generation
-    print("  [v2] Generating candidates...")
-    generator = CandidateGenerator(sample_store=store)
+    # Stage 1: candidate generation (with vector index if available)
+    from indexer import get_vector_index
+    vector_index = get_vector_index()
+
+    print(f"  [v2] Generating candidates... (vector index: {'yes' if vector_index else 'no'})")
+    generator = CandidateGenerator(sample_store=store, vector_index=vector_index)
     candidates = generator.generate(mix_profile, needs, max_candidates=max_results * 5)
 
     # Load preference server (Phase 5)
@@ -356,7 +360,7 @@ async def log_feedback(
     action: str,
     mix_filepath: str = "",
     session_id: str = "",
-    rating: int | None = None,
+    rating: Optional[int] = None,
     recommendation_rank: int = 0,
 ):
     """Log a user interaction with a recommended sample.

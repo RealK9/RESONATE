@@ -6,7 +6,7 @@ from __future__ import annotations
 import numpy as np
 import librosa
 import soundfile as sf
-from backend.ml.models.sample_profile import TransientDescriptors
+from ml.models.sample_profile import TransientDescriptors
 
 
 def extract_transient_descriptors(filepath: str) -> TransientDescriptors:

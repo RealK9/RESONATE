@@ -23,7 +23,7 @@ class CLAPExtractor:
         """Load the CLAP model."""
         import laion_clap
 
-        self.model = laion_clap.CLAP_Module(enable_fusion=False, amodel="HTSAT-base")
+        self.model = laion_clap.CLAP_Module(enable_fusion=False, amodel="HTSAT-tiny")
         self.model.load_ckpt()  # Downloads checkpoint if needed
         self.model.eval()
 

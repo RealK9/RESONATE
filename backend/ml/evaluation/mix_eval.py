@@ -10,9 +10,9 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 
-from backend.ml.analysis.needs_engine import NeedsEngine
-from backend.ml.analysis.style_classifier import StyleClassifier
-from backend.ml.models.mix_profile import MixProfile, NeedOpportunity
+from ml.analysis.needs_engine import NeedsEngine
+from ml.analysis.style_classifier import StyleClassifier
+from ml.models.mix_profile import MixProfile, NeedOpportunity
 
 logger = logging.getLogger(__name__)
 

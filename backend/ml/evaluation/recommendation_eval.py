@@ -12,8 +12,8 @@ import math
 from collections import defaultdict
 from dataclasses import dataclass, field
 
-from backend.ml.models.preference import FeedbackEvent, PreferencePair
-from backend.ml.models.recommendation import Recommendation, RecommendationResult
+from ml.models.preference import FeedbackEvent, PreferencePair
+from ml.models.recommendation import Recommendation, RecommendationResult
 
 logger = logging.getLogger(__name__)
 

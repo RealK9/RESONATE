@@ -1,4 +1,4 @@
-from backend.ml.classifiers.style_tagger import StyleTagger
+from ml.classifiers.style_tagger import StyleTagger
 
 EXPECTED_TAGS = {"bright", "dark", "wide", "punchy", "analog", "digital",
                  "gritty", "clean", "warm", "airy", "tight", "loose"}

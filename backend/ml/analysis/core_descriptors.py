@@ -6,7 +6,7 @@ from __future__ import annotations
 import numpy as np
 import soundfile as sf
 import pyloudnorm as pyln
-from backend.ml.models.sample_profile import CoreDescriptors
+from ml.models.sample_profile import CoreDescriptors
 
 
 def extract_core_descriptors(filepath: str) -> CoreDescriptors:
