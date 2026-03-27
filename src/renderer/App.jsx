@@ -24,6 +24,10 @@ import { useBridge } from "./hooks/useBridge";
 import { WaveformTooltip } from "./components/WaveformTooltip";
 import { Modal } from "./components/Modal";
 import { MixPreviewBar } from "./components/MixPreviewBar";
+import { ProducerDNA } from "./components/ProducerDNA";
+import { ChartIntel } from "./components/ChartIntel";
+import { VersionTimeline } from "./components/VersionTimeline";
+import { SmartCollection } from "./components/SmartCollection";
 
 // ── Logo with background stripped + animated light tracing down the colored strokes ──
 function LogoBlend({ size, isDark, animate = true }) {
@@ -176,7 +180,16 @@ export default function App() {
   const [v2Available, setV2Available] = useState(true);            // v2 pipeline responded?
   const [v2Loading, setV2Loading] = useState(false);               // loading spinner for v2 recs
   const [viewMode, setViewMode] = useState("smart");               // "smart" | "all"
+  const [collections, setCollections] = useState([]);              // smart collection kits
+
+  // ── Producer DNA / Taste Profile State ──
+  const [dnaProfile, setDnaProfile] = useState(null);
+  const [dnaTraining, setDnaTraining] = useState(false);
   const [ringGlowing, setRingGlowing] = useState(false);           // readiness ring glow animation
+  const [chartComparison, setChartComparison] = useState(null);    // chart intelligence data
+
+  // ── Version Tracking State ──
+  const [versions, setVersions] = useState([]);                    // version timeline data
 
   // ── Virtual Scrolling State ──
   const scrollRef = useRef(null);
@@ -240,7 +253,7 @@ export default function App() {
 
   const runAnalysis = useCallback(async (file) => {
     setScreen("analyzing"); setProgress(0); setError(null); setSimilarSamples(null);
-    setMixProfile(null); setV2Recommendations([]); setMixNeeds([]); setGapAnalysis(null); setV2Loading(false);
+    setMixProfile(null); setV2Recommendations([]); setMixNeeds([]); setGapAnalysis(null); setChartComparison(null); setV2Loading(false);
     let p = 0, si = 0; setStage(STAGES[0]);
     tmr.current = setInterval(() => { p += Math.random() * 1.5 + 0.5; p = Math.min(p, 90); const nsi = Math.min(Math.floor(p / (90 / (STAGES.length - 1))), STAGES.length - 2); if (nsi !== si) { si = nsi; setStage(STAGES[nsi]); } setProgress(Math.round(p)); }, 100);
     try {
@@ -260,6 +273,8 @@ export default function App() {
         }
         v2Success = true;
         setV2Available(true);
+        // Fetch chart comparison in background
+        api.getChartComparison().then(c => setChartComparison(c)).catch(() => {});
         // Build v1-compatible analysis result
         const v1Compat = { analysis: { key: mp?.analysis?.key || "", bpm: mp?.analysis?.bpm || 0, genre: fullResult.summary?.blueprint_used || mp?.style?.primary_cluster || "", mood: "", energy_label: "", summary: fullResult.summary?.gap_summary || "", what_track_needs: (mp?.needs || []).map(n => n.description).slice(0, 6), frequency_bands: {}, frequency_gaps: [], detected_instruments: [] } };
         setAnalysisResult(v1Compat);
@@ -273,6 +288,8 @@ export default function App() {
           api.getGapAnalysisV2().then(g => setGapAnalysis(formatGapAnalysis(g))).catch(() => {});
           v2Success = true;
           setV2Available(true);
+          // Fetch chart comparison in background
+          api.getChartComparison().then(c => setChartComparison(c)).catch(() => {});
           const v1Compat = { analysis: { key: v2Result?.analysis?.key || "", bpm: v2Result?.analysis?.bpm || 0, genre: v2Result?.style?.primary_cluster || "", mood: "", energy_label: "", summary: "", what_track_needs: (v2Result?.needs || []).map(n => n.description).slice(0, 6), frequency_bands: {}, frequency_gaps: [], detected_instruments: [] } };
           setAnalysisResult(v1Compat);
         } catch {
@@ -293,9 +310,27 @@ export default function App() {
         api.getRecommendationsV2(30).then(recsResult => {
           if (recsResult?.recommendations) setV2Recommendations(recsResult.recommendations);
           setV2Loading(false);
+          // Fetch smart collections after recommendations are ready
+          api.getCollections().then(res => {
+            if (res?.collections) setCollections(res.collections);
+          }).catch(() => {});
         }).catch(() => setV2Loading(false));
       }
 
+      // Fetch smart collections if recommendations already exist
+      if (v2Success && v2Recommendations.length > 0) {
+        api.getCollections().then(res => {
+          if (res?.collections) setCollections(res.collections);
+        }).catch(() => {});
+      }
+
+      // Auto-save version and fetch timeline
+      const projectName = file.name.replace(/\.[^/.]+$/, "");
+      api.saveVersion(projectName, null, file.name).then(() => {
+        api.getVersions(projectName).then(res => {
+          if (res?.versions) setVersions(res.versions);
+        }).catch(() => {});
+      }).catch(() => {});
       setTimeout(() => {
         setScreen("results");
         const readiness = gapAnalysis?.readiness;
@@ -398,8 +433,10 @@ export default function App() {
       setCurrentSessionId(d.id);
       const sessR = await fetch(API + "/sessions"); const sessD = await sessR.json(); setSessions(sessD.sessions || []);
       toast.success("Session saved");
+      // Background-train taste model after saving session
+      api.trainTaste().catch(() => {});
     } catch { toast.error("Failed to save session"); }
-  }, [fileName, toast]);
+  }, [fileName, toast, api]);
 
   const loadSession = useCallback(async (sessionId) => {
     try {
@@ -553,7 +590,7 @@ export default function App() {
     logV2Feedback(sample, "drag");
   }, [currentSessionId, bridge.connected, bridge.dawSync, logV2Feedback]);
 
-  const handleNew = () => { setScreen("home"); setActiveSample(null); audio.stop(); setAnalysisResult(null); setSelectedIdx(-1); setSimilarSamples(null); setMixProfile(null); setV2Recommendations([]); setMixNeeds([]); setGapAnalysis(null); setViewMode("smart"); };
+  const handleNew = () => { setScreen("home"); setActiveSample(null); audio.stop(); setAnalysisResult(null); setSelectedIdx(-1); setSimilarSamples(null); setMixProfile(null); setV2Recommendations([]); setMixNeeds([]); setGapAnalysis(null); setChartComparison(null); setCollections([]); setViewMode("smart"); };
 
   const analyzeFromBridge = useCallback(async () => {
     try {
@@ -942,6 +979,9 @@ export default function App() {
               </div>
             )}
 
+            {/* Chart Intelligence Panel */}
+            {chartComparison && <ChartIntel data={chartComparison} />}
+
             {/* Bridge Status */}
             {bridge.connected && (
               <div style={{ padding: 10, borderRadius: 8, marginBottom: 12, background: isDark ? "rgba(34,197,94,0.06)" : "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.15)" }}>
@@ -1062,6 +1102,26 @@ export default function App() {
 
           {/* Main */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: theme.bg }}>
+            {/* Version Timeline */}
+            {versions.length > 0 && (
+              <VersionTimeline
+                versions={versions}
+                onSaveVersion={() => {
+                  const pName = fileName.replace(/\.[^/.]+$/, "");
+                  api.saveVersion(pName, null, fileName).then(() => {
+                    api.getVersions(pName).then(res => {
+                      if (res?.versions) setVersions(res.versions);
+                    }).catch(() => {});
+                    toast.success("Version saved");
+                  }).catch(() => toast.error("Failed to save version"));
+                }}
+                onSelectVersion={(v) => {
+                  if (v.readiness_score != null) {
+                    toast.success(`${v.version_label}: readiness ${Math.round(v.readiness_score)}/100`);
+                  }
+                }}
+              />
+            )}
             {/* AI Summary Card */}
             {(a.summary || gapAnalysis) && (
               <div style={{ padding: "12px 16px", background: theme.surface, borderBottom: "1px solid " + theme.border }}>
@@ -1116,9 +1176,10 @@ export default function App() {
               {[
                 { id: "matched", l: "AI Matched", c: displaySamples.length },
                 { id: "favorites", l: "Favorites", c: favorites.size },
+                { id: "dna", l: "Your DNA", c: null, color: "#D946EF" },
               ].map(t => (
-                <button key={t.id} onClick={() => setTab(t.id)} style={{ padding: "10px 14px", border: "none", background: "transparent", color: tab === t.id ? (t.color || theme.text) : theme.textMuted, fontSize: 11, fontWeight: tab === t.id ? 600 : 400, cursor: "pointer", borderBottom: tab === t.id ? "2px solid " + (t.color || theme.accent) : "2px solid transparent", fontFamily: AF, transition: "all 0.2s ease" }}>
-                  {t.l}<span style={{ marginLeft: 4, fontSize: 9, padding: "1px 4px", borderRadius: 4, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)" }}>{t.c}</span>
+                <button key={t.id} onClick={() => { setTab(t.id); if (t.id === "dna") api.getTasteProfile().then(setDnaProfile).catch(() => {}); }} style={{ padding: "10px 14px", border: "none", background: "transparent", color: tab === t.id ? (t.color || theme.text) : theme.textMuted, fontSize: 11, fontWeight: tab === t.id ? 600 : 400, cursor: "pointer", borderBottom: tab === t.id ? "2px solid " + (t.color || theme.accent) : "2px solid transparent", fontFamily: AF, transition: "all 0.2s ease" }}>
+                  {t.l}{t.c != null && <span style={{ marginLeft: 4, fontSize: 9, padding: "1px 4px", borderRadius: 4, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)" }}>{t.c}</span>}
                 </button>
               ))}
               {/* v2 view mode toggle */}
@@ -1144,8 +1205,9 @@ export default function App() {
               </div>
             )}
 
-            {(
-              /* ── Sample List ── */
+            {tab === "dna" ? (
+              <ProducerDNA data={dnaProfile} training={dnaTraining} onTrain={async () => { setDnaTraining(true); try { await api.trainTaste(); const p = await api.getTasteProfile(); setDnaProfile(p); } catch {} setDnaTraining(false); }} theme={theme} isDark={isDark} />
+            ) : (
               <>
                 <div style={{ display: "grid", gridTemplateColumns: "22px 30px 1fr 54px 40px 40px 42px", gap: 6, padding: "6px 14px", fontSize: 8, color: theme.textFaint, textTransform: "uppercase", letterSpacing: 1.5, background: theme.surface, borderBottom: "1px solid " + theme.borderLight, fontFamily: AF }}>
                   <span onClick={checkedSamples.size > 0 ? clearChecked : selectAllVisible} style={{ cursor: "pointer", textAlign: "center", fontSize: 7 }}>{checkedSamples.size > 0 ? "✓" : ""}</span><span /><span>Name</span><span>Match</span><span>Key</span><span>BPM</span><span>Len</span>
