@@ -1,4 +1,4 @@
 # pyproject.toml
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = [".", "backend"]
 testpaths = ["tests"]
