@@ -283,6 +283,27 @@ export function useAudioPlayer() {
     if (tSourceRef.current) tSourceRef.current.playbackRate.value = playbackRate;
   }, [playbackRate]);
 
+  // ── Preview In Context (enable mix + play in one action) ─────────────
+  const previewInContext = useCallback(async (id, path) => {
+    // Ensure mix mode is on
+    if (!mixModeRef.current) {
+      setMixMode(true);
+      mixModeRef.current = true;
+    }
+    // Ensure track is loaded
+    if (!trackBufferRef.current) {
+      const ctx = getCtx();
+      try {
+        const buf = await fetchBuffer(ctx, API + "/track/audio");
+        trackBufferRef.current = buf;
+      } catch (e) {
+        console.warn("previewInContext: Failed to load track:", e);
+      }
+    }
+    // Now play — mix mode is on so track will play in sync
+    await play(path, id, false);
+  }, [getCtx, play]);
+
   // ── Cleanup on unmount ────────────────────────────────────────────────
   useEffect(() => {
     return () => {
@@ -294,6 +315,6 @@ export function useAudioPlayer() {
   return {
     playing, currentId, toggle, stop, progress, duration, currentTime, seek,
     mixMode, toggleMix, trackVol, setTrackVol, sampleVol, setSampleVol,
-    loadTrack, playbackRate, setPlaybackRate,
+    loadTrack, playbackRate, setPlaybackRate, previewInContext,
   };
 }

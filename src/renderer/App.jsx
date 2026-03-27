@@ -23,6 +23,7 @@ import { ShortcutOverlay } from "./components/ShortcutOverlay";
 import { useBridge } from "./hooks/useBridge";
 import { WaveformTooltip } from "./components/WaveformTooltip";
 import { Modal } from "./components/Modal";
+import { MixPreviewBar } from "./components/MixPreviewBar";
 
 // ── Logo with background stripped + animated light tracing down the colored strokes ──
 function LogoBlend({ size, isDark, animate = true }) {
@@ -447,6 +448,7 @@ export default function App() {
   // Also syncs when DAW bridge is connected with dawSync enabled.
   const isSynced = !!analysisResult || (bridge.connected && bridge.dawSync);
   const handlePlay = s => { setActiveSample(s); audio.toggle(s.path, s.id, isSynced); const idx = filtered.findIndex(x => x.id === s.id); if (idx >= 0) setSelectedIdx(idx); logV2Feedback(s, "audition"); };
+  const handlePreviewInContext = useCallback((s) => { setActiveSample(s); audio.previewInContext(s.id, s.path); const idx = filtered.findIndex(x => x.id === s.id); if (idx >= 0) setSelectedIdx(idx); logV2Feedback(s, "audition"); }, [audio, filtered, logV2Feedback]);
   const selectAllVisible = useCallback(() => { setCheckedSamples(new Set(filtered.map(s => s.id))); }, [filtered]);
 
   // Count samples by source
@@ -1148,7 +1150,7 @@ export default function App() {
                 <div style={{ display: "grid", gridTemplateColumns: "22px 30px 1fr 54px 40px 40px 42px", gap: 6, padding: "6px 14px", fontSize: 8, color: theme.textFaint, textTransform: "uppercase", letterSpacing: 1.5, background: theme.surface, borderBottom: "1px solid " + theme.borderLight, fontFamily: AF }}>
                   <span onClick={checkedSamples.size > 0 ? clearChecked : selectAllVisible} style={{ cursor: "pointer", textAlign: "center", fontSize: 7 }}>{checkedSamples.size > 0 ? "✓" : ""}</span><span /><span>Name</span><span>Match</span><span>Key</span><span>BPM</span><span>Len</span>
                 </div>
-                <div ref={scrollRef} onScroll={handleScroll} style={{ flex: 1, overflowY: "auto", background: theme.surface }}>
+                <div ref={scrollRef} onScroll={handleScroll} style={{ flex: 1, overflowY: "auto", background: theme.surface, paddingBottom: (audio.mixMode && audio.playing && activeSample) ? 64 : 0 }}>
                   {samples.length === 0 && indexProgress && !indexProgress.done ? (
                     Array.from({ length: 12 }).map((_, i) => <SkeletonRow key={i} />)
                   ) : filtered.length > 0 ? (
@@ -1156,7 +1158,7 @@ export default function App() {
                       <div style={{ position: "absolute", top: startIdx * ROW_HEIGHT, width: "100%" }}>
                         {visibleSamples.map((s, i) => (
                           <div key={s.id} draggable onDragStart={e => handleDragStart(e, s)} style={{ height: ROW_HEIGHT }}>
-                            <SampleRow sample={s} isActive={activeSample?.id === s.id} isPlaying={audio.currentId === s.id && audio.playing} onPlay={handlePlay} isSelected={(startIdx + i) === selectedIdx} isChecked={checkedSamples.has(s.id)} onCheck={toggleCheck} onHoverWaveform={handleHoverWaveform} dawSync={isSynced} />
+                            <SampleRow sample={s} isActive={activeSample?.id === s.id} isPlaying={audio.currentId === s.id && audio.playing} onPlay={handlePlay} onPreviewInContext={handlePreviewInContext} isSelected={(startIdx + i) === selectedIdx} isChecked={checkedSamples.has(s.id)} onCheck={toggleCheck} onHoverWaveform={handleHoverWaveform} dawSync={isSynced} />
                           </div>
                         ))}
                       </div>
@@ -1206,6 +1208,7 @@ export default function App() {
           </div>
         </div>
       )}
+      <MixPreviewBar theme={theme} isDark={isDark} audio={audio} activeSample={activeSample} fileName={fileName} />
     </div>
   );
 }
