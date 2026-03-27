@@ -39,6 +39,8 @@ class ScoringBreakdown:
     user_preference: float = 0.0   # theta -- learned preference boost (Phase 5)
     masking_penalty: float = 0.0   # lambda -- frequency masking risk
     redundancy_penalty: float = 0.0  # mu -- too similar to existing elements
+    chart_potential_lift: float = 0.0  # nu -- how much this improves chart readiness
+    genre_coherence_lift: float = 0.0  # xi -- how much this tightens genre identity
 
 
 @dataclass

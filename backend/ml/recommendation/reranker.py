@@ -46,8 +46,8 @@ from ml.recommendation.candidate_generator import (
 # ---------------------------------------------------------------------------
 
 _DEFAULT_WEIGHTS: dict[str, float] = {
-    "alpha": 0.20,    # need_fit
-    "beta": 0.15,     # role_fit
+    "alpha": 0.14,    # need_fit (reduced from 0.20 to budget chart factors)
+    "beta": 0.11,     # role_fit (reduced from 0.15)
     "gamma": 0.15,    # spectral_complement
     "delta": 0.10,    # tonal_compatibility
     "epsilon": 0.08,  # rhythmic_compatibility
@@ -56,6 +56,8 @@ _DEFAULT_WEIGHTS: dict[str, float] = {
     "theta": 0.04,    # user_preference
     "lambda_": 0.05,  # masking_penalty
     "mu": 0.05,       # redundancy_penalty
+    "nu": 0.08,       # chart_potential_lift
+    "xi": 0.04,       # genre_coherence_lift
 }
 
 # Spectral band boundaries in Hz (10 bands, matching SpectralOccupancy).
@@ -84,9 +86,11 @@ class Reranker:
         corpus: ReferenceCorpus | None = None,
         weights: dict[str, float] | None = None,
         preference_server: PreferenceServer | None = None,
+        gap_result=None,
     ):
         self._corpus = corpus
         self._preference_server = preference_server
+        self._gap_result = gap_result  # GapAnalysisResult or None
         self._weights = dict(_DEFAULT_WEIGHTS)
         # Apply learned weight deltas from the preference server.
         if preference_server is not None and preference_server.is_loaded:
@@ -130,6 +134,8 @@ class Reranker:
                 + w["zeta"] * bd.style_prior_fit
                 + w["eta"] * bd.quality_prior
                 + w["theta"] * bd.user_preference
+                + w.get("nu", 0) * bd.chart_potential_lift
+                + w.get("xi", 0) * bd.genre_coherence_lift
                 - w["lambda_"] * bd.masking_penalty
                 - w["mu"] * bd.redundancy_penalty
             )
@@ -178,6 +184,8 @@ class Reranker:
             user_preference=self._user_preference(sample, mix),
             masking_penalty=self._masking_penalty(sample, mix),
             redundancy_penalty=self._redundancy_penalty(sample, already_selected),
+            chart_potential_lift=self._chart_potential_lift(sample, mix),
+            genre_coherence_lift=self._genre_coherence_lift(sample, mix),
         )
 
     # 1. Need fit -------------------------------------------------------
@@ -406,6 +414,67 @@ class Reranker:
         role = sample.labels.role
         count = sum(1 for s in already_selected if s.labels.role == role)
         return min(1.0, count * 0.3)
+
+    # 11. Chart potential lift -------------------------------------------
+
+    def _chart_potential_lift(self, sample: SampleProfile, mix: MixProfile) -> float:
+        """
+        How much adding this sample would improve chart readiness.
+        Uses gap analysis missing roles + sample's RPM chart potential.
+        """
+        gap = self._gap_result
+        if gap is None:
+            return 0.5  # neutral when no gap analysis
+
+        score = 0.0
+        role = sample.labels.role
+
+        # Reward samples that fill missing roles
+        missing = gap.missing_roles if hasattr(gap, "missing_roles") else []
+        if role in missing:
+            score += 0.5
+
+        # Reward high chart-potential samples when mix is low
+        sample_chart = getattr(sample.labels, "rpm_chart_potential", 0.0) or 0.0
+        mix_readiness = gap.production_readiness_score if hasattr(gap, "production_readiness_score") else 50
+        if sample_chart > 0.6 and mix_readiness < 60:
+            score += 0.3
+
+        # Reward genre-matching samples
+        sample_genre = getattr(sample.labels, "rpm_genre_top", "") or ""
+        mix_genre = mix.style.primary_cluster or ""
+        if sample_genre and mix_genre and sample_genre.lower() in mix_genre.lower():
+            score += 0.2
+
+        return min(1.0, max(0.0, score))
+
+    # 12. Genre coherence lift -------------------------------------------
+
+    def _genre_coherence_lift(self, sample: SampleProfile, mix: MixProfile) -> float:
+        """
+        Reward samples that tighten the genre identity of the mix.
+        Especially valuable when genre coherence is currently low.
+        """
+        gap = self._gap_result
+        if gap is None:
+            return 0.5  # neutral
+
+        coherence = gap.genre_coherence_score if hasattr(gap, "genre_coherence_score") else 0.5
+
+        # If genre is already coherent, this factor is neutral
+        if coherence > 0.75:
+            return 0.5
+
+        # Genre is unclear — reward samples matching primary cluster
+        sample_genre = getattr(sample.labels, "rpm_genre_top", "") or ""
+        mix_genre = mix.style.primary_cluster or ""
+        sample_chart = getattr(sample.labels, "rpm_chart_potential", 0.0) or 0.0
+
+        if sample_genre and mix_genre and sample_genre.lower() in mix_genre.lower():
+            if sample_chart > 0.6:
+                return 0.85  # strong genre match + chart potential
+            return 0.65  # genre match
+        return 0.3  # doesn't help genre coherence
 
     # ------------------------------------------------------------------
     # Helpers

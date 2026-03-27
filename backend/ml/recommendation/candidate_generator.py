@@ -178,9 +178,11 @@ class CandidateGenerator:
         self,
         sample_store: SampleStore,
         vector_index: VectorIndex | None = None,
+        gap_result=None,
     ):
         self._store = sample_store
         self._index = vector_index
+        self._gap_result = gap_result  # GapAnalysisResult (optional)
 
     def generate(
         self,
@@ -253,6 +255,14 @@ class CandidateGenerator:
                 seen_filepaths.add(sample.filepath)
                 ordered_candidates.append(sample)
 
+        # If gap analysis is available, boost candidates that fill critical gaps
+        if self._gap_result is not None and self._gap_result.missing_roles:
+            missing = set(self._gap_result.missing_roles)
+            # Partition into gap-fillers and others, preserving order within each
+            gap_fillers = [c for c in ordered_candidates if self._fills_missing_role(c, missing)]
+            others = [c for c in ordered_candidates if not self._fills_missing_role(c, missing)]
+            ordered_candidates = gap_fillers + others
+
         # Cap at max_candidates.  The list is already in need-priority order,
         # so truncating keeps the most important candidates.
         return ordered_candidates[:max_candidates]
@@ -302,6 +312,23 @@ class CandidateGenerator:
         ]
         peak_idx = int(np.argmax(chroma))
         return note_names[peak_idx]
+
+    @staticmethod
+    def _fills_missing_role(sample: SampleProfile, missing_roles: set[str]) -> bool:
+        """Check if a sample's detected role matches any missing role."""
+        sample_role = sample.labels.role.lower() if sample.labels.role else ""
+        # Map sample role labels to gap analysis role names
+        role_map = {
+            "kick": "kick", "snare": "snare_clap", "clap": "snare_clap",
+            "hat": "hats_tops", "hihat": "hats_tops", "hi-hat": "hats_tops",
+            "bass": "bass", "lead": "lead", "pad": "pad",
+            "chord": "chord_support", "keys": "chord_support",
+            "vocal": "vocal_texture", "vox": "vocal_texture",
+            "fx": "fx_transitions", "transition": "fx_transitions",
+            "texture": "ambience", "ambient": "ambience",
+        }
+        mapped = role_map.get(sample_role, sample_role)
+        return mapped in missing_roles
 
     def _embedding_search(
         self, mix_profile: MixProfile, k: int

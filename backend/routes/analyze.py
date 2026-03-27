@@ -18,12 +18,14 @@ try:
     from ml.analysis.mix_analyzer import analyze_mix
     from ml.analysis.style_classifier import StyleClassifier
     from ml.analysis.needs_engine import NeedsEngine
+    from ml.analysis.gap_analyzer import GapAnalyzer
     from ml.training.style_priors import StylePriorsTrainer
     from ml.recommendation.candidate_generator import CandidateGenerator
     from ml.recommendation.reranker import Reranker
     from ml.recommendation.explanations import ExplanationEngine
     from ml.db.sample_store import SampleStore
     from ml.models.recommendation import RecommendationResult
+    from ml.models.gap_analysis import GapAnalysisResult
     from ml.models.preference import FeedbackEvent
     from ml.training.preference_dataset import PreferenceDataset
     from ml.training.preference_serving import PreferenceServer
@@ -183,13 +185,18 @@ async def analyze_v2(file: UploadFile = File(...)):
     mix_profile = analyze_mix(str(dest))
 
     print("  [v2] Classifying style...")
-    StyleClassifier().classify(mix_profile)
+    mix_profile.style = StyleClassifier().classify(mix_profile)
 
     print("  [v2] Loading reference corpus...")
     corpus = StylePriorsTrainer(str(REFERENCE_CORPUS_PATH)).load_or_default()
 
     print("  [v2] Diagnosing needs...")
-    NeedsEngine(corpus=corpus).diagnose(mix_profile)
+    mix_profile.needs = NeedsEngine(corpus=corpus).diagnose(mix_profile)
+
+    print("  [v2] Running gap analysis...")
+    gap_result = GapAnalyzer().analyze(mix_profile)
+    mix_profile.gap_analysis = gap_result.to_dict()
+    state.latest_gap_result = gap_result
 
     state.latest_mix_profile = mix_profile
 
@@ -210,6 +217,19 @@ async def get_v2_needs():
         raise HTTPException(status_code=404, detail="No mix analyzed yet")
     profile_dict = state.latest_mix_profile.to_dict() if hasattr(state.latest_mix_profile, "to_dict") else state.latest_mix_profile
     return {"needs": profile_dict.get("needs", [])}
+
+
+@router.get("/analyze/v2/gap")
+async def get_v2_gap():
+    """Return the gap analysis from the latest v2 analysis.
+
+    Includes production readiness score (0-100), chart potential,
+    genre coherence, and an actionable list of gaps sorted by severity.
+    """
+    gap = getattr(state, "latest_gap_result", None)
+    if gap is None:
+        raise HTTPException(status_code=404, detail="No gap analysis available — call /analyze/v2 first")
+    return gap.to_dict()
 
 
 @router.get("/analyze/v2/profile")
@@ -297,8 +317,9 @@ async def recommend_v2(max_results: int = 20):
     from indexer import get_vector_index
     vector_index = get_vector_index()
 
-    print(f"  [v2] Generating candidates... (vector index: {'yes' if vector_index else 'no'})")
-    generator = CandidateGenerator(sample_store=store, vector_index=vector_index)
+    gap_result = getattr(state, "latest_gap_result", None)
+    print(f"  [v2] Generating candidates... (vector index: {'yes' if vector_index else 'no'}, gap analysis: {'yes' if gap_result else 'no'})")
+    generator = CandidateGenerator(sample_store=store, vector_index=vector_index, gap_result=gap_result)
     candidates = generator.generate(mix_profile, needs, max_candidates=max_results * 5)
 
     # Load preference server (Phase 5)
@@ -308,14 +329,14 @@ async def recommend_v2(max_results: int = 20):
     pref_server = PreferenceServer(pref_dataset)
     pref_server.load()
 
-    # Stage 2: reranking (with learned preferences if available)
-    print(f"  [v2] Reranking {len(candidates)} candidates...")
-    reranker = Reranker(corpus=corpus, preference_server=pref_server)
+    # Stage 2: reranking (with learned preferences + gap intelligence)
+    print(f"  [v2] Reranking {len(candidates)} candidates... (gap analysis: {'yes' if gap_result else 'no'})")
+    reranker = Reranker(corpus=corpus, preference_server=pref_server, gap_result=gap_result)
     recommendations = reranker.rerank(candidates, mix_profile, needs)
 
-    # Stage 3: explanations
+    # Stage 3: explanations (gap-aware)
     print("  [v2] Generating explanations...")
-    engine = ExplanationEngine()
+    engine = ExplanationEngine(gap_result=gap_result)
     engine.explain_batch(recommendations, mix_profile, needs)
 
     # Trim to requested count
@@ -339,6 +360,124 @@ async def get_latest_recommendations():
     if state.latest_recommendations is None:
         raise HTTPException(status_code=404, detail="No recommendations generated yet")
     return state.latest_recommendations.to_dict()
+
+
+# ---------------------------------------------------------------------------
+# v2 combined endpoint — the CORE workflow in a single call
+# ---------------------------------------------------------------------------
+
+@router.post("/analyze/v2/full")
+async def analyze_and_recommend(
+    file: UploadFile = File(...),
+    max_results: int = 20,
+):
+    """Full RESONATE workflow in one call: upload → analyze → gap analysis → recommend.
+
+    This is the primary endpoint for the core product experience.
+    Returns the complete picture: mix analysis, gap analysis (what's missing),
+    and scored sample recommendations (what to add).
+    """
+    _require_v2()
+    from config import UPLOAD_DIR, REFERENCE_CORPUS_PATH, PROFILE_DB_PATH
+
+    # Save uploaded file
+    dest = UPLOAD_DIR / file.filename
+    with open(dest, "wb") as f:
+        content = await file.read()
+        f.write(content)
+
+    # ── Stage 1: Mix Analysis ──
+    print("\n  [v2/full] Running mix analysis...")
+    mix_profile = analyze_mix(str(dest))
+
+    print("  [v2/full] Classifying style...")
+    mix_profile.style = StyleClassifier().classify(mix_profile)
+
+    print("  [v2/full] Loading reference corpus...")
+    corpus = StylePriorsTrainer(str(REFERENCE_CORPUS_PATH)).load_or_default()
+
+    print("  [v2/full] Diagnosing needs...")
+    mix_profile.needs = NeedsEngine(corpus=corpus).diagnose(mix_profile)
+
+    # ── Stage 2: Gap Analysis ──
+    print("  [v2/full] Running gap analysis...")
+    gap_result = GapAnalyzer().analyze(mix_profile)
+    mix_profile.gap_analysis = gap_result.to_dict()
+    state.latest_gap_result = gap_result
+    state.latest_mix_profile = mix_profile
+
+    # ── Stage 3: Recommendation ──
+    needs = mix_profile.needs
+    recommendations_list = []
+    total_candidates = 0
+
+    if needs:
+        store = SampleStore(str(PROFILE_DB_PATH))
+        store.init()
+
+        from indexer import get_vector_index
+        vector_index = get_vector_index()
+
+        print(f"  [v2/full] Generating candidates...")
+        generator = CandidateGenerator(
+            sample_store=store, vector_index=vector_index, gap_result=gap_result
+        )
+        candidates = generator.generate(mix_profile, needs, max_candidates=max_results * 5)
+        total_candidates = len(candidates)
+
+        # Load preference server
+        pref_db_path = str(PROFILE_DB_PATH).replace(".db", "_prefs.db")
+        pref_dataset = PreferenceDataset(pref_db_path)
+        pref_dataset.init()
+        pref_server = PreferenceServer(pref_dataset)
+        pref_server.load()
+
+        print(f"  [v2/full] Reranking {len(candidates)} candidates...")
+        reranker = Reranker(corpus=corpus, preference_server=pref_server, gap_result=gap_result)
+        recommendations_list = reranker.rerank(candidates, mix_profile, needs)
+
+        print("  [v2/full] Generating explanations...")
+        engine = ExplanationEngine(gap_result=gap_result)
+        engine.explain_batch(recommendations_list, mix_profile, needs)
+
+        recommendations_list = recommendations_list[:max_results]
+
+    rec_result = RecommendationResult(
+        mix_filepath=mix_profile.filepath,
+        recommendations=recommendations_list,
+        needs_addressed=list({r.need_addressed for r in recommendations_list if r.need_addressed}),
+        total_candidates_considered=total_candidates,
+    )
+    state.latest_recommendations = rec_result
+
+    # ── Also run v1 for backwards compat ──
+    print("  [v2/full] Running legacy v1 analysis...")
+    track = analyze_track(str(dest))
+    state.latest_track_file = dest
+    ai = _run_ai_analysis(track)
+    _finalize(track, ai, label="v2/full Analysis")
+
+    # ── Build combined response ──
+    print(f"  [v2/full] Complete! Readiness: {gap_result.production_readiness_score:.0f}/100 | "
+          f"Recommendations: {len(recommendations_list)}")
+
+    return {
+        "mix_profile": mix_profile.to_dict(),
+        "gap_analysis": gap_result.to_dict(),
+        "recommendations": rec_result.to_dict(),
+        "summary": {
+            "production_readiness": gap_result.production_readiness_score,
+            "chart_potential_current": gap_result.chart_potential_current,
+            "chart_potential_ceiling": gap_result.chart_potential_ceiling,
+            "genre_detected": gap_result.genre_detected,
+            "blueprint_used": gap_result.blueprint_name,
+            "total_gaps": gap_result.total_gaps,
+            "critical_gaps": gap_result.critical_gaps,
+            "missing_roles": gap_result.missing_roles,
+            "recommendations_count": len(recommendations_list),
+            "gap_summary": gap_result.summary,
+        },
+    }
 
 
 # ---------------------------------------------------------------------------

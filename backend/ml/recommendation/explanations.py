@@ -2,17 +2,21 @@
 Explanation engine -- Phase 4 human-readable recommendation explanations.
 
 Maps each recommendation to a natural-language explanation based on the
-decision policy that triggered it, the scoring breakdown, and the mix
-context.  The goal is output that reads like a music producer giving
-quick, confident advice -- not a computer spitting out numbers.
+decision policy that triggered it, the scoring breakdown, the mix
+context, and gap analysis results.  The goal is output that reads like
+a music producer giving quick, confident advice -- not a computer
+spitting out numbers.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 from ml.models.mix_profile import MixProfile, NeedOpportunity
 from ml.models.recommendation import Recommendation, ScoringBreakdown
 from ml.recommendation.candidate_generator import _POLICY_TO_ROLES
+
+if TYPE_CHECKING:
+    from ml.models.gap_analysis import GapAnalysisResult
 
 
 # ---------------------------------------------------------------------------
@@ -23,6 +27,41 @@ _BAND_NAMES = [
     "sub-bass", "bass", "low-mids", "mids", "upper-mids",
     "presence", "brilliance", "air", "ultra-highs", "beyond",
 ]
+
+# Human-friendly role labels (matches gap_analyzer._ROLE_LABELS)
+_ROLE_DISPLAY: dict[str, str] = {
+    "kick": "kick drum",
+    "snare_clap": "snare / clap",
+    "hats_tops": "hi-hats",
+    "bass": "bass",
+    "lead": "lead melody",
+    "chord_support": "chords / harmony",
+    "pad": "pads / atmosphere",
+    "vocal_texture": "vocal texture",
+    "fx_transitions": "FX / transitions",
+    "ambience": "ambience / room",
+    # Sample-level role names (shorter)
+    "snare": "snare", "clap": "clap", "hat": "hi-hat",
+    "vocal": "vocal", "fx": "FX", "texture": "texture",
+}
+
+# Genre display names
+_GENRE_DISPLAY: dict[str, str] = {
+    "modern_trap": "trap",
+    "modern_drill": "drill",
+    "2010s_edm_drop": "EDM",
+    "2020s_melodic_house": "melodic house",
+    "melodic_techno": "melodic techno",
+    "dnb": "drum & bass",
+    "afro_house": "afro house",
+    "pop_production": "pop",
+    "2000s_pop_chorus": "2000s pop",
+    "r_and_b": "R&B",
+    "1990s_boom_bap": "boom bap",
+    "lo_fi_chill": "lo-fi",
+    "cinematic": "cinematic",
+    "ambient": "ambient",
+}
 
 # Primary templates keyed by decision policy.
 _POLICY_TEMPLATES: dict[str, str] = {
@@ -39,178 +78,92 @@ _POLICY_TEMPLATES: dict[str, str] = {
 
 
 # ---------------------------------------------------------------------------
-# Genre family detection and genre-aware template overrides
+# Gap-aware explanation helpers
 # ---------------------------------------------------------------------------
 
-_GENRE_FAMILIES: dict[str, list[str]] = {
-    "trap": ["trap", "drill", "rage", "phonk"],
-    "edm": ["edm", "house", "deep house", "tech house", "techno", "trance",
-             "dubstep", "drum and bass", "dnb", "electro", "progressive house",
-             "future bass"],
-    "lofi": ["lo-fi", "lofi", "ambient", "chillhop", "downtempo", "chill"],
-    "rnb": ["r&b", "rnb", "soul", "neo-soul", "neo soul", "funk"],
-    "pop": ["pop", "synth-pop", "synthpop", "indie pop", "electropop",
-            "dance pop", "k-pop"],
-}
+def _gap_context_sentence(
+    role: str,
+    gap_result: "GapAnalysisResult | None",
+    mix_profile: MixProfile,
+) -> str:
+    """Build a sentence referencing gap analysis data when available.
 
-
-def _detect_genre_family(primary_cluster: str) -> str:
-    """Map a primary_cluster string to one of the known genre families."""
-    if not primary_cluster:
+    Returns an empty string if gap analysis adds nothing beyond what the
+    primary template already says.
+    """
+    if gap_result is None:
         return ""
-    cluster_lower = primary_cluster.lower()
-    for family, keywords in _GENRE_FAMILIES.items():
-        for kw in keywords:
-            if kw in cluster_lower:
-                return family
+
+    genre = _GENRE_DISPLAY.get(
+        gap_result.blueprint_name, gap_result.blueprint_name
+    )
+    readiness = gap_result.production_readiness_score
+
+    # Check if this sample's role fills a critical gap
+    role_lower = role.lower() if role else ""
+    # Map sample roles to gap analysis role names
+    _role_map = {
+        "kick": "kick", "snare": "snare_clap", "clap": "snare_clap",
+        "hat": "hats_tops", "hihat": "hats_tops",
+        "bass": "bass", "lead": "lead", "pad": "pad",
+        "chord": "chord_support", "keys": "chord_support",
+        "vocal": "vocal_texture", "fx": "fx_transitions",
+        "texture": "ambience", "ambient": "ambience",
+    }
+    mapped_role = _role_map.get(role_lower, role_lower)
+
+    # Check if this role is in the missing roles list
+    if mapped_role in gap_result.missing_roles:
+        role_label = _ROLE_DISPLAY.get(mapped_role, role)
+        return (
+            f"Your {genre} mix is currently at {readiness:.0f}/100 "
+            f"production readiness — adding {role_label} is one of the "
+            f"top priorities to get it chart-ready."
+        )
+
+    # Check for matching critical/moderate gaps
+    for gap in gap_result.gaps[:5]:  # top 5 by severity
+        if gap.category == "role" and gap.dimension == mapped_role:
+            role_label = _ROLE_DISPLAY.get(mapped_role, role)
+            if gap.severity > 0.7:
+                return (
+                    f"Gap analysis flagged weak {role_label} as a critical issue "
+                    f"for your {genre} production."
+                )
+            elif gap.severity > 0.4:
+                return (
+                    f"Strengthening your {role_label} would bring your {genre} "
+                    f"mix closer to chart-ready ({readiness:.0f}/100 currently)."
+                )
+
+        # Spectral gap that this role might address
+        if gap.category == "spectral" and gap.severity > 0.5:
+            band_role_map = {
+                "sub": ["kick", "bass"],
+                "bass": ["bass", "kick"],
+                "low_mid": ["bass", "pad", "chord_support"],
+                "mid": ["lead", "vocal_texture", "chord_support"],
+                "upper_mid": ["lead", "hats_tops", "vocal_texture"],
+                "presence": ["hats_tops", "lead"],
+                "brilliance": ["hats_tops"],
+                "air": ["hats_tops", "fx_transitions"],
+            }
+            filling_roles = band_role_map.get(gap.dimension, [])
+            if mapped_role in filling_roles:
+                return (
+                    f"This helps fill the {gap.dimension.replace('_', '-')} "
+                    f"energy gap identified in your mix."
+                )
+
+    # Chart potential uplift
+    if gap_result.chart_potential_current < 50 and readiness < 70:
+        return (
+            f"Your {genre} mix has room to grow — currently at "
+            f"{readiness:.0f}/100 readiness with "
+            f"{gap_result.chart_potential_ceiling:.0f}/100 potential."
+        )
+
     return ""
-
-
-# Genre-specific template overrides keyed by (policy, genre_family).
-# These replace the default template when the genre family is known,
-# using vocabulary that resonates with producers in each world.
-_GENRE_TEMPLATE_OVERRIDES: dict[tuple[str, str], str] = {
-    # --- trap / drill ---
-    ("fill_missing_role", "trap"):
-        "Your beat is missing {role}. This {sample_role} knocks and would lock that gap down.",
-    ("reinforce_existing", "trap"):
-        "Your {role} needs more weight. This hits hard and adds {quality} to make it slap.",
-    ("improve_polish", "trap"):
-        "This {role} brings that bounce \u2014 {specific_quality} to make the 808 knock harder.",
-    ("enhance_groove", "trap"):
-        "This percussion slaps \u2014 gives your bounce that extra knock it needs.",
-    ("reduce_emptiness", "trap"):
-        "Your mix needs more weight in the {band} range. This hits that gap hard.",
-    ("enhance_lift", "trap"):
-        "This adds that build-up energy \u2014 makes the drop hit even harder.",
-
-    # --- EDM / house ---
-    ("fill_missing_role", "edm"):
-        "Your mix is missing {role}. This {sample_role} drives the energy and fills that gap.",
-    ("reinforce_existing", "edm"):
-        "Your {role} could use reinforcement. This drives {quality} forward and strengthens the groove.",
-    ("improve_polish", "edm"):
-        "This {role} adds that main-stage energy \u2014 {specific_quality} to drive the drop.",
-    ("enhance_groove", "edm"):
-        "This drives the groove harder \u2014 gives your rhythm the energy it needs to build.",
-    ("reduce_emptiness", "edm"):
-        "Your mix has a gap in the {band} range. This builds out that frequency space with energy.",
-    ("enhance_lift", "edm"):
-        "This builds tension and energy \u2014 exactly what your drops need to land.",
-    ("add_movement", "edm"):
-        "This adds rhythmic drive to keep the energy building and evolving.",
-
-    # --- lo-fi / ambient ---
-    ("fill_missing_role", "lofi"):
-        "Your mix is missing {role}. This {sample_role} adds warmth and texture to fill that space.",
-    ("reinforce_existing", "lofi"):
-        "Your {role} could use more texture. This brings {quality} and adds atmosphere.",
-    ("improve_polish", "lofi"):
-        "This {role} adds warmth and space \u2014 {specific_quality} for that lived-in vibe.",
-    ("enhance_groove", "lofi"):
-        "This adds subtle texture to the rhythm \u2014 gives your beat that dusty warmth.",
-    ("reduce_emptiness", "lofi"):
-        "Your mix has space in the {band} range. This fills it with warm atmosphere.",
-    ("add_movement", "lofi"):
-        "This adds gentle movement and texture to keep the vibe breathing.",
-
-    # --- R&B / soul ---
-    ("fill_missing_role", "rnb"):
-        "Your mix is missing {role}. This {sample_role} brings that smooth feel to fill the pocket.",
-    ("reinforce_existing", "rnb"):
-        "Your {role} needs more pocket. This adds {quality} \u2014 smooth and locked in.",
-    ("improve_polish", "rnb"):
-        "This {role} brings warmth and groove \u2014 {specific_quality} for that polished feel.",
-    ("enhance_groove", "rnb"):
-        "This locks right into the pocket \u2014 gives your groove that smooth feel.",
-    ("reduce_emptiness", "rnb"):
-        "Your mix is missing warmth in the {band} range. This fills that space with smooth tone.",
-
-    # --- pop ---
-    ("fill_missing_role", "pop"):
-        "Your mix is missing {role}. This {sample_role} adds the hook and fills that gap.",
-    ("reinforce_existing", "pop"):
-        "Your {role} needs more shine. This adds {quality} to make it radio-ready.",
-    ("improve_polish", "pop"):
-        "This {role} brings commercial polish \u2014 {specific_quality} for that radio-ready shine.",
-    ("enhance_groove", "pop"):
-        "This tightens the rhythm up \u2014 gives your hook that polished, radio-ready bounce.",
-    ("reduce_emptiness", "pop"):
-        "Your mix needs more presence in the {band} range. This adds shine to fill that space.",
-}
-
-
-# ---------------------------------------------------------------------------
-# Alternative openings for batch de-duplication
-# ---------------------------------------------------------------------------
-
-# Keyed by policy, each list provides alternative opening patterns so that
-# batches of recommendations don't all start the same way.
-_ALTERNATIVE_OPENINGS: dict[str, list[str]] = {
-    "fill_missing_role": [
-        "There's a {role}-shaped hole in your mix. This {sample_role} fills it.",
-        "Your track needs {role} \u2014 this {sample_role} is the missing piece.",
-    ],
-    "reinforce_existing": [
-        "Your {role} is there but thin. This layers in {quality} to thicken it up.",
-        "Think of this as doubling down on your {role} \u2014 adds {quality} where it counts.",
-    ],
-    "improve_polish": [
-        "This {role} is that final coat of lacquer \u2014 {specific_quality}.",
-        "For mix-ready sheen, this {role} delivers {specific_quality}.",
-    ],
-    "increase_contrast": [
-        "Against your {existing_element}, this creates the contrast your mix needs.",
-        "This plays off your {existing_element} \u2014 the tension makes both hit harder.",
-    ],
-    "add_movement": [
-        "This keeps your arrangement from sitting still \u2014 rhythmic and melodic motion.",
-        "Keeps the ear interested \u2014 this brings movement where the mix was static.",
-    ],
-    "reduce_emptiness": [
-        "The {band} range is wide open \u2014 this fills that frequency real estate.",
-        "You've got empty space in the {band}. This claims it.",
-    ],
-    "support_transition": [
-        "Smooth out your transitions \u2014 this FX/texture bridges the gap between sections.",
-        "This makes your sections flow into each other instead of jumping.",
-    ],
-    "enhance_groove": [
-        "Your rhythm needs another layer \u2014 this percussion locks it in.",
-        "This tightens up the groove and gives the rhythm more pocket.",
-    ],
-    "enhance_lift": [
-        "Your builds need more payoff \u2014 this brings the emotional arc.",
-        "This lifts the energy where your arrangement needs it most.",
-    ],
-}
-
-
-# ---------------------------------------------------------------------------
-# Confidence-calibrated language
-# ---------------------------------------------------------------------------
-
-def _confidence_phrase(breakdown: ScoringBreakdown) -> str:
-    """
-    Return a confidence qualifier based on overall breakdown strength.
-    High scores get emphatic language, moderate gets measured,
-    low gets exploratory.
-    """
-    # Use the average of all scoring components as a proxy for confidence.
-    scores = [
-        breakdown.need_fit, breakdown.role_fit,
-        breakdown.spectral_complement, breakdown.tonal_compatibility,
-        breakdown.rhythmic_compatibility, breakdown.style_prior_fit,
-        breakdown.quality_prior,
-    ]
-    avg = sum(scores) / len(scores) if scores else 0.5
-
-    if avg > 0.8:
-        return "exactly what your mix needs"
-    elif avg > 0.4:
-        return "a solid addition"
-    else:
-        return "worth exploring"
 
 
 # ---------------------------------------------------------------------------
@@ -224,33 +177,30 @@ def _describe_quality(sample_role: str, breakdown: ScoringBreakdown) -> str:
     """
     # Build a scored list of (component_value, descriptor) pairs.
     candidates: list[tuple[float, str]] = [
-        (breakdown.spectral_complement, "fills the frequency spectrum"),
-        (breakdown.tonal_compatibility, "harmonic depth and color"),
-        (breakdown.rhythmic_compatibility, "locked-in rhythm"),
+        (breakdown.spectral_complement, "spectral fullness"),
+        (breakdown.tonal_compatibility, "harmonic richness"),
+        (breakdown.rhythmic_compatibility, "groove tightness"),
         (breakdown.style_prior_fit, "stylistic cohesion"),
-        (breakdown.quality_prior, "mix-ready polish"),
+        (breakdown.quality_prior, "polished production quality"),
     ]
 
-    # Role-specific overrides for more vivid, musical language.
+    # Role-specific overrides for more musical language.
     role_lower = sample_role.lower()
-    if role_lower in ("kick",):
-        candidates.append((breakdown.rhythmic_compatibility, "chest-thumping punch"))
-        candidates.append((breakdown.spectral_complement, "sub-rattling weight"))
-    elif role_lower in ("snare", "clap"):
-        candidates.append((breakdown.rhythmic_compatibility, "crack that cuts through"))
+    if role_lower in ("kick", "snare", "clap"):
+        candidates.append((breakdown.rhythmic_compatibility, "punchy attack"))
         candidates.append((breakdown.spectral_complement, "weight and body"))
     elif role_lower in ("bass",):
-        candidates.append((breakdown.spectral_complement, "ground-shaking low-end"))
-        candidates.append((breakdown.tonal_compatibility, "deep, round tone"))
+        candidates.append((breakdown.spectral_complement, "low-end warmth"))
+        candidates.append((breakdown.tonal_compatibility, "deep tone"))
     elif role_lower in ("hat",):
         candidates.append((breakdown.spectral_complement, "crisp shimmer"))
         candidates.append((breakdown.rhythmic_compatibility, "tight groove feel"))
     elif role_lower in ("lead", "vocal"):
         candidates.append((breakdown.tonal_compatibility, "melodic character"))
-        candidates.append((breakdown.spectral_complement, "bright, cutting presence"))
+        candidates.append((breakdown.spectral_complement, "bright presence"))
     elif role_lower in ("pad", "texture"):
-        candidates.append((breakdown.spectral_complement, "warm, enveloping texture"))
-        candidates.append((breakdown.tonal_compatibility, "lush harmonic tone"))
+        candidates.append((breakdown.spectral_complement, "warm texture"))
+        candidates.append((breakdown.tonal_compatibility, "lush tone"))
     elif role_lower in ("fx",):
         candidates.append((breakdown.spectral_complement, "spatial depth"))
         candidates.append((breakdown.style_prior_fit, "atmospheric character"))
@@ -431,56 +381,14 @@ class ExplanationEngine:
     sample was recommended, using language that sounds like advice from
     an experienced engineer rather than output from a scoring algorithm.
 
-    Parameters
-    ----------
-    gap_result : dict | None
-        Optional gap analysis result dict.  When provided, the engine
-        references readiness scores and chart-potential ceilings in its
-        explanations for fill_missing_role and improve_polish policies.
+    When a ``gap_result`` is provided, explanations reference specific gap
+    analysis data — production readiness scores, missing roles, and
+    spectral gaps — so the producer understands exactly how each sample
+    moves them closer to a chart-ready mix.
     """
 
-    def __init__(self, gap_result: dict[str, Any] | None = None) -> None:
-        self._gap_result = gap_result or {}
-        # Track which opening patterns have been used during a batch
-        # to avoid repetitive language.  Reset at the start of each batch.
-        self._used_patterns: dict[str, int] = {}
-
-    # ------------------------------------------------------------------
-    # Gap-context sentence generation
-    # ------------------------------------------------------------------
-
-    def _gap_context_sentence(self, policy: str, role: str, genre_family: str) -> str:
-        """
-        Build an optional sentence that references gap-analysis metrics
-        (readiness score, chart potential) when available.
-        """
-        if not self._gap_result:
-            return ""
-
-        genre_label = genre_family or "current"
-
-        if policy == "fill_missing_role":
-            readiness = self._gap_result.get("readiness_score")
-            if readiness is not None:
-                return (
-                    f"Your {genre_label} mix is at {readiness}/100 "
-                    f"\u2014 adding {role or 'this element'} is a top priority."
-                )
-
-        if policy == "improve_polish":
-            current_potential = self._gap_result.get("chart_potential")
-            ceiling = self._gap_result.get("chart_potential_ceiling")
-            if current_potential is not None and ceiling is not None:
-                return (
-                    f"This pushes your chart potential from {current_potential} "
-                    f"toward {ceiling}."
-                )
-
-        return ""
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+    def __init__(self, gap_result: "GapAnalysisResult | None" = None):
+        self._gap_result = gap_result
 
     def explain(
         self,
@@ -509,13 +417,8 @@ class ExplanationEngine:
         role = recommendation.role
         breakdown = recommendation.breakdown
 
-        # Detect genre family from the mix's style cluster.
-        genre_family = _detect_genre_family(
-            mix_profile.style.primary_cluster if mix_profile.style else ""
-        )
-
-        # --- Pick a template: genre-specific override or default ----------
-        template = self._pick_template(policy, genre_family)
+        # --- Build the primary sentence from the policy template ----------
+        template = _POLICY_TEMPLATES.get(policy, "")
         primary = self._fill_template(
             template, policy, role, breakdown, mix_profile, need
         )
@@ -525,35 +428,35 @@ class ExplanationEngine:
             quality = _describe_quality(role, breakdown)
             primary = f"This {role or 'sample'} brings {quality} to your mix."
 
+        # --- Gap-aware context sentence -----------------------------------
+        gap_sentence = _gap_context_sentence(
+            role, self._gap_result, mix_profile
+        )
+
         # --- Optionally add a secondary detail sentence -------------------
-        secondary = _secondary_detail(breakdown, mix_profile, role, policy)
-
-        # --- Gap-context sentence when gap analysis is available ----------
-        gap_sentence = self._gap_context_sentence(policy, role, genre_family)
-
-        # --- Confidence calibration ---------------------------------------
-        confidence = _confidence_phrase(breakdown)
+        # Skip generic secondary if we already have a gap-specific sentence
+        secondary = ""
+        if not gap_sentence:
+            secondary = _secondary_detail(breakdown, mix_profile, role, policy)
 
         # --- Incorporate the need description when available --------------
         need_clause = ""
-        if need and need.description:
+        if need and need.description and not gap_sentence:
+            # Weave the need description into the explanation when the
+            # primary template hasn't already covered it fully.
             need_desc_lower = need.description.lower()
             primary_lower = primary.lower()
+            # Avoid redundancy -- only add if the need description adds info.
             if not self._is_redundant(need_desc_lower, primary_lower):
                 need_clause = f" Your mix analysis flagged: \"{need.description}.\""
 
         parts = [primary]
         if gap_sentence:
             parts.append(gap_sentence)
-        if need_clause:
+        elif need_clause:
             parts.append(need_clause)
         if secondary:
             parts.append(secondary)
-
-        # Append a confidence-calibrated closer when not already wordy.
-        total_len = sum(len(p) for p in parts)
-        if total_len < 140:
-            parts.append(f"Overall, {confidence}.")
 
         return " ".join(parts).strip()
 
@@ -567,15 +470,10 @@ class ExplanationEngine:
         Add explanations to every recommendation in the list, in-place.
 
         Each recommendation is matched to its best-fit need, then
-        explained using :meth:`explain`.  The engine tracks which opening
-        patterns have been used so that the batch reads naturally without
-        repeating the same phrasing more than twice.
+        explained using :meth:`explain`.
 
         Returns the same list for convenience (mutations are in-place).
         """
-        # Reset the pattern tracker for this batch.
-        self._used_patterns = {}
-
         for rec in recommendations:
             matched_need = _match_need(rec, needs)
             rec.explanation = self.explain(rec, mix_profile, need=matched_need)
@@ -586,42 +484,6 @@ class ExplanationEngine:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
-
-    def _pick_template(self, policy: str, genre_family: str) -> str:
-        """
-        Select the best template for a (policy, genre_family) pair.
-
-        Checks genre-specific overrides first, falls back to the default
-        policy template, and applies batch de-duplication to avoid
-        repetitive openings.
-        """
-        # Track how many times we've used the primary template for this policy.
-        pattern_key = f"{policy}:primary"
-        use_count = self._used_patterns.get(pattern_key, 0)
-
-        # Try genre-specific override first.
-        if genre_family:
-            genre_key = (policy, genre_family)
-            genre_template = _GENRE_TEMPLATE_OVERRIDES.get(genre_key)
-            if genre_template:
-                genre_pattern_key = f"{policy}:{genre_family}"
-                genre_use_count = self._used_patterns.get(genre_pattern_key, 0)
-                if genre_use_count < 2:
-                    self._used_patterns[genre_pattern_key] = genre_use_count + 1
-                    return genre_template
-
-        # If we've used the primary template twice already, try alternatives.
-        if use_count >= 2:
-            alternatives = _ALTERNATIVE_OPENINGS.get(policy, [])
-            for i, alt in enumerate(alternatives):
-                alt_key = f"{policy}:alt{i}"
-                if self._used_patterns.get(alt_key, 0) < 2:
-                    self._used_patterns[alt_key] = self._used_patterns.get(alt_key, 0) + 1
-                    return alt
-
-        # Default: use the primary template.
-        self._used_patterns[pattern_key] = use_count + 1
-        return _POLICY_TEMPLATES.get(policy, "")
 
     def _fill_template(
         self,

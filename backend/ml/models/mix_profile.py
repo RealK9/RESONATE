@@ -100,6 +100,7 @@ class MixProfile:
     style: StyleCluster = field(default_factory=StyleCluster)
     needs: list[NeedOpportunity] = field(default_factory=list)
     density_map: list[float] = field(default_factory=list)
+    gap_analysis: dict = field(default_factory=dict)  # serialized GapAnalysisResult
 
     def to_dict(self) -> dict:
         return asdict(self)
