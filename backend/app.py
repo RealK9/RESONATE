@@ -16,6 +16,10 @@ from routes.preferences import router as preferences_router
 from routes.export import router as export_router
 from routes.layering import router as layering_router
 from routes.bridge import router as bridge_router
+from routes.taste_profile import router as taste_router
+from routes.chart_intelligence import router as chart_router
+from routes.versions import router as versions_router
+from routes.collections import router as collections_router
 
 
 def create_app() -> FastAPI:
@@ -41,6 +45,10 @@ def create_app() -> FastAPI:
     application.include_router(export_router)
     application.include_router(layering_router)
     application.include_router(bridge_router)
+    application.include_router(taste_router)
+    application.include_router(chart_router)
+    application.include_router(versions_router)
+    application.include_router(collections_router)
 
     # Start bridge server for VST3 plugin communication
     from bridge import run_bridge_in_thread

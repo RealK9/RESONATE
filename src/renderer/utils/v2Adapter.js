@@ -148,6 +148,17 @@ const GENRE_DISPLAY = {
   lo_fi_chill: "Lo-fi",
   cinematic: "Cinematic",
   ambient: "Ambient",
+  lo_fi_hip_hop: "Lo-Fi Hip Hop",
+  boom_bap: "Boom Bap",
+  rnb_soul: "R&B/Soul",
+  pop_electronic: "Pop",
+  indie_rock: "Indie Rock",
+  ambient_textural: "Ambient",
+  latin_reggaeton: "Reggaeton",
+  house_tech_house: "House/Tech House",
+  future_bass: "Future Bass",
+  phonk: "Phonk",
+  jazz_fusion: "Jazz Fusion",
 };
 
 /**

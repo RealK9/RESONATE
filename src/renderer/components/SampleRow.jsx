@@ -23,7 +23,7 @@ const ROLE_COLORS = {
   ambience: "#34D399", percussion: "#FB923C",
 };
 
-export const SampleRow = memo(function SampleRow({ sample, isActive, isPlaying, onPlay, isSelected, isChecked, onCheck, onHoverWaveform, dawSync = false }) {
+export const SampleRow = memo(function SampleRow({ sample, isActive, isPlaying, onPlay, onPreviewInContext, isSelected, isChecked, onCheck, onHoverWaveform, dawSync = false }) {
   const [hov, setHov] = useState(false);
   const rowRef = useRef(null);
   const { theme, mode } = useTheme();
@@ -42,12 +42,25 @@ export const SampleRow = memo(function SampleRow({ sample, isActive, isPlaying, 
           {isChecked && <svg width="8" height="8" viewBox="0 0 12 12" fill={isDark ? "#0D0D12" : "#fff"}><path d="M2 6l3 3 5-5" stroke={isDark ? "#0D0D12" : "#fff"} strokeWidth="2" fill="none" strokeLinecap="round" /></svg>}
         </div>
       </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
         {isActive && isPlaying ? (
           <div style={{ display: "flex", gap: 1.5, alignItems: "end", height: 12 }}>
             {[7, 11, 9, 10, 6].map((h, i) => <div key={i} style={{ width: 2, height: h, background: theme.text, borderRadius: 1, animation: "barBounce 0.55s ease " + (i * 0.08) + "s infinite alternate" }} />)}
           </div>
         ) : <svg width="11" height="11" viewBox="0 0 16 16" fill={hov ? theme.textSec : theme.textFaint}><path d="M4 2.5v11l9-5.5z" /></svg>}
+        {sample._isV2 && onPreviewInContext && (
+          <div
+            onClick={e => { e.stopPropagation(); onPreviewInContext(sample); }}
+            title="Preview in context with your track"
+            style={{ cursor: "pointer", opacity: hov ? 1 : 0.5, transition: "opacity 0.15s" }}
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <path d="M2 4v8l5-4z" fill={hov ? "#D946EF" : theme.textFaint} />
+              <path d="M6 4v8l5-4z" fill={hov ? "#D946EF" : theme.textFaint} opacity="0.5" />
+              <rect x="12" y="3" width="1.5" height="10" rx="0.5" fill={hov ? "#D946EF" : theme.textFaint} opacity="0.3" />
+            </svg>
+          </div>
+        )}
       </div>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 400, color: theme.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: SERIF }}>{sample.clean_name || sample.name}</div>

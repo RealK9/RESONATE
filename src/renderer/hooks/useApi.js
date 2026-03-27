@@ -109,6 +109,64 @@ export function useApi() {
     return r.json();
   };
 
+  // ---------------------------------------------------------------------------
+  // Smart Collections endpoints
+  // ---------------------------------------------------------------------------
+
+  /** Generate themed sample collections from current analysis. */
+  const getCollections = async () => {
+    const r = await fetch(API + "/collections/generate");
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.detail || "Failed to generate collections");
+    }
+    return r.json();
+  };
+
+  /** Export a collection as a ZIP file and trigger download. */
+  const exportCollection = async (collectionId) => {
+    const r = await fetch(API + `/collections/export/${collectionId}`, { method: "POST" });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.detail || "Export failed");
+    }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `RESONATE-${collectionId}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Chart Intelligence 2.0
+  // ---------------------------------------------------------------------------
+
+  /** Get chart trend data (decade + genre profiles). */
+  const getChartTrends = async (genre = null, decade = null) => {
+    const params = new URLSearchParams();
+    if (genre) params.set("genre", genre);
+    if (decade) params.set("decade", String(decade));
+    const qs = params.toString();
+    const r = await fetch(API + "/charts/trends" + (qs ? "?" + qs : ""));
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.detail || "Failed to load chart trends");
+    }
+    return r.json();
+  };
+
+  /** Compare latest mix against chart averages. */
+  const getChartComparison = async () => {
+    const r = await fetch(API + "/charts/compare");
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.detail || "Chart comparison failed");
+    }
+    return r.json();
+  };
+
   /** Full RESONATE workflow: upload → analyze → gap → recommend in one call. */
   const analyzeFullV2 = async (file, maxResults = 30) => {
     const fd = new FormData();
@@ -123,12 +181,72 @@ export function useApi() {
     return r.json();
   };
 
+  // ---------------------------------------------------------------------------
+  // Taste profile / Producer DNA endpoints
+  // ---------------------------------------------------------------------------
+
+  const getTasteProfile = async (userId = "default") => {
+    const r = await fetch(API + `/taste/profile?user_id=${userId}`);
+    return r.json();
+  };
+
+  const trainTaste = async (userId = "default") => {
+    const r = await fetch(API + `/taste/train?user_id=${userId}`, { method: "POST" });
+    return r.json();
+  };
+
+  // ---------------------------------------------------------------------------
+  // Version tracking endpoints
+  // ---------------------------------------------------------------------------
+
+  /** Save current analysis as a named version. */
+  const saveVersion = async (projectName, versionLabel = null, filepath = "") => {
+    const body = { project_name: projectName, filepath };
+    if (versionLabel) body.version_label = versionLabel;
+    const r = await fetch(API + "/versions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.detail || "Failed to save version");
+    }
+    return r.json();
+  };
+
+  /** Get all versions for a project. */
+  const getVersions = async (projectName) => {
+    const r = await fetch(API + "/versions/" + encodeURIComponent(projectName));
+    return r.json();
+  };
+
+  /** Compare two versions by id. */
+  const compareVersions = async (idA, idB) => {
+    const r = await fetch(API + `/versions/compare?id_a=${idA}&id_b=${idB}`);
+    return r.json();
+  };
+
+  /** List all projects with version counts. */
+  const listProjects = async () => {
+    const r = await fetch(API + "/versions/projects");
+    return r.json();
+  };
+
   return {
     checkHealth, getSettings, setSampleDir,
     analyzeTrack, getSamples, getSampleAbsPath,
     // v2
     analyzeTrackV2, getRecommendationsV2, logFeedbackV2,
     trainPreferencesV2, getNeedsV2, getGapAnalysisV2, analyzeFullV2,
+    // chart intelligence
+    getChartTrends, getChartComparison,
+    // taste profile
+    getTasteProfile, trainTaste,
+    // version tracking
+    saveVersion, getVersions, compareVersions, listProjects,
+    // smart collections
+    getCollections, exportCollection,
     API,
   };
 }

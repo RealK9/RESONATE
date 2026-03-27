@@ -23,6 +23,11 @@ import { ShortcutOverlay } from "./components/ShortcutOverlay";
 import { useBridge } from "./hooks/useBridge";
 import { WaveformTooltip } from "./components/WaveformTooltip";
 import { Modal } from "./components/Modal";
+import { MixPreviewBar } from "./components/MixPreviewBar";
+import { ProducerDNA } from "./components/ProducerDNA";
+import { ChartIntel } from "./components/ChartIntel";
+import { VersionTimeline } from "./components/VersionTimeline";
+import { SmartCollection } from "./components/SmartCollection";
 
 // ── Logo with background stripped + animated light tracing down the colored strokes ──
 function LogoBlend({ size, isDark, animate = true }) {
@@ -175,6 +180,16 @@ export default function App() {
   const [v2Available, setV2Available] = useState(true);            // v2 pipeline responded?
   const [v2Loading, setV2Loading] = useState(false);               // loading spinner for v2 recs
   const [viewMode, setViewMode] = useState("smart");               // "smart" | "all"
+  const [collections, setCollections] = useState([]);              // smart collection kits
+
+  // ── Producer DNA / Taste Profile State ──
+  const [dnaProfile, setDnaProfile] = useState(null);
+  const [dnaTraining, setDnaTraining] = useState(false);
+  const [ringGlowing, setRingGlowing] = useState(false);           // readiness ring glow animation
+  const [chartComparison, setChartComparison] = useState(null);    // chart intelligence data
+
+  // ── Version Tracking State ──
+  const [versions, setVersions] = useState([]);                    // version timeline data
 
   // ── Virtual Scrolling State ──
   const scrollRef = useRef(null);
@@ -183,6 +198,17 @@ export default function App() {
 
   const waveformUrl = useMemo(() => activeSample ? API + "/samples/audio/" + encodeURI(activeSample.path) : null, [activeSample]);
   const waveformPeaks = useWaveformData(waveformUrl);
+
+  // ── Readiness ring glow on change ──
+  const prevReadinessRef = useRef(null);
+  useEffect(() => {
+    if (gapAnalysis?.readiness != null && prevReadinessRef.current != null && gapAnalysis.readiness !== prevReadinessRef.current) {
+      setRingGlowing(true);
+      const t = setTimeout(() => setRingGlowing(false), 1200);
+      return () => clearTimeout(t);
+    }
+    if (gapAnalysis?.readiness != null) prevReadinessRef.current = gapAnalysis.readiness;
+  }, [gapAnalysis?.readiness]);
 
   const iStyle = { padding: "7px 9px", borderRadius: 5, border: "1px solid " + theme.border, background: isDark ? "#1E1E28" : "#fff", color: theme.text, fontSize: 11, outline: "none", fontFamily: "'DM Sans', sans-serif" };
   const lbl = { fontSize: 8, color: theme.textMuted, textTransform: "uppercase", letterSpacing: 2, marginBottom: 5, fontWeight: 600, fontFamily: AF };
@@ -227,7 +253,7 @@ export default function App() {
 
   const runAnalysis = useCallback(async (file) => {
     setScreen("analyzing"); setProgress(0); setError(null); setSimilarSamples(null);
-    setMixProfile(null); setV2Recommendations([]); setMixNeeds([]); setGapAnalysis(null); setV2Loading(false);
+    setMixProfile(null); setV2Recommendations([]); setMixNeeds([]); setGapAnalysis(null); setChartComparison(null); setV2Loading(false);
     let p = 0, si = 0; setStage(STAGES[0]);
     tmr.current = setInterval(() => { p += Math.random() * 1.5 + 0.5; p = Math.min(p, 90); const nsi = Math.min(Math.floor(p / (90 / (STAGES.length - 1))), STAGES.length - 2); if (nsi !== si) { si = nsi; setStage(STAGES[nsi]); } setProgress(Math.round(p)); }, 100);
     try {
@@ -247,6 +273,8 @@ export default function App() {
         }
         v2Success = true;
         setV2Available(true);
+        // Fetch chart comparison in background
+        api.getChartComparison().then(c => setChartComparison(c)).catch(() => {});
         // Build v1-compatible analysis result
         const v1Compat = { analysis: { key: mp?.analysis?.key || "", bpm: mp?.analysis?.bpm || 0, genre: fullResult.summary?.blueprint_used || mp?.style?.primary_cluster || "", mood: "", energy_label: "", summary: fullResult.summary?.gap_summary || "", what_track_needs: (mp?.needs || []).map(n => n.description).slice(0, 6), frequency_bands: {}, frequency_gaps: [], detected_instruments: [] } };
         setAnalysisResult(v1Compat);
@@ -260,6 +288,8 @@ export default function App() {
           api.getGapAnalysisV2().then(g => setGapAnalysis(formatGapAnalysis(g))).catch(() => {});
           v2Success = true;
           setV2Available(true);
+          // Fetch chart comparison in background
+          api.getChartComparison().then(c => setChartComparison(c)).catch(() => {});
           const v1Compat = { analysis: { key: v2Result?.analysis?.key || "", bpm: v2Result?.analysis?.bpm || 0, genre: v2Result?.style?.primary_cluster || "", mood: "", energy_label: "", summary: "", what_track_needs: (v2Result?.needs || []).map(n => n.description).slice(0, 6), frequency_bands: {}, frequency_gaps: [], detected_instruments: [] } };
           setAnalysisResult(v1Compat);
         } catch {
@@ -280,9 +310,27 @@ export default function App() {
         api.getRecommendationsV2(30).then(recsResult => {
           if (recsResult?.recommendations) setV2Recommendations(recsResult.recommendations);
           setV2Loading(false);
+          // Fetch smart collections after recommendations are ready
+          api.getCollections().then(res => {
+            if (res?.collections) setCollections(res.collections);
+          }).catch(() => {});
         }).catch(() => setV2Loading(false));
       }
 
+      // Fetch smart collections if recommendations already exist
+      if (v2Success && v2Recommendations.length > 0) {
+        api.getCollections().then(res => {
+          if (res?.collections) setCollections(res.collections);
+        }).catch(() => {});
+      }
+
+      // Auto-save version and fetch timeline
+      const projectName = file.name.replace(/\.[^/.]+$/, "");
+      api.saveVersion(projectName, null, file.name).then(() => {
+        api.getVersions(projectName).then(res => {
+          if (res?.versions) setVersions(res.versions);
+        }).catch(() => {});
+      }).catch(() => {});
       setTimeout(() => {
         setScreen("results");
         const readiness = gapAnalysis?.readiness;
@@ -385,8 +433,10 @@ export default function App() {
       setCurrentSessionId(d.id);
       const sessR = await fetch(API + "/sessions"); const sessD = await sessR.json(); setSessions(sessD.sessions || []);
       toast.success("Session saved");
+      // Background-train taste model after saving session
+      api.trainTaste().catch(() => {});
     } catch { toast.error("Failed to save session"); }
-  }, [fileName, toast]);
+  }, [fileName, toast, api]);
 
   const loadSession = useCallback(async (sessionId) => {
     try {
@@ -435,6 +485,7 @@ export default function App() {
   // Also syncs when DAW bridge is connected with dawSync enabled.
   const isSynced = !!analysisResult || (bridge.connected && bridge.dawSync);
   const handlePlay = s => { setActiveSample(s); audio.toggle(s.path, s.id, isSynced); const idx = filtered.findIndex(x => x.id === s.id); if (idx >= 0) setSelectedIdx(idx); logV2Feedback(s, "audition"); };
+  const handlePreviewInContext = useCallback((s) => { setActiveSample(s); audio.previewInContext(s.id, s.path); const idx = filtered.findIndex(x => x.id === s.id); if (idx >= 0) setSelectedIdx(idx); logV2Feedback(s, "audition"); }, [audio, filtered, logV2Feedback]);
   const selectAllVisible = useCallback(() => { setCheckedSamples(new Set(filtered.map(s => s.id))); }, [filtered]);
 
   // Count samples by source
@@ -539,7 +590,7 @@ export default function App() {
     logV2Feedback(sample, "drag");
   }, [currentSessionId, bridge.connected, bridge.dawSync, logV2Feedback]);
 
-  const handleNew = () => { setScreen("home"); setActiveSample(null); audio.stop(); setAnalysisResult(null); setSelectedIdx(-1); setSimilarSamples(null); setMixProfile(null); setV2Recommendations([]); setMixNeeds([]); setGapAnalysis(null); setViewMode("smart"); };
+  const handleNew = () => { setScreen("home"); setActiveSample(null); audio.stop(); setAnalysisResult(null); setSelectedIdx(-1); setSimilarSamples(null); setMixProfile(null); setV2Recommendations([]); setMixNeeds([]); setGapAnalysis(null); setChartComparison(null); setCollections([]); setViewMode("smart"); };
 
   const analyzeFromBridge = useCallback(async () => {
     try {
@@ -815,8 +866,13 @@ export default function App() {
                 {sessions.length > 0 && <button onClick={() => setShowSessions(true)} style={{ flex: 1, fontSize: 8, padding: "4px 0", borderRadius: 4, border: "1px solid " + theme.border, background: "transparent", color: theme.textSec, cursor: "pointer", fontFamily: AF }}>History</button>}
               </div>
               {bridge.connected && (
-                <button onClick={reAnalyze} disabled={reanalyzing} style={{ width: "100%", fontSize: 9, padding: "6px 0", marginTop: 6, borderRadius: 5, border: "1px solid rgba(34,197,94,0.3)", background: reanalyzing ? "rgba(34,197,94,0.03)" : "rgba(34,197,94,0.08)", color: reanalyzing ? theme.textMuted : "#22C55E", cursor: reanalyzing ? "default" : "pointer", fontWeight: 600, fontFamily: AF, transition: "all 0.2s" }}>
-                  {reanalyzing ? "Re-Analyzing..." : "Re-Analyze from DAW"}
+                <button onClick={reAnalyze} disabled={reanalyzing} style={{ width: "100%", fontSize: 9, padding: "6px 0", marginTop: 6, borderRadius: 5, border: "1px solid rgba(34,197,94,0.3)", background: reanalyzing ? "rgba(34,197,94,0.03)" : "rgba(34,197,94,0.08)", color: reanalyzing ? theme.textMuted : "#22C55E", cursor: reanalyzing ? "default" : "pointer", fontWeight: 600, fontFamily: AF, transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                  {reanalyzing && (
+                    <svg width="10" height="10" viewBox="0 0 16 16" style={{ animation: "spinAnalyze 0.8s linear infinite", flexShrink: 0 }}>
+                      <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="28 10" strokeLinecap="round" />
+                    </svg>
+                  )}
+                  {reanalyzing ? "Re-Analyzing..." : gapAnalysis ? `Re-Analyze from DAW (${gapAnalysis.readiness}/100)` : "Re-Analyze from DAW"}
                 </button>
               )}
             </div>
@@ -844,28 +900,46 @@ export default function App() {
                 <div style={lbl}>Production Readiness</div>
                 {/* Score ring */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  <div style={{ position: "relative", width: 44, height: 44, flexShrink: 0 }}>
+                  <div style={{ position: "relative", width: 44, height: 44, flexShrink: 0, "--ring-color": gapAnalysis.readinessColor, animation: ringGlowing ? "ringGlow 1.2s ease-out" : "none" }}>
                     <svg width="44" height="44" viewBox="0 0 44 44">
                       <circle cx="22" cy="22" r="18" fill="none" stroke={isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"} strokeWidth="3" />
-                      <circle cx="22" cy="22" r="18" fill="none" stroke={gapAnalysis.readinessColor} strokeWidth="3" strokeDasharray={`${gapAnalysis.readiness * 1.131} 113.1`} strokeLinecap="round" transform="rotate(-90 22 22)" style={{ transition: "stroke-dasharray 0.6s ease" }} />
+                      <circle cx="22" cy="22" r="18" fill="none" stroke={gapAnalysis.readinessColor} strokeWidth="3" strokeDasharray={`${gapAnalysis.readiness * 1.131} 113.1`} strokeLinecap="round" transform="rotate(-90 22 22)" style={{ transition: "stroke-dasharray 0.6s ease, stroke 0.4s ease" }} />
                     </svg>
-                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, fontFamily: MONO, color: gapAnalysis.readinessColor }}>{gapAnalysis.readiness}</div>
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, fontFamily: MONO, color: gapAnalysis.readinessColor, transition: "color 0.4s ease" }}>
+                      <span style={{ display: "inline-block", transition: "transform 0.3s ease, opacity 0.3s ease" }}>{gapAnalysis.readiness}</span>
+                    </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: gapAnalysis.readinessColor, fontFamily: AF }}>{gapAnalysis.readinessTier}</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: gapAnalysis.readinessColor, fontFamily: AF, transition: "color 0.4s ease" }}>{gapAnalysis.readinessTier}</div>
                     <div style={{ fontSize: 9, color: theme.textMuted, fontFamily: AF }}>{gapAnalysis.genre}</div>
                   </div>
                 </div>
+                {/* Genre coherence */}
+                {gapAnalysis.genreCoherence > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, padding: "4px 0" }}>
+                    <span style={{ fontSize: 9, color: theme.textMuted, fontFamily: AF }}>Genre Coherence</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ width: 40, height: 3, borderRadius: 1.5, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", overflow: "hidden" }}>
+                        <div style={{ height: "100%", borderRadius: 1.5, background: gapAnalysis.genreCoherence >= 75 ? "#22C55E" : gapAnalysis.genreCoherence >= 50 ? "#F59E0B" : "#EF4444", width: `${gapAnalysis.genreCoherence}%`, transition: "width 0.4s ease" }} />
+                      </div>
+                      <span style={{ fontSize: 9, color: theme.text, fontFamily: MONO, fontWeight: 600, minWidth: 22, textAlign: "right" }}>{gapAnalysis.genreCoherence}%</span>
+                    </div>
+                  </div>
+                )}
                 {/* Chart potential bar */}
                 <div style={{ marginBottom: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                     <span style={{ fontSize: 9, color: theme.textMuted, fontFamily: AF }}>Chart Potential</span>
                     <span style={{ fontSize: 9, color: theme.text, fontFamily: MONO, fontWeight: 600 }}>{gapAnalysis.chartPotentialCurrent}<span style={{ color: theme.textFaint }}> / {gapAnalysis.chartPotentialCeiling}</span></span>
                   </div>
-                  <div style={{ height: 4, borderRadius: 2, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: 2, background: "linear-gradient(90deg, #D946EF, #06B6D4)", width: `${gapAnalysis.chartPotentialCeiling}%`, position: "relative" }}>
-                      <div style={{ position: "absolute", left: `${(gapAnalysis.chartPotentialCurrent / Math.max(gapAnalysis.chartPotentialCeiling, 1)) * 100}%`, top: -2, width: 2, height: 8, background: "#fff", borderRadius: 1, boxShadow: "0 0 4px rgba(0,0,0,0.3)" }} />
+                  <div style={{ height: 4, borderRadius: 2, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", overflow: "hidden", position: "relative" }}>
+                    <div style={{ height: "100%", borderRadius: 2, background: "linear-gradient(90deg, #D946EF, #A855F7, #06B6D4)", backgroundSize: "200% 100%", animation: "shimmerBar 3s ease-in-out infinite", width: `${gapAnalysis.chartPotentialCeiling}%`, position: "relative", transition: "width 0.4s ease" }}>
+                      <div style={{ position: "absolute", left: `${(gapAnalysis.chartPotentialCurrent / Math.max(gapAnalysis.chartPotentialCeiling, 1)) * 100}%`, top: -3, width: 2, height: 10, background: "#fff", borderRadius: 1, boxShadow: "0 0 4px rgba(0,0,0,0.3)", transition: "left 0.4s ease" }} />
                     </div>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2, position: "relative" }}>
+                    <span style={{ fontSize: 7, color: theme.textFaint, fontFamily: AF, position: "relative", left: `${(gapAnalysis.chartPotentialCurrent / 100) * 100}%`, transform: "translateX(-50%)" }}>current</span>
+                    <span style={{ fontSize: 7, color: theme.textFaint, fontFamily: AF }}>ceiling</span>
                   </div>
                 </div>
                 {/* Missing roles */}
@@ -875,6 +949,17 @@ export default function App() {
                     <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
                       {gapAnalysis.missingRoles.map(r => (
                         <span key={r} style={{ fontSize: 9, padding: "2px 7px", borderRadius: 4, background: "rgba(239,68,68,0.1)", color: "#EF4444", fontFamily: AF, fontWeight: 600 }}>{r}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Present roles */}
+                {gapAnalysis.presentRoles && gapAnalysis.presentRoles.length > 0 && (
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 8, color: theme.textFaint, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 4, fontFamily: AF }}>Present</div>
+                    <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+                      {gapAnalysis.presentRoles.map(r => (
+                        <span key={r} style={{ fontSize: 9, padding: "2px 7px", borderRadius: 4, background: isDark ? "rgba(34,197,94,0.08)" : "rgba(34,197,94,0.1)", color: "#22C55E", fontFamily: AF, fontWeight: 500 }}>{r}</span>
                       ))}
                     </div>
                   </div>
@@ -893,6 +978,9 @@ export default function App() {
                 )}
               </div>
             )}
+
+            {/* Chart Intelligence Panel */}
+            {chartComparison && <ChartIntel data={chartComparison} />}
 
             {/* Bridge Status */}
             {bridge.connected && (
@@ -1014,22 +1102,56 @@ export default function App() {
 
           {/* Main */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: theme.bg }}>
+            {/* Version Timeline */}
+            {versions.length > 0 && (
+              <VersionTimeline
+                versions={versions}
+                onSaveVersion={() => {
+                  const pName = fileName.replace(/\.[^/.]+$/, "");
+                  api.saveVersion(pName, null, fileName).then(() => {
+                    api.getVersions(pName).then(res => {
+                      if (res?.versions) setVersions(res.versions);
+                    }).catch(() => {});
+                    toast.success("Version saved");
+                  }).catch(() => toast.error("Failed to save version"));
+                }}
+                onSelectVersion={(v) => {
+                  if (v.readiness_score != null) {
+                    toast.success(`${v.version_label}: readiness ${Math.round(v.readiness_score)}/100`);
+                  }
+                }}
+              />
+            )}
             {/* AI Summary Card */}
             {(a.summary || gapAnalysis) && (
               <div style={{ padding: "12px 16px", background: theme.surface, borderBottom: "1px solid " + theme.border }}>
                 {/* Gap analysis headline */}
                 {gapAnalysis && (
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: (a.summary || a.what_track_needs?.length) ? 8 : 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 22, fontWeight: 200, color: gapAnalysis.readinessColor, fontFamily: SERIF }}>{gapAnalysis.readiness}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ fontSize: 22, fontWeight: 200, color: gapAnalysis.readinessColor, fontFamily: SERIF, transition: "color 0.4s ease" }}>{gapAnalysis.readiness}</span>
+                      {prevReadiness != null && prevReadiness !== gapAnalysis.readiness && (
+                        <span style={{ fontSize: 11, fontWeight: 600, fontFamily: MONO, color: gapAnalysis.readiness > prevReadiness ? "#22C55E" : "#EF4444", marginTop: 2 }}>
+                          {gapAnalysis.readiness > prevReadiness ? "\u2191" : "\u2193"}{Math.abs(gapAnalysis.readiness - prevReadiness)}
+                        </span>
+                      )}
                       <span style={{ fontSize: 9, color: theme.textMuted, fontFamily: AF }}>/100</span>
                     </div>
+                    {gapAnalysis.chartPotentialCeiling > 0 && (
+                      <>
+                        <div style={{ width: 1, height: 24, background: theme.borderLight }} />
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                          <svg width="10" height="10" viewBox="0 0 16 16" style={{ color: "#D946EF", opacity: 0.7 }}><path d="M8 1l2.2 4.5 5 .7-3.6 3.5.9 5L8 12.3 3.5 14.7l.9-5L.8 6.2l5-.7z" fill="currentColor" /></svg>
+                          <span style={{ fontSize: 9, color: theme.textMuted, fontFamily: MONO }}>{gapAnalysis.chartPotentialCurrent}<span style={{ color: theme.textFaint }}>/{gapAnalysis.chartPotentialCeiling}</span></span>
+                        </div>
+                      </>
+                    )}
                     <div style={{ width: 1, height: 24, background: theme.borderLight }} />
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 11, color: theme.text, fontFamily: AF, fontWeight: 500 }}>{gapAnalysis.summary}</div>
                     </div>
                     {gapAnalysis.criticalGaps > 0 && (
-                      <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: "rgba(239,68,68,0.1)", color: "#EF4444", fontFamily: AF, fontWeight: 600, flexShrink: 0 }}>{gapAnalysis.criticalGaps} critical</span>
+                      <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: "rgba(239,68,68,0.1)", color: "#EF4444", fontFamily: AF, fontWeight: 600, flexShrink: 0, animation: "criticalPulse 2s ease-in-out infinite" }}>{gapAnalysis.criticalGaps} critical</span>
                     )}
                   </div>
                 )}
@@ -1049,14 +1171,41 @@ export default function App() {
               </div>
             )}
 
+            {/* Smart Collections Row */}
+            {collections.length > 0 && collections.some(c => c.samples?.length > 0) && (
+              <div style={{
+                display: "flex", gap: 10, padding: "10px 14px",
+                overflowX: "auto", overflowY: "hidden",
+                borderBottom: "1px solid " + theme.borderLight,
+                background: isDark ? "rgba(255,255,255,0.01)" : "rgba(0,0,0,0.01)",
+                scrollbarWidth: "none",
+              }}>
+                {collections.filter(c => c.samples?.length > 0).map(c => (
+                  <SmartCollection
+                    key={c.id}
+                    collection={c}
+                    onPreview={(sample) => {
+                      if (sample.filepath) {
+                        const s = { path: sample.filepath, id: sample.filepath, name: sample.name };
+                        setActiveSample(s);
+                        audio.toggle(s.path, s.id, isSynced);
+                      }
+                    }}
+                    onExport={(collectionId) => api.exportCollection(collectionId)}
+                  />
+                ))}
+              </div>
+            )}
+
             {/* Tabs */}
             <div style={{ display: "flex", background: theme.surface, borderBottom: "1px solid " + theme.border, padding: "0 14px", alignItems: "center" }}>
               {[
                 { id: "matched", l: "AI Matched", c: displaySamples.length },
                 { id: "favorites", l: "Favorites", c: favorites.size },
+                { id: "dna", l: "Your DNA", c: null, color: "#D946EF" },
               ].map(t => (
-                <button key={t.id} onClick={() => setTab(t.id)} style={{ padding: "10px 14px", border: "none", background: "transparent", color: tab === t.id ? (t.color || theme.text) : theme.textMuted, fontSize: 11, fontWeight: tab === t.id ? 600 : 400, cursor: "pointer", borderBottom: tab === t.id ? "2px solid " + (t.color || theme.accent) : "2px solid transparent", fontFamily: AF, transition: "all 0.2s ease" }}>
-                  {t.l}<span style={{ marginLeft: 4, fontSize: 9, padding: "1px 4px", borderRadius: 4, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)" }}>{t.c}</span>
+                <button key={t.id} onClick={() => { setTab(t.id); if (t.id === "dna") api.getTasteProfile().then(setDnaProfile).catch(() => {}); }} style={{ padding: "10px 14px", border: "none", background: "transparent", color: tab === t.id ? (t.color || theme.text) : theme.textMuted, fontSize: 11, fontWeight: tab === t.id ? 600 : 400, cursor: "pointer", borderBottom: tab === t.id ? "2px solid " + (t.color || theme.accent) : "2px solid transparent", fontFamily: AF, transition: "all 0.2s ease" }}>
+                  {t.l}{t.c != null && <span style={{ marginLeft: 4, fontSize: 9, padding: "1px 4px", borderRadius: 4, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)" }}>{t.c}</span>}
                 </button>
               ))}
               {/* v2 view mode toggle */}
@@ -1082,13 +1231,14 @@ export default function App() {
               </div>
             )}
 
-            {(
-              /* ── Sample List ── */
+            {tab === "dna" ? (
+              <ProducerDNA data={dnaProfile} training={dnaTraining} onTrain={async () => { setDnaTraining(true); try { await api.trainTaste(); const p = await api.getTasteProfile(); setDnaProfile(p); } catch {} setDnaTraining(false); }} theme={theme} isDark={isDark} />
+            ) : (
               <>
                 <div style={{ display: "grid", gridTemplateColumns: "22px 30px 1fr 54px 40px 40px 42px", gap: 6, padding: "6px 14px", fontSize: 8, color: theme.textFaint, textTransform: "uppercase", letterSpacing: 1.5, background: theme.surface, borderBottom: "1px solid " + theme.borderLight, fontFamily: AF }}>
                   <span onClick={checkedSamples.size > 0 ? clearChecked : selectAllVisible} style={{ cursor: "pointer", textAlign: "center", fontSize: 7 }}>{checkedSamples.size > 0 ? "✓" : ""}</span><span /><span>Name</span><span>Match</span><span>Key</span><span>BPM</span><span>Len</span>
                 </div>
-                <div ref={scrollRef} onScroll={handleScroll} style={{ flex: 1, overflowY: "auto", background: theme.surface }}>
+                <div ref={scrollRef} onScroll={handleScroll} style={{ flex: 1, overflowY: "auto", background: theme.surface, paddingBottom: (audio.mixMode && audio.playing && activeSample) ? 64 : 0 }}>
                   {samples.length === 0 && indexProgress && !indexProgress.done ? (
                     Array.from({ length: 12 }).map((_, i) => <SkeletonRow key={i} />)
                   ) : filtered.length > 0 ? (
@@ -1096,7 +1246,7 @@ export default function App() {
                       <div style={{ position: "absolute", top: startIdx * ROW_HEIGHT, width: "100%" }}>
                         {visibleSamples.map((s, i) => (
                           <div key={s.id} draggable onDragStart={e => handleDragStart(e, s)} style={{ height: ROW_HEIGHT }}>
-                            <SampleRow sample={s} isActive={activeSample?.id === s.id} isPlaying={audio.currentId === s.id && audio.playing} onPlay={handlePlay} isSelected={(startIdx + i) === selectedIdx} isChecked={checkedSamples.has(s.id)} onCheck={toggleCheck} onHoverWaveform={handleHoverWaveform} dawSync={isSynced} />
+                            <SampleRow sample={s} isActive={activeSample?.id === s.id} isPlaying={audio.currentId === s.id && audio.playing} onPlay={handlePlay} onPreviewInContext={handlePreviewInContext} isSelected={(startIdx + i) === selectedIdx} isChecked={checkedSamples.has(s.id)} onCheck={toggleCheck} onHoverWaveform={handleHoverWaveform} dawSync={isSynced} />
                           </div>
                         ))}
                       </div>
@@ -1146,6 +1296,7 @@ export default function App() {
           </div>
         </div>
       )}
+      <MixPreviewBar theme={theme} isDark={isDark} audio={audio} activeSample={activeSample} fileName={fileName} />
     </div>
   );
 }
