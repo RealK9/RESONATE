@@ -1171,6 +1171,32 @@ export default function App() {
               </div>
             )}
 
+            {/* Smart Collections Row */}
+            {collections.length > 0 && collections.some(c => c.samples?.length > 0) && (
+              <div style={{
+                display: "flex", gap: 10, padding: "10px 14px",
+                overflowX: "auto", overflowY: "hidden",
+                borderBottom: "1px solid " + theme.borderLight,
+                background: isDark ? "rgba(255,255,255,0.01)" : "rgba(0,0,0,0.01)",
+                scrollbarWidth: "none",
+              }}>
+                {collections.filter(c => c.samples?.length > 0).map(c => (
+                  <SmartCollection
+                    key={c.id}
+                    collection={c}
+                    onPreview={(sample) => {
+                      if (sample.filepath) {
+                        const s = { path: sample.filepath, id: sample.filepath, name: sample.name };
+                        setActiveSample(s);
+                        audio.toggle(s.path, s.id, isSynced);
+                      }
+                    }}
+                    onExport={(collectionId) => api.exportCollection(collectionId)}
+                  />
+                ))}
+              </div>
+            )}
+
             {/* Tabs */}
             <div style={{ display: "flex", background: theme.surface, borderBottom: "1px solid " + theme.border, padding: "0 14px", alignItems: "center" }}>
               {[
