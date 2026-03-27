@@ -160,7 +160,63 @@ class Reranker:
 
         # Sort descending by score, stable.
         recommendations.sort(key=lambda r: r.score, reverse=True)
+
+        # --- Greedy diversity re-ranking ---
+        # After initial scoring, progressively penalize same-role candidates
+        # to ensure the final list covers multiple needs and roles.
+        if len(recommendations) > 1:
+            recommendations = self._diversify(recommendations, mix_profile, needs)
+
         return recommendations
+
+    def _diversify(
+        self,
+        recs: list[Recommendation],
+        mix: MixProfile,
+        needs: list[NeedOpportunity],
+    ) -> list[Recommendation]:
+        """
+        Greedy sequential re-ranking for diversity.
+        Pick top candidate, penalize remaining same-role/same-policy candidates,
+        repeat.  Ensures the final list covers multiple roles and needs.
+        """
+        remaining = list(recs)
+        selected: list[Recommendation] = []
+        selected_roles: dict[str, int] = {}      # role -> count
+        selected_policies: dict[str, int] = {}    # policy -> count
+        addressed_needs: set[str] = set()
+
+        while remaining:
+            # Apply diversity penalties to remaining candidates
+            for rec in remaining:
+                role_count = selected_roles.get(rec.role, 0)
+                policy_count = selected_policies.get(rec.policy, 0)
+
+                # Progressive penalty: each duplicate role costs -8% score
+                role_penalty = role_count * 0.08
+                # Each duplicate policy costs -5%
+                policy_penalty = policy_count * 0.05
+                # Bonus for addressing an unmet need
+                need_bonus = 0.03 if rec.need_addressed and rec.need_addressed not in addressed_needs else 0.0
+
+                rec._diversity_adjusted_score = rec.score - role_penalty - policy_penalty + need_bonus
+
+            # Pick best remaining candidate by diversity-adjusted score
+            remaining.sort(key=lambda r: r._diversity_adjusted_score, reverse=True)
+            best = remaining.pop(0)
+
+            selected.append(best)
+            selected_roles[best.role] = selected_roles.get(best.role, 0) + 1
+            selected_policies[best.policy] = selected_policies.get(best.policy, 0) + 1
+            if best.need_addressed:
+                addressed_needs.add(best.need_addressed)
+
+        # Clean up temp attribute
+        for rec in selected:
+            if hasattr(rec, '_diversity_adjusted_score'):
+                delattr(rec, '_diversity_adjusted_score')
+
+        return selected
 
     # ------------------------------------------------------------------
     # Component scorers (each returns 0-1)
@@ -485,8 +541,23 @@ class Reranker:
         sample: SampleProfile,
         needs: list[NeedOpportunity],
     ) -> NeedOpportunity | None:
-        """Return the highest-severity need that the sample's role addresses."""
+        """Return the best-fit need for this sample, preferring description-hint matches."""
+        from ml.recommendation.candidate_generator import _DESCRIPTION_ROLE_HINTS
         role = sample.labels.role
+
+        # First pass: prefer needs whose description specifically mentions this role
+        hint_match: NeedOpportunity | None = None
+        hint_sev = -1.0
+        for need in needs:
+            desc_lower = need.description.lower()
+            for hint, hint_roles in _DESCRIPTION_ROLE_HINTS.items():
+                if hint in desc_lower and role in hint_roles and need.severity > hint_sev:
+                    hint_match = need
+                    hint_sev = need.severity
+        if hint_match:
+            return hint_match
+
+        # Second pass: fall back to policy-role mapping
         best: NeedOpportunity | None = None
         best_sev = -1.0
         for need in needs:

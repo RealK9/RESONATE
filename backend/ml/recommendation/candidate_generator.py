@@ -209,18 +209,26 @@ class CandidateGenerator:
 
         mix_key = mix_profile.analysis.key
 
-        # Collect candidates per need, preserving need priority order.
+        # Collect candidates per need with per-need quotas to ensure diversity.
+        # Each need gets a fair share of the candidate budget.
+        per_need_quota = max(10, max_candidates // max(len(sorted_needs), 1))
         seen_filepaths: set[str] = set()
-        ordered_candidates: list[SampleProfile] = []
+        # Interleave: round-robin across needs to ensure diversity
+        need_buckets: list[list[SampleProfile]] = [[] for _ in sorted_needs]
 
-        for need in sorted_needs:
+        for i, need in enumerate(sorted_needs):
             roles = self._roles_for_need(need)
             if not roles:
                 continue
 
+            bucket = need_buckets[i]
             for role in roles:
+                if len(bucket) >= per_need_quota:
+                    break
                 samples = self._store.search_by_role(role)
                 for sample in samples:
+                    if len(bucket) >= per_need_quota:
+                        break
                     if sample.filepath in seen_filepaths:
                         continue
                     # Quality floor.
@@ -234,7 +242,15 @@ class CandidateGenerator:
                         ):
                             continue
                     seen_filepaths.add(sample.filepath)
-                    ordered_candidates.append(sample)
+                    bucket.append(sample)
+
+        # Round-robin interleave from all buckets for maximum diversity
+        ordered_candidates: list[SampleProfile] = []
+        max_bucket_len = max((len(b) for b in need_buckets), default=0)
+        for idx in range(max_bucket_len):
+            for bucket in need_buckets:
+                if idx < len(bucket):
+                    ordered_candidates.append(bucket[idx])
 
         # If vector index is available, add embedding-based candidates too.
         if self._index is not None:
@@ -255,16 +271,8 @@ class CandidateGenerator:
                 seen_filepaths.add(sample.filepath)
                 ordered_candidates.append(sample)
 
-        # If gap analysis is available, boost candidates that fill critical gaps
-        if self._gap_result is not None and self._gap_result.missing_roles:
-            missing = set(self._gap_result.missing_roles)
-            # Partition into gap-fillers and others, preserving order within each
-            gap_fillers = [c for c in ordered_candidates if self._fills_missing_role(c, missing)]
-            others = [c for c in ordered_candidates if not self._fills_missing_role(c, missing)]
-            ordered_candidates = gap_fillers + others
-
-        # Cap at max_candidates.  The list is already in need-priority order,
-        # so truncating keeps the most important candidates.
+        # Cap at max_candidates.  The list is already interleaved across needs,
+        # so truncating keeps diverse candidates.
         return ordered_candidates[:max_candidates]
 
     # ------------------------------------------------------------------
