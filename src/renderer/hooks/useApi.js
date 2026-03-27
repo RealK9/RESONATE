@@ -103,12 +103,32 @@ export function useApi() {
     return r.json();
   };
 
+  /** Get gap analysis results from the latest analysis. */
+  const getGapAnalysisV2 = async () => {
+    const r = await fetch(API + "/analyze/v2/gap");
+    return r.json();
+  };
+
+  /** Full RESONATE workflow: upload → analyze → gap → recommend in one call. */
+  const analyzeFullV2 = async (file, maxResults = 30) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const r = await fetch(API + `/analyze/v2/full?max_results=${maxResults}`, {
+      method: "POST", body: fd,
+    });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.detail || "Full analysis failed");
+    }
+    return r.json();
+  };
+
   return {
     checkHealth, getSettings, setSampleDir,
     analyzeTrack, getSamples, getSampleAbsPath,
     // v2
     analyzeTrackV2, getRecommendationsV2, logFeedbackV2,
-    trainPreferencesV2, getNeedsV2,
+    trainPreferencesV2, getNeedsV2, getGapAnalysisV2, analyzeFullV2,
     API,
   };
 }

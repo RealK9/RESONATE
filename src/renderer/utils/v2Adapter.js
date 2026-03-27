@@ -129,3 +129,92 @@ export const POLICY_LABELS = {
   enhance_groove: "Groove",
   enhance_lift: "Lift",
 };
+
+/**
+ * Genre display names for the gap analysis panel.
+ */
+const GENRE_DISPLAY = {
+  modern_trap: "Trap",
+  modern_drill: "Drill",
+  "2010s_edm_drop": "EDM",
+  "2020s_melodic_house": "Melodic House",
+  melodic_techno: "Melodic Techno",
+  dnb: "Drum & Bass",
+  afro_house: "Afro House",
+  pop_production: "Pop",
+  "2000s_pop_chorus": "2000s Pop",
+  r_and_b: "R&B",
+  "1990s_boom_bap": "Boom Bap",
+  lo_fi_chill: "Lo-fi",
+  cinematic: "Cinematic",
+  ambient: "Ambient",
+};
+
+/**
+ * Gap severity label + color.
+ */
+const GAP_SEVERITY = [
+  { threshold: 0.7, label: "Critical", color: "#EF4444" },
+  { threshold: 0.4, label: "Moderate", color: "#F59E0B" },
+  { threshold: 0, label: "Minor", color: "#6B7280" },
+];
+
+/**
+ * Format gap analysis results for display.
+ *
+ * @param {Object} gapAnalysis - Raw gap analysis dict from API
+ * @returns {Object} Formatted gap data for UI
+ */
+export function formatGapAnalysis(gapAnalysis) {
+  if (!gapAnalysis) return null;
+
+  const readiness = gapAnalysis.production_readiness_score ?? 0;
+  const genre = GENRE_DISPLAY[gapAnalysis.blueprint_name] || gapAnalysis.genre_detected || "Unknown";
+
+  // Determine readiness tier
+  let readinessTier, readinessColor;
+  if (readiness >= 85) {
+    readinessTier = "Chart-Ready";
+    readinessColor = "#22C55E";
+  } else if (readiness >= 65) {
+    readinessTier = "Getting Close";
+    readinessColor = "#3B82F6";
+  } else if (readiness >= 40) {
+    readinessTier = "In Progress";
+    readinessColor = "#F59E0B";
+  } else {
+    readinessTier = "Early Stage";
+    readinessColor = "#EF4444";
+  }
+
+  // Format gaps
+  const gaps = (gapAnalysis.gaps || []).map((g) => {
+    const sev = GAP_SEVERITY.find((s) => g.severity >= s.threshold) || GAP_SEVERITY[2];
+    return {
+      category: g.category,
+      dimension: g.dimension,
+      severity: g.severity,
+      severityLabel: sev.label,
+      severityColor: sev.color,
+      message: g.message,
+      direction: g.direction,
+    };
+  });
+
+  return {
+    readiness: Math.round(readiness),
+    readinessTier,
+    readinessColor,
+    genre,
+    chartPotentialCurrent: Math.round(gapAnalysis.chart_potential_current ?? 0),
+    chartPotentialCeiling: Math.round(gapAnalysis.chart_potential_ceiling ?? 0),
+    genreCoherence: Math.round((gapAnalysis.genre_coherence_score ?? 0) * 100),
+    missingRoles: (gapAnalysis.missing_roles || []).map((r) => ROLE_LABELS[r] || r),
+    presentRoles: (gapAnalysis.present_roles || []).map((r) => ROLE_LABELS[r] || r),
+    totalGaps: gapAnalysis.total_gaps ?? 0,
+    criticalGaps: gapAnalysis.critical_gaps ?? 0,
+    moderateGaps: gapAnalysis.moderate_gaps ?? 0,
+    gaps: gaps.slice(0, 8), // top 8 for display
+    summary: gapAnalysis.summary || "",
+  };
+}
