@@ -1,7 +1,7 @@
 #include "BridgeClient.h"
 
 BridgeClient::BridgeClient()
-    : Thread("ResonateBridge-WS")
+    : Thread("ResonateBridge")
 {
     startThread();
     startTimer(SEND_INTERVAL_MS);
@@ -11,10 +11,7 @@ BridgeClient::~BridgeClient()
 {
     stopTimer();
     signalThreadShouldExit();
-
-    if (socket != nullptr)
-        socket->close();
-
+    disconnect();
     stopThread(2000);
 }
 
@@ -31,6 +28,55 @@ juce::String BridgeClient::getStatus() const
     return "Waiting for RESONATE...";
 }
 
+// ---------------------------------------------------------------------------
+// Thread-safe disconnect
+// ---------------------------------------------------------------------------
+void BridgeClient::disconnect()
+{
+    const juce::ScopedLock sl(socketLock);
+    connected.store(false);
+    if (socket != nullptr)
+    {
+        socket->close();
+        socket.reset();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Safe JSON field parser (replaces raw indexOf hacking)
+// ---------------------------------------------------------------------------
+bool BridgeClient::parseJsonField(const juce::String& json,
+                                   const juce::String& key,
+                                   juce::String& value)
+{
+    // Look for "key":"value" pattern
+    auto pattern = "\"" + key + "\"";
+    auto idx = json.indexOf(pattern);
+    if (idx < 0)
+        return false;
+
+    // Find the colon after the key
+    auto colonIdx = json.indexOf(idx + pattern.length(), ":");
+    if (colonIdx < 0)
+        return false;
+
+    // Find opening quote of value
+    auto openQuote = json.indexOf(colonIdx + 1, "\"");
+    if (openQuote < 0)
+        return false;
+
+    // Find closing quote of value
+    auto closeQuote = json.indexOf(openQuote + 1, "\"");
+    if (closeQuote < 0 || closeQuote <= openQuote)
+        return false;
+
+    value = json.substring(openQuote + 1, closeQuote);
+    return value.isNotEmpty();
+}
+
+// ---------------------------------------------------------------------------
+// Background thread: connect + read loop
+// ---------------------------------------------------------------------------
 void BridgeClient::run()
 {
     while (!threadShouldExit())
@@ -40,20 +86,16 @@ void BridgeClient::run()
             connectToServer();
         }
 
-        // Check for incoming messages (key changes from RESONATE)
-        if (connected.load() && socket != nullptr && socket->isConnected())
+        if (connected.load())
         {
             juce::String response;
             if (readResponse(response))
             {
-                // Parse simple JSON messages from RESONATE
                 if (response.contains("keyChange"))
                 {
-                    auto keyStart = response.indexOf("\"key\"") + 6;
-                    auto keyEnd = response.indexOf(keyStart + 1, "\"");
-                    if (keyStart > 5 && keyEnd > keyStart)
+                    juce::String key;
+                    if (parseJsonField(response, "key", key))
                     {
-                        auto key = response.substring(keyStart + 1, keyEnd);
                         if (onKeyChange)
                             onKeyChange(key);
                     }
@@ -61,61 +103,80 @@ void BridgeClient::run()
                 else if (response.contains("captureAudio"))
                 {
                     if (onCaptureRequest)
-                        onCaptureRequest();
+                    {
+                        // Invoke on a separate thread to avoid blocking the read loop
+                        juce::MessageManager::callAsync([this]()
+                        {
+                            if (onCaptureRequest)
+                                onCaptureRequest();
+                        });
+                    }
                 }
             }
         }
 
-        wait(50);  // 20Hz check rate
+        wait(50);
     }
 }
 
+// ---------------------------------------------------------------------------
+// Connect to RESONATE backend
+// ---------------------------------------------------------------------------
 void BridgeClient::connectToServer()
 {
-    socket = std::make_unique<juce::StreamingSocket>();
+    auto newSocket = std::make_unique<juce::StreamingSocket>();
 
-    if (socket->connect("127.0.0.1", PORT, 1000))
+    if (newSocket->connect("127.0.0.1", PORT, 1000))
     {
+        {
+            const juce::ScopedLock sl(socketLock);
+            socket = std::move(newSocket);
+        }
         connected.store(true);
         DBG("ResonateBridge: Connected to RESONATE on port " + juce::String(PORT));
     }
     else
     {
-        socket.reset();
-        connected.store(false);
-        // Wait before retry
+        // Wait before retry (interruptible)
         for (int i = 0; i < RECONNECT_DELAY_MS / 50 && !threadShouldExit(); ++i)
             wait(50);
     }
 }
 
+// ---------------------------------------------------------------------------
+// Timer callback: send throttled transport updates (runs on message thread)
+// ---------------------------------------------------------------------------
 void BridgeClient::timerCallback()
 {
-    if (!connected.load() || socket == nullptr)
+    if (!connected.load())
         return;
 
-    TransportState state;
+    TransportState ts;
     {
         const juce::ScopedLock sl(stateLock);
-        state = latestState;
+        ts = latestState;
     }
 
-    // Build JSON payload
     auto json = juce::String::formatted(
         "{\"type\":\"transport\",\"bpm\":%.2f,\"timeSigNum\":%d,\"timeSigDen\":%d,"
         "\"playing\":%s,\"position\":%.4f}\n",
-        state.bpm,
-        state.timeSigNum,
-        state.timeSigDen,
-        state.isPlaying ? "true" : "false",
-        state.positionInSeconds
+        ts.bpm,
+        ts.timeSigNum,
+        ts.timeSigDen,
+        ts.isPlaying ? "true" : "false",
+        ts.positionInSeconds
     );
 
     sendJson(json);
 }
 
+// ---------------------------------------------------------------------------
+// Thread-safe send (protected by socketLock)
+// ---------------------------------------------------------------------------
 void BridgeClient::sendJson(const juce::String& json)
 {
+    const juce::ScopedLock sl(socketLock);
+
     if (socket == nullptr || !socket->isConnected())
     {
         connected.store(false);
@@ -124,42 +185,69 @@ void BridgeClient::sendJson(const juce::String& json)
 
     auto data = json.toRawUTF8();
     auto len = (int)json.getNumBytesAsUTF8();
+    int totalWritten = 0;
 
-    int written = socket->write(data, len);
-    if (written < 0)
+    // Retry partial writes
+    while (totalWritten < len)
     {
-        connected.store(false);
-        socket.reset();
-        DBG("ResonateBridge: Connection lost");
+        int written = socket->write(data + totalWritten, len - totalWritten);
+        if (written <= 0)
+        {
+            DBG("ResonateBridge: Write failed, disconnecting");
+            connected.store(false);
+            socket->close();
+            socket.reset();
+            return;
+        }
+        totalWritten += written;
     }
 }
 
 void BridgeClient::sendRawBytes(const void* data, int size)
 {
+    const juce::ScopedLock sl(socketLock);
+
     if (socket == nullptr || !socket->isConnected())
     {
         connected.store(false);
         return;
     }
 
-    int written = socket->write(data, size);
-    if (written < 0)
+    const auto* bytes = static_cast<const char*>(data);
+    int totalWritten = 0;
+
+    while (totalWritten < size)
     {
-        connected.store(false);
-        socket.reset();
+        int written = socket->write(bytes + totalWritten, size - totalWritten);
+        if (written <= 0)
+        {
+            DBG("ResonateBridge: Raw write failed, disconnecting");
+            connected.store(false);
+            socket->close();
+            socket.reset();
+            return;
+        }
+        totalWritten += written;
     }
 }
 
+// ---------------------------------------------------------------------------
+// Non-blocking read (protected by socketLock)
+// ---------------------------------------------------------------------------
 bool BridgeClient::readResponse(juce::String& out)
 {
-    if (socket == nullptr || !socket->isConnected())
-        return false;
+    const juce::ScopedLock sl(socketLock);
 
-    // Non-blocking check if data available
+    if (socket == nullptr || !socket->isConnected())
+    {
+        connected.store(false);
+        return false;
+    }
+
     if (!socket->waitUntilReady(true, 0))
         return false;
 
-    char buffer[1024];
+    char buffer[2048];
     int bytesRead = socket->read(buffer, sizeof(buffer) - 1, false);
     if (bytesRead > 0)
     {
@@ -169,7 +257,9 @@ bool BridgeClient::readResponse(juce::String& out)
     }
     else if (bytesRead < 0)
     {
+        DBG("ResonateBridge: Read error, disconnecting");
         connected.store(false);
+        socket->close();
         socket.reset();
     }
 

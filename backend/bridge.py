@@ -3,6 +3,11 @@ RESONATE — Bridge Server.
 TCP socket server that receives transport state from the VST3 Bridge plugin
 and exposes it to the FastAPI app via shared state.
 Supports audio capture for "Analyze from DAW" feature.
+
+Thread safety:
+  - _clients_lock protects the _clients dict
+  - _capture_lock protects capture state (_capture_event, _captured_wav)
+  - bridge_state dict updates are atomic (single-key assignments)
 """
 
 import asyncio
@@ -22,10 +27,12 @@ bridge_state = {
     "position": 0.0,
 }
 
-_clients = {}  # writer -> reader mapping
+_clients: dict[asyncio.StreamWriter, asyncio.StreamReader] = {}
+_clients_lock = asyncio.Lock()
 _server: Optional[asyncio.AbstractServer] = None
 
-# Audio capture state
+# Audio capture state (protected by _capture_lock)
+_capture_lock = asyncio.Lock()
 _capture_event: Optional[asyncio.Event] = None
 _captured_wav: Optional[bytes] = None
 
@@ -33,26 +40,30 @@ _captured_wav: Optional[bytes] = None
 async def request_audio_capture() -> Optional[bytes]:
     """Request audio capture from the connected bridge plugin. Returns WAV bytes or None."""
     global _capture_event, _captured_wav
-    if not _clients:
-        return None
 
-    _capture_event = asyncio.Event()
-    _captured_wav = None
+    async with _clients_lock:
+        if not _clients:
+            return None
 
-    # Send capture request to all connected plugins
+    async with _capture_lock:
+        _capture_event = asyncio.Event()
+        _captured_wav = None
+
     await send_to_plugin({"type": "captureAudio"})
 
-    # Wait up to 10 seconds for the plugin to respond with audio
     try:
-        await asyncio.wait_for(_capture_event.wait(), timeout=10.0)
+        async with _capture_lock:
+            evt = _capture_event
+        if evt:
+            await asyncio.wait_for(evt.wait(), timeout=10.0)
     except asyncio.TimeoutError:
-        print("  ✗ Bridge: Audio capture timed out")
-        _capture_event = None
-        return None
+        print("  ✗ Bridge: Audio capture timed out (10s)")
 
-    result = _captured_wav
-    _capture_event = None
-    _captured_wav = None
+    async with _capture_lock:
+        result = _captured_wav
+        _capture_event = None
+        _captured_wav = None
+
     return result
 
 
@@ -62,15 +73,24 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
 
     addr = writer.get_extra_info("peername")
     print(f"  ✓ Bridge: VST3 plugin connected from {addr}")
-    _clients[writer] = reader
-    bridge_state["connected"] = True
+
+    async with _clients_lock:
+        _clients[writer] = reader
+        bridge_state["connected"] = True
 
     buffer = b""
-    awaiting_wav_bytes = 0  # How many raw WAV bytes we're expecting
+    awaiting_wav_bytes = 0
 
     try:
         while True:
-            data = await reader.read(65536)
+            try:
+                data = await asyncio.wait_for(reader.read(65536), timeout=30.0)
+            except asyncio.TimeoutError:
+                # No data in 30s — check if connection is still alive
+                if writer.is_closing():
+                    break
+                continue
+
             if not data:
                 break
 
@@ -83,53 +103,81 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
                     buffer = buffer[awaiting_wav_bytes:]
                     awaiting_wav_bytes = 0
 
-                    _captured_wav = wav_data
-                    if _capture_event:
-                        _capture_event.set()
+                    async with _capture_lock:
+                        _captured_wav = wav_data
+                        if _capture_event:
+                            _capture_event.set()
 
                     print(f"  ✓ Bridge: Received {len(wav_data)} bytes of audio from DAW")
                 continue
 
-            # Process complete JSON messages (newline-delimited)
-            text_buffer = buffer.decode("utf-8", errors="ignore")
-            while "\n" in text_buffer:
-                line, text_buffer = text_buffer.split("\n", 1)
+            # Process complete JSON messages (newline-delimited).
+            # Find the boundary between text and potential binary data.
+            # Only decode up to the last newline to avoid mangling binary bytes.
+            last_newline = buffer.rfind(b"\n")
+            if last_newline < 0:
+                # No complete line yet — keep buffering
+                # Safety: if buffer is huge without a newline, it's garbage
+                if len(buffer) > 1_000_000:
+                    print("  ✗ Bridge: Buffer overflow (no newline in 1MB), clearing")
+                    buffer = b""
+                continue
+
+            text_part = buffer[:last_newline + 1]
+            buffer = buffer[last_newline + 1:]
+
+            # Now safely decode only the text portion
+            try:
+                text_lines = text_part.decode("utf-8")
+            except UnicodeDecodeError:
+                # Binary data mixed in — skip this chunk
+                continue
+
+            for line in text_lines.split("\n"):
                 line = line.strip()
                 if not line:
                     continue
 
                 try:
                     msg = json.loads(line)
-                    if msg.get("type") == "transport":
-                        bridge_state["bpm"] = msg.get("bpm", 120.0)
-                        bridge_state["timeSigNum"] = msg.get("timeSigNum", 4)
-                        bridge_state["timeSigDen"] = msg.get("timeSigDen", 4)
-                        bridge_state["playing"] = msg.get("playing", False)
-                        bridge_state["position"] = msg.get("position", 0.0)
+                except json.JSONDecodeError:
+                    continue
 
-                        state.daw_bpm = bridge_state["bpm"]
-                        state.daw_playing = bridge_state["playing"]
+                msg_type = msg.get("type")
 
-                    elif msg.get("type") == "audioCapture":
-                        if msg.get("error"):
-                            print(f"  ✗ Bridge: Capture error: {msg['error']}")
+                if msg_type == "transport":
+                    bridge_state["bpm"] = msg.get("bpm", 120.0)
+                    bridge_state["timeSigNum"] = msg.get("timeSigNum", 4)
+                    bridge_state["timeSigDen"] = msg.get("timeSigDen", 4)
+                    bridge_state["playing"] = msg.get("playing", False)
+                    bridge_state["position"] = msg.get("position", 0.0)
+                    state.daw_bpm = bridge_state["bpm"]
+                    state.daw_playing = bridge_state["playing"]
+
+                elif msg_type == "audioCapture":
+                    if msg.get("error"):
+                        print(f"  ✗ Bridge: Capture error: {msg['error']}")
+                        async with _capture_lock:
                             if _capture_event:
                                 _capture_event.set()
-                        else:
-                            wav_size = msg.get("wavSize", 0)
-                            if wav_size > 0:
-                                awaiting_wav_bytes = wav_size
-                                print(f"  ✓ Bridge: Expecting {wav_size} bytes of WAV audio...")
-                except json.JSONDecodeError:
-                    pass
+                    else:
+                        wav_size = msg.get("wavSize", 0)
+                        if wav_size > 0:
+                            awaiting_wav_bytes = wav_size
+                            print(f"  ✓ Bridge: Expecting {wav_size} bytes of WAV audio...")
 
-            buffer = text_buffer.encode("utf-8")
-
-    except (asyncio.CancelledError, ConnectionResetError, BrokenPipeError):
+    except (asyncio.CancelledError, ConnectionResetError, BrokenPipeError, OSError):
         pass
     finally:
-        del _clients[writer]
-        bridge_state["connected"] = len(_clients) > 0
+        async with _clients_lock:
+            _clients.pop(writer, None)
+            bridge_state["connected"] = len(_clients) > 0
+
+        # Reset DAW state on disconnect
+        if not bridge_state["connected"]:
+            state.daw_bpm = 0.0
+            state.daw_playing = False
+
         print(f"  ✗ Bridge: VST3 plugin disconnected from {addr}")
         try:
             writer.close()
@@ -141,15 +189,23 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
 async def send_to_plugin(message: dict):
     """Send a message to all connected bridge plugins."""
     data = (json.dumps(message) + "\n").encode("utf-8")
-    dead = set()
-    for writer in _clients:
+    dead = []
+
+    async with _clients_lock:
+        writers = list(_clients.keys())
+
+    for writer in writers:
         try:
             writer.write(data)
-            await writer.drain()
+            await asyncio.wait_for(writer.drain(), timeout=2.0)
         except Exception:
-            dead.add(writer)
-    for w in dead:
-        _clients.pop(w, None)
+            dead.append(writer)
+
+    if dead:
+        async with _clients_lock:
+            for w in dead:
+                _clients.pop(w, None)
+            bridge_state["connected"] = len(_clients) > 0
 
 
 async def start_bridge_server(port: int = 9876):

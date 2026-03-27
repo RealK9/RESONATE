@@ -2,7 +2,7 @@
  * RESONATE — Bridge Hook.
  * Polls backend for DAW bridge state (BPM, key, transport).
  * Updates in real-time when VST3 plugin is connected.
- * Detects BPM changes to trigger sample re-scoring.
+ * Detects BPM changes, plugin crashes, and connection drops.
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -11,66 +11,93 @@ import { API } from "./useApi";
 const KEYS_ALL = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
                   "Cm", "C#m", "Dm", "D#m", "Em", "Fm", "F#m", "Gm", "G#m", "Am", "A#m", "Bm"];
 
+const POLL_FAST = 200;    // ms when connected
+const POLL_SLOW = 3000;   // ms when disconnected
+const STALE_THRESHOLD = 5; // consecutive failures before marking disconnected
+
 export function useBridge() {
   const [connected, setConnected] = useState(false);
   const [dawBpm, setDawBpm] = useState(120);
   const [dawPlaying, setDawPlaying] = useState(false);
   const [dawTimeSig, setDawTimeSig] = useState("4/4");
   const [dawPosition, setDawPosition] = useState(0);
-  const [browseKey, setBrowseKey] = useState(null);  // Key being browsed (null = use DAW key)
+  const [browseKey, setBrowseKey] = useState(null);
   const [rescoreNeeded, setRescoreNeeded] = useState(false);
-  const [dawSync, setDawSync] = useState(false);  // Sync playback & drag to DAW key/BPM
+  const [dawSync, setDawSync] = useState(false);
+  const [error, setError] = useState(null);
   const pollRef = useRef(null);
+  const failCountRef = useRef(0);
+  const wasConnectedRef = useRef(false);
 
-  // Poll bridge status
+  // Poll bridge status with crash detection
   useEffect(() => {
     const poll = async () => {
       try {
         const r = await fetch(API + "/bridge/status");
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const d = await r.json();
+
+        failCountRef.current = 0;
+        setError(null);
         setConnected(d.connected);
+
         if (d.connected) {
           setDawBpm(d.bpm);
           setDawPlaying(d.playing);
           setDawTimeSig(`${d.timeSigNum}/${d.timeSigDen}`);
           setDawPosition(d.position);
-          // Backend reports when BPM has drifted enough to warrant re-scoring
+
           if (d.rescoreNeeded) {
             setRescoreNeeded(true);
           }
-        } else {
-          // If bridge disconnects after being connected, trigger rescore to revert to track BPM
-          if (connected && !d.connected) {
-            setRescoreNeeded(true);
-            setDawSync(false);  // Auto-disable sync when bridge disconnects
+
+          wasConnectedRef.current = true;
+        } else if (wasConnectedRef.current && !d.connected) {
+          // Plugin disconnected after being connected — likely crash or DAW close
+          setRescoreNeeded(true);
+          setDawSync(false);
+          wasConnectedRef.current = false;
+        }
+      } catch (e) {
+        failCountRef.current++;
+        if (failCountRef.current >= STALE_THRESHOLD) {
+          setConnected(false);
+          setError("Backend unreachable");
+          if (wasConnectedRef.current) {
+            setDawSync(false);
+            wasConnectedRef.current = false;
           }
         }
-      } catch {
-        setConnected(false);
       }
     };
 
-    // Poll faster when connected (150ms), slower when not (2s)
     const start = () => {
       poll();
-      pollRef.current = setInterval(poll, connected ? 150 : 2000);
+      pollRef.current = setInterval(poll, connected ? POLL_FAST : POLL_SLOW);
     };
     start();
     return () => clearInterval(pollRef.current);
   }, [connected]);
 
-  // Allow App to clear the rescore flag after refetching samples
   const clearRescore = useCallback(() => setRescoreNeeded(false), []);
 
-  // Send key change to DAW
+  // Send key change to DAW with error reporting
   const sendKeyChange = useCallback(async (key) => {
     try {
-      await fetch(API + "/bridge/key", {
+      const r = await fetch(API + "/bridge/key", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key }),
       });
-    } catch {}
+      if (!r.ok) {
+        setError("Failed to send key change");
+        return false;
+      }
+      return true;
+    } catch {
+      setError("Bridge communication failed");
+      return false;
+    }
   }, []);
 
   return {
@@ -86,6 +113,7 @@ export function useBridge() {
     clearRescore,
     dawSync,
     setDawSync,
+    error,
     allKeys: KEYS_ALL,
   };
 }

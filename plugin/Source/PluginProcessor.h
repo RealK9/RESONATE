@@ -55,6 +55,7 @@ private:
     static constexpr int CAPTURE_SECONDS = 30;
     juce::AudioBuffer<float> captureBuffer;
     int captureWritePos = 0;
+    bool captureWrapped = false;   // True once the ring buffer has wrapped at least once
     double currentSampleRate = 44100.0;
     juce::CriticalSection captureLock;
 
