@@ -47,12 +47,14 @@ private:
 
     void connectToServer();
     bool readResponse(juce::String& out);
+    void disconnect();              // Thread-safe disconnect helper
+    bool parseJsonField(const juce::String& json, const juce::String& key, juce::String& value);
 
     std::atomic<bool> connected { false };
     TransportState latestState;
     juce::CriticalSection stateLock;
-    std::unique_ptr<juce::StreamingSocket> socket;
     std::mutex socketMutex;  // protects all socket reads/writes
+    std::unique_ptr<juce::StreamingSocket> socket;
 
     static constexpr int PORT = 9876;
     static constexpr int SEND_INTERVAL_MS = 100;

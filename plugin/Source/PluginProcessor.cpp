@@ -60,10 +60,16 @@ ResonateBridgeProcessor::ResonateBridgeProcessor()
     };
 }
 
-ResonateBridgeProcessor::~ResonateBridgeProcessor() = default;
+ResonateBridgeProcessor::~ResonateBridgeProcessor()
+{
+    // Clear callbacks before bridge destructor runs
+    bridge.onCaptureRequest = nullptr;
+    bridge.onKeyChange = nullptr;
+}
 
 void ResonateBridgeProcessor::prepareToPlay(double sampleRate, int /*samplesPerBlock*/)
 {
+    const juce::ScopedLock sl(captureLock);
     currentSampleRate = sampleRate;
     const int totalSamples = static_cast<int>(sampleRate * CAPTURE_SECONDS);
     captureBuffer.setSize(2, totalSamples);
@@ -74,7 +80,10 @@ void ResonateBridgeProcessor::prepareToPlay(double sampleRate, int /*samplesPerB
 
 void ResonateBridgeProcessor::releaseResources()
 {
-    // No-op
+    const juce::ScopedLock sl(captureLock);
+    captureBuffer.setSize(0, 0);
+    writePos.store(0, std::memory_order_relaxed);
+    samplesWritten.store(0, std::memory_order_release);
 }
 
 void ResonateBridgeProcessor::processBlock(juce::AudioBuffer<float>& buffer,
@@ -213,7 +222,6 @@ juce::AudioProcessorEditor* ResonateBridgeProcessor::createEditor()
     return new ResonateBridgeEditor(*this);
 }
 
-// Entry point — tells the DAW about this plugin
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new ResonateBridgeProcessor();

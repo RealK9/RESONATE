@@ -170,6 +170,8 @@ export default function App() {
   const [v2Recommendations, setV2Recommendations] = useState([]);  // raw v2 recs
   const [mixNeeds, setMixNeeds] = useState([]);                    // formatted needs for display
   const [gapAnalysis, setGapAnalysis] = useState(null);            // formatted gap analysis
+  const [prevReadiness, setPrevReadiness] = useState(null);        // previous readiness for delta display
+  const [reanalyzing, setReanalyzing] = useState(false);           // re-analysis in progress
   const [v2Available, setV2Available] = useState(true);            // v2 pipeline responded?
   const [v2Loading, setV2Loading] = useState(false);               // loading spinner for v2 recs
   const [viewMode, setViewMode] = useState("smart");               // "smart" | "all"
@@ -556,6 +558,64 @@ export default function App() {
     } catch { setScreen("home"); toast.error("Bridge analysis failed"); }
   }, [loadSamples, audio, toast]);
 
+  // ── Re-Analyze from Results Screen (Bridge or File) ──
+  const reAnalyze = useCallback(async () => {
+    if (reanalyzing) return;
+    setReanalyzing(true);
+
+    // Save current readiness for delta comparison
+    if (gapAnalysis?.readiness != null) {
+      setPrevReadiness(gapAnalysis.readiness);
+    }
+
+    try {
+      if (bridge.connected) {
+        // Re-analyze from DAW bridge
+        const r = await fetch(API + "/analyze/bridge", { method: "POST" });
+        if (!r.ok) { toast.error("Bridge capture failed — play some audio first"); setReanalyzing(false); return; }
+        const d = await r.json();
+        setAnalysisResult(d);
+        setFileName(d.filename || "DAW Master");
+      }
+
+      // Run full v2 pipeline on whatever we have
+      if (v2Available) {
+        try {
+          // Use the gap endpoint to get fresh analysis (the /analyze/v2 endpoint was already called by bridge)
+          const gapResult = await api.getGapAnalysisV2();
+          const newGap = formatGapAnalysis(gapResult);
+          setGapAnalysis(newGap);
+
+          // Get fresh needs
+          const needsResult = await api.getNeedsV2();
+          setMixNeeds(formatNeeds(needsResult));
+
+          // Get fresh recommendations
+          const recsResult = await api.getRecommendationsV2(30);
+          if (recsResult?.recommendations) setV2Recommendations(recsResult.recommendations);
+
+          await loadSamples();
+
+          // Show delta
+          if (prevReadiness != null && newGap?.readiness != null) {
+            const delta = newGap.readiness - prevReadiness;
+            if (delta > 0) toast.success(`Re-analyzed! Readiness: ${prevReadiness} → ${newGap.readiness} (+${delta})`);
+            else if (delta < 0) toast.info(`Re-analyzed. Readiness: ${prevReadiness} → ${newGap.readiness} (${delta})`);
+            else toast.success(`Re-analyzed. Readiness: ${newGap.readiness}/100`);
+          } else {
+            toast.success("Re-analysis complete");
+          }
+        } catch {
+          toast.info("Re-analyzed (basic mode)");
+        }
+      }
+    } catch (e) {
+      toast.error("Re-analysis failed: " + (e.message || "unknown error"));
+    }
+
+    setReanalyzing(false);
+  }, [reanalyzing, bridge.connected, v2Available, gapAnalysis, prevReadiness, api, loadSamples, toast]);
+
   // ── Star Rating Display ──
   const StarRating = ({ sampleId }) => {
     const r = ratings[sampleId] || 0;
@@ -749,11 +809,16 @@ export default function App() {
                   <span style={{ fontSize: 10, color: theme.text, fontWeight: 600, fontFamily: MONO }}>{v || "—"}</span>
                 </div>
               ))}
-              {/* Session actions */}
+              {/* Session + Re-Analyze actions */}
               <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
                 <button onClick={saveSession} style={{ flex: 1, fontSize: 8, padding: "4px 0", borderRadius: 4, border: "1px solid " + theme.border, background: "transparent", color: theme.textSec, cursor: "pointer", fontFamily: AF }}>Save Session</button>
                 {sessions.length > 0 && <button onClick={() => setShowSessions(true)} style={{ flex: 1, fontSize: 8, padding: "4px 0", borderRadius: 4, border: "1px solid " + theme.border, background: "transparent", color: theme.textSec, cursor: "pointer", fontFamily: AF }}>History</button>}
               </div>
+              {bridge.connected && (
+                <button onClick={reAnalyze} disabled={reanalyzing} style={{ width: "100%", fontSize: 9, padding: "6px 0", marginTop: 6, borderRadius: 5, border: "1px solid rgba(34,197,94,0.3)", background: reanalyzing ? "rgba(34,197,94,0.03)" : "rgba(34,197,94,0.08)", color: reanalyzing ? theme.textMuted : "#22C55E", cursor: reanalyzing ? "default" : "pointer", fontWeight: 600, fontFamily: AF, transition: "all 0.2s" }}>
+                  {reanalyzing ? "Re-Analyzing..." : "Re-Analyze from DAW"}
+                </button>
+              )}
             </div>
             {/* v2 Mix Needs */}
             {mixNeeds.length > 0 && (

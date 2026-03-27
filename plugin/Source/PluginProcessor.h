@@ -70,5 +70,8 @@ private:
     // processBlock NEVER touches this.
     std::mutex snapshotMutex;
 
+    // captureLock only used for prepareToPlay/releaseResources (non-RT resizing)
+    juce::CriticalSection captureLock;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ResonateBridgeProcessor)
 };
