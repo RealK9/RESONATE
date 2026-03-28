@@ -24,10 +24,12 @@ import { useBridge } from "./hooks/useBridge";
 import { WaveformTooltip } from "./components/WaveformTooltip";
 import { Modal } from "./components/Modal";
 import { MixPreviewBar } from "./components/MixPreviewBar";
+import { PlaybackBar } from "./components/PlaybackBar";
 import { ProducerDNA } from "./components/ProducerDNA";
 import { ChartIntel } from "./components/ChartIntel";
 import { VersionTimeline } from "./components/VersionTimeline";
 import { SmartCollection } from "./components/SmartCollection";
+import { usePitchTempo } from "./hooks/usePitchTempo";
 
 // ── Logo with background stripped + animated light tracing down the colored strokes ──
 function LogoBlend({ size, isDark, animate = true }) {
@@ -154,7 +156,11 @@ export default function App() {
   const [sampleDir, setSampleDir] = useState("");
   const tmr = useRef(null);
   const audio = useAudioPlayer();
+  const pitchTempo = usePitchTempo();
   const bridge = useBridge();
+
+  // Connect pitch/tempo engine to audio player (ref-based, safe to call repeatedly)
+  audio.connectPitchTempo(pitchTempo);
 
   // ── Sidebar UI State ──
   const [analyzerExpanded, setAnalyzerExpanded] = useState(false);
@@ -263,10 +269,11 @@ export default function App() {
     try {
       // Try the full v2 pipeline first (analyze + gap + recommend in one call)
       let v2Success = false;
+      let mp = null;
       try {
         const fullResult = await api.analyzeFullV2(file, 30);
         // Extract mix profile
-        const mp = fullResult.mix_profile;
+        mp = fullResult.mix_profile;
         setMixProfile(mp);
         setMixNeeds(formatNeeds(mp));
         // Extract gap analysis
@@ -285,6 +292,7 @@ export default function App() {
         // Full endpoint not available — try v2 analyze + separate recommend
         try {
           const v2Result = await api.analyzeTrackV2(file);
+          mp = v2Result;
           setMixProfile(v2Result);
           setMixNeeds(formatNeeds(v2Result));
           // Try to get gap analysis separately
@@ -301,10 +309,17 @@ export default function App() {
           const res = await fetch(API + "/analyze", { method: "POST", body: fd });
           if (!res.ok) { const e = await res.json(); throw new Error(e.detail || "Failed"); }
           const result = await res.json(); setAnalysisResult(result);
+          // Feed v1 key/BPM into pitch/tempo engine
+          pitchTempo.setUploadAnalysis(result?.analysis?.key, result?.analysis?.bpm);
         }
       }
       clearInterval(tmr.current); setStage(STAGES[STAGES.length - 1]); setProgress(100);
       await loadSamples(); await audio.loadTrack();
+
+      // Feed upload key/BPM into pitch/tempo engine from MixProfile
+      if (mp) {
+        pitchTempo.setUploadAnalysis(mp.analysis?.key, mp.analysis?.bpm);
+      }
 
       // Fetch v2 recommendations in the background if not already loaded
       if (v2Success && v2Recommendations.length === 0) {
@@ -444,7 +459,9 @@ export default function App() {
     try {
       const r = await fetch(API + "/sessions/" + sessionId);
       const d = await r.json();
-      setAnalysisResult({ analysis: { ...d.track_profile, ...d.ai_analysis } });
+      const sessAnalysis = { ...d.track_profile, ...d.ai_analysis };
+      setAnalysisResult({ analysis: sessAnalysis });
+      pitchTempo.setUploadAnalysis(sessAnalysis.key, sessAnalysis.bpm);
       setFileName(d.track_filename);
       setCurrentSessionId(d.id);
       setShowSessions(false);
@@ -483,11 +500,10 @@ export default function App() {
     return true;
   }).sort((a, b) => (b.match || 0) - (a.match || 0)), [displaySamples, category, selectedKey, search, tab, favorites, sourceFilter, moodFilter]);
 
-  // Auto-sync to track key/BPM whenever we have an analysis (like Splice).
-  // Also syncs when DAW bridge is connected with dawSync enabled.
-  const isSynced = !!analysisResult || (bridge.connected && bridge.dawSync);
-  const handlePlay = s => { setActiveSample(s); audio.toggle(s.path, s.id, isSynced); const idx = filtered.findIndex(x => x.id === s.id); if (idx >= 0) setSelectedIdx(idx); logV2Feedback(s, "audition"); };
-  const handlePreviewInContext = useCallback((s) => { setActiveSample(s); audio.previewInContext(s.id, s.path); const idx = filtered.findIndex(x => x.id === s.id); if (idx >= 0) setSelectedIdx(idx); logV2Feedback(s, "audition"); }, [audio, filtered, logV2Feedback]);
+  // Build sampleMeta for pitch/tempo processing (Splice-style)
+  const makeMeta = (s) => ({ key: s.key, bpm: s.bpm });
+  const handlePlay = s => { setActiveSample(s); audio.toggle(s.path, s.id, makeMeta(s)); const idx = filtered.findIndex(x => x.id === s.id); if (idx >= 0) setSelectedIdx(idx); logV2Feedback(s, "audition"); };
+  const handlePreviewInContext = useCallback((s) => { setActiveSample(s); audio.previewInContext(s.id, s.path, makeMeta(s)); const idx = filtered.findIndex(x => x.id === s.id); if (idx >= 0) setSelectedIdx(idx); logV2Feedback(s, "audition"); }, [audio, filtered, logV2Feedback]);
   const selectAllVisible = useCallback(() => { setCheckedSamples(new Set(filtered.map(s => s.id))); }, [filtered]);
 
   // Count samples by source
@@ -530,15 +546,15 @@ export default function App() {
 
       if (e.code === "Space") {
         e.preventDefault();
-        if (activeSample) audio.toggle(activeSample.path, activeSample.id, isSynced);
+        if (activeSample) audio.toggle(activeSample.path, activeSample.id, makeMeta(activeSample));
       } else if (e.code === "ArrowDown") {
         e.preventDefault();
         const next = Math.min(selectedIdx + 1, filtered.length - 1);
-        if (filtered[next]) { setSelectedIdx(next); setActiveSample(filtered[next]); audio.toggle(filtered[next].path, filtered[next].id, isSynced); }
+        if (filtered[next]) { setSelectedIdx(next); setActiveSample(filtered[next]); audio.toggle(filtered[next].path, filtered[next].id, makeMeta(filtered[next])); }
       } else if (e.code === "ArrowUp") {
         e.preventDefault();
         const prev = Math.max(selectedIdx - 1, 0);
-        if (filtered[prev]) { setSelectedIdx(prev); setActiveSample(filtered[prev]); audio.toggle(filtered[prev].path, filtered[prev].id, isSynced); }
+        if (filtered[prev]) { setSelectedIdx(prev); setActiveSample(filtered[prev]); audio.toggle(filtered[prev].path, filtered[prev].id, makeMeta(filtered[prev])); }
       } else if (e.key === "m" || e.key === "M") {
         audio.toggleMix();
       } else if (e.key === "f" || e.key === "F") {
@@ -592,7 +608,7 @@ export default function App() {
     logV2Feedback(sample, "drag");
   }, [currentSessionId, bridge.connected, bridge.dawSync, logV2Feedback]);
 
-  const handleNew = () => { setScreen("home"); setActiveSample(null); audio.stop(); setAnalysisResult(null); setSelectedIdx(-1); setSimilarSamples(null); setMixProfile(null); setV2Recommendations([]); setMixNeeds([]); setGapAnalysis(null); setChartComparison(null); setCollections([]); setViewMode("smart"); };
+  const handleNew = () => { setScreen("home"); setActiveSample(null); audio.stop(); setAnalysisResult(null); setSelectedIdx(-1); setSimilarSamples(null); setMixProfile(null); setV2Recommendations([]); setMixNeeds([]); setGapAnalysis(null); setChartComparison(null); setCollections([]); setViewMode("smart"); pitchTempo.setUploadAnalysis(null, 0); };
 
   const analyzeFromBridge = useCallback(async () => {
     try {
@@ -718,7 +734,7 @@ export default function App() {
           {(similarSamples || []).length === 0 ? (
             <div style={{ padding: 20, textAlign: "center", color: theme.textMuted, fontSize: 11 }}>No similar samples found</div>
           ) : (similarSamples || []).map(s => (
-            <div key={s.id} onClick={() => { setActiveSample(s); audio.toggle(s.path, s.id, isSynced); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 6, marginBottom: 4, cursor: "pointer", background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)", border: "1px solid " + theme.borderLight }}>
+            <div key={s.id} onClick={() => { setActiveSample(s); audio.toggle(s.path, s.id, makeMeta(s)); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 6, marginBottom: 4, cursor: "pointer", background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)", border: "1px solid " + theme.borderLight }}>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: 12, color: theme.text, fontFamily: SERIF, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.clean_name || s.name}</div>
                 <div style={{ fontSize: 9, color: theme.textMuted }}>{s.type_label} · {s.key} · {s.bpm ? Math.round(s.bpm) : "—"}</div>
@@ -739,7 +755,7 @@ export default function App() {
           {(layerSamples || []).length === 0 ? (
             <div style={{ padding: 20, textAlign: "center", color: theme.textMuted, fontSize: 11 }}>No layering suggestions found</div>
           ) : (layerSamples || []).map(s => (
-            <div key={s.id} onClick={() => { setActiveSample(s); audio.toggle(s.path, s.id, isSynced); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 6, marginBottom: 4, cursor: "pointer", background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)", border: "1px solid " + theme.borderLight }}>
+            <div key={s.id} onClick={() => { setActiveSample(s); audio.toggle(s.path, s.id, makeMeta(s)); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 6, marginBottom: 4, cursor: "pointer", background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)", border: "1px solid " + theme.borderLight }}>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: 12, color: theme.text, fontFamily: SERIF, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.clean_name || s.name}</div>
                 <div style={{ fontSize: 9, color: theme.textMuted }}>{s.type_label} · {s.key} · {s.layer_reason}</div>
@@ -1269,7 +1285,7 @@ export default function App() {
                       if (sample.filepath) {
                         const s = { path: sample.filepath, id: sample.filepath, name: sample.name };
                         setActiveSample(s);
-                        audio.toggle(s.path, s.id, isSynced);
+                        audio.toggle(s.path, s.id, makeMeta(s));
                       }
                     }}
                     onExport={(collectionId) => api.exportCollection(collectionId)}
@@ -1327,7 +1343,7 @@ export default function App() {
                       <div style={{ position: "absolute", top: startIdx * ROW_HEIGHT, width: "100%" }}>
                         {visibleSamples.map((s, i) => (
                           <div key={s.id} draggable onDragStart={e => handleDragStart(e, s)} style={{ height: ROW_HEIGHT }}>
-                            <SampleRow sample={s} isActive={activeSample?.id === s.id} isPlaying={audio.currentId === s.id && audio.playing} onPlay={handlePlay} onPreviewInContext={handlePreviewInContext} isSelected={(startIdx + i) === selectedIdx} isChecked={checkedSamples.has(s.id)} onCheck={toggleCheck} onHoverWaveform={handleHoverWaveform} dawSync={isSynced} />
+                            <SampleRow sample={s} isActive={activeSample?.id === s.id} isPlaying={audio.currentId === s.id && audio.playing} onPlay={handlePlay} onPreviewInContext={handlePreviewInContext} isSelected={(startIdx + i) === selectedIdx} isChecked={checkedSamples.has(s.id)} onCheck={toggleCheck} onHoverWaveform={handleHoverWaveform} />
                           </div>
                         ))}
                       </div>
@@ -1337,11 +1353,16 @@ export default function App() {
               </>
             )}
 
+            {/* Pitch/Tempo Controls — Splice-style KEY + BPM bar */}
+            {(pitchTempo.uploadBpm > 0 || pitchTempo.uploadKey) && (
+              <PlaybackBar pitchTempo={pitchTempo} />
+            )}
+
             {/* Player */}
             {activeSample && (
               <div style={{ padding: "8px 14px", borderTop: "1px solid " + theme.border, background: theme.surface }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <button onClick={() => audio.toggle(activeSample.path, activeSample.id, isSynced)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: theme.gradient, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 12px rgba(217,70,239,0.2), 0 2px 6px rgba(6,182,212,0.15)" }}>
+                  <button onClick={() => audio.toggle(activeSample.path, activeSample.id, makeMeta(activeSample))} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: theme.gradient, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 12px rgba(217,70,239,0.2), 0 2px 6px rgba(6,182,212,0.15)" }}>
                     {audio.currentId === activeSample.id && audio.playing
                       ? <svg width="9" height="9" viewBox="0 0 14 14" fill="#fff"><rect x="2" y="1" width="4" height="12" rx="1" /><rect x="8" y="1" width="4" height="12" rx="1" /></svg>
                       : <svg width="9" height="9" viewBox="0 0 14 14" fill="#fff"><path d="M3 1v12l10-6z" /></svg>}

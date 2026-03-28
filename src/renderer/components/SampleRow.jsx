@@ -23,7 +23,7 @@ const ROLE_COLORS = {
   ambience: "#34D399", percussion: "#FB923C",
 };
 
-export const SampleRow = memo(function SampleRow({ sample, isActive, isPlaying, onPlay, onPreviewInContext, isSelected, isChecked, onCheck, onHoverWaveform, dawSync = false }) {
+export const SampleRow = memo(function SampleRow({ sample, isActive, isPlaying, onPlay, onPreviewInContext, isSelected, isChecked, onCheck, onHoverWaveform }) {
   const [hov, setHov] = useState(false);
   const rowRef = useRef(null);
   const { theme, mode } = useTheme();
@@ -83,18 +83,8 @@ export const SampleRow = memo(function SampleRow({ sample, isActive, isPlaying, 
         </div>
       </div>
       <span style={{ fontSize: 11, fontWeight: 700, color: (sample.match || 50) >= 70 ? "#D946EF" : (sample.match || 50) >= 55 ? theme.text : theme.textMuted, fontFamily: MONO }}>{Math.round(sample.match || 50)}%</span>
-      <span style={{ fontSize: 10, color: theme.textMuted, fontFamily: MONO }}>
-        {sample.key || "—"}
-        {dawSync && sample.synced_key && sample.synced_key !== sample.key && (
-          <span style={{ fontSize: 7, color: "#22C55E", marginLeft: 2 }}>{">" + sample.synced_key}</span>
-        )}
-      </span>
-      <span style={{ fontSize: 10, color: theme.textMuted, fontFamily: MONO }}>
-        {sample.bpm ? Math.round(sample.bpm) : "—"}
-        {dawSync && sample.synced_bpm && Math.round(sample.synced_bpm) !== Math.round(sample.bpm || 0) && (
-          <span style={{ fontSize: 7, color: "#22C55E", marginLeft: 2 }}>{">" + Math.round(sample.synced_bpm)}</span>
-        )}
-      </span>
+      <span style={{ fontSize: 10, color: theme.textMuted, fontFamily: MONO }}>{sample.key || "—"}</span>
+      <span style={{ fontSize: 10, color: theme.textMuted, fontFamily: MONO }}>{sample.bpm ? Math.round(sample.bpm) : "—"}</span>
       <span style={{ fontSize: 9, color: theme.textFaint }}>{typeof sample.duration === "number" ? dur(sample.duration) : "—"}</span>
     </div>
   );
