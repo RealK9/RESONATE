@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoniqLabs — Double Peak</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #080808;
+    color: #E8E6E3;
+    font-family: 'Sora', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px 20px;
+    gap: 50px;
+  }
+  .title {
+    font-size: 10px;
+    font-weight: 300;
+    letter-spacing: 10px;
+    text-transform: uppercase;
+    color: #3a3a3a;
+  }
+  .divider {
+    width: 80px;
+    height: 1px;
+    background: #1a1a1a;
+  }
+  .section-label {
+    font-size: 8px;
+    font-weight: 400;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: #2a2a2a;
+  }
+
+  /* Hero */
+  .hero-mark {
+    width: 560px;
+    height: 160px;
+    position: relative;
+  }
+  .hero-mark canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Sizes */
+  .sizes {
+    display: flex;
+    align-items: flex-end;
+    gap: 36px;
+  }
+  .size-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .size-frame {
+    position: relative;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 50% 45%, #111 0%, #0a0a0a 60%, #060606 100%);
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+  .size-frame canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+  .size-label {
+    font-size: 8px;
+    color: #2a2a2a;
+    letter-spacing: 2px;
+  }
+
+  /* Lockups */
+  .lockups {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    align-items: center;
+  }
+  .lockup {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .lockup canvas {
+    flex-shrink: 0;
+  }
+  .lockup-text { display: flex; flex-direction: column; }
+  .brand-soniq {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    color: #e8e4df;
+  }
+  .brand-labs {
+    font-size: 16px;
+    font-weight: 200;
+    letter-spacing: 8px;
+    color: rgba(255,255,255,0.3);
+    margin-top: -2px;
+  }
+  .brand-soniq-sm {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 5px;
+    color: #e8e4df;
+  }
+  .brand-labs-sm {
+    font-size: 12px;
+    font-weight: 200;
+    letter-spacing: 7px;
+    color: rgba(255,255,255,0.3);
+    margin-top: -1px;
+  }
+  .brand-inline {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 4px;
+    color: #e8e4df;
+  }
+  .brand-inline span {
+    font-weight: 200;
+    color: rgba(255,255,255,0.35);
+  }
+
+  /* Dark / Light comparison */
+  .compare {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+  }
+  .compare-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .compare-frame {
+    width: 240px;
+    height: 200px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+  }
+  .compare-frame.dark {
+    background: radial-gradient(ellipse at 50% 45%, #111 0%, #0a0a0a 60%, #060606 100%);
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+  .compare-frame.light {
+    background: radial-gradient(ellipse at 50% 45%, #f5f2ed 0%, #ebe8e2 60%, #e4e0da 100%);
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .compare-frame canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+  .compare-label {
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: #333;
+    text-transform: uppercase;
+  }
+
+  /* Favicon strip */
+  .favicon-strip {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+  .fav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .fav-frame {
+    position: relative;
+    overflow: hidden;
+    background: #0c0c0c;
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+  .fav-frame canvas {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  }
+  .fav-label {
+    font-size: 7px;
+    color: #2a2a2a;
+    letter-spacing: 1px;
+  }
+
+  .desc {
+    font-size: 11px;
+    color: #3a3a3a;
+    text-align: center;
+    line-height: 1.8;
+    max-width: 500px;
+  }
+</style>
+</head>
+<body>
+
+<span class="title">Double Peak</span>
+
+<!-- HERO -->
+<div class="hero-mark">
+  <canvas id="hero" width="1120" height="320"></canvas>
+</div>
+
+<div class="divider"></div>
+
+<!-- SIZE LADDER -->
+<span class="section-label">Scale</span>
+<div class="sizes">
+  <div class="size-col">
+    <div class="size-frame" style="width:200px;height:166px;border-radius:24px;">
+      <canvas class="sz" width="400" height="332" data-s="200"></canvas>
+    </div>
+    <span class="size-label">200px</span>
+  </div>
+  <div class="size-col">
+    <div class="size-frame" style="width:120px;height:100px;border-radius:18px;">
+      <canvas class="sz" width="240" height="200" data-s="120"></canvas>
+    </div>
+    <span class="size-label">120px</span>
+  </div>
+  <div class="size-col">
+    <div class="size-frame" style="width:64px;height:53px;border-radius:12px;">
+      <canvas class="sz" width="128" height="106" data-s="64"></canvas>
+    </div>
+    <span class="size-label">64px</span>
+  </div>
+  <div class="size-col">
+    <div class="size-frame" style="width:32px;height:27px;border-radius:7px;">
+      <canvas class="sz" width="64" height="54" data-s="32"></canvas>
+    </div>
+    <span class="size-label">32px</span>
+  </div>
+  <div class="size-col">
+    <div class="size-frame" style="width:16px;height:16px;border-radius:4px;">
+      <canvas class="sz" width="32" height="32" data-s="16"></canvas>
+    </div>
+    <span class="size-label">16px</span>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- DARK vs LIGHT -->
+<span class="section-label">Dark &amp; Light</span>
+<div class="compare">
+  <div class="compare-col">
+    <span class="compare-label">Dark</span>
+    <div class="compare-frame dark"><canvas id="cmpDark" width="480" height="400"></canvas></div>
+  </div>
+  <div class="compare-col">
+    <span class="compare-label">Light</span>
+    <div class="compare-frame light"><canvas id="cmpLight" width="480" height="400"></canvas></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- WORDMARK LOCKUPS -->
+<span class="section-label">Lockups</span>
+<div class="lockups">
+  <!-- Large stacked -->
+  <div class="lockup">
+    <canvas id="lk1" width="120" height="100"></canvas>
+    <div class="lockup-text">
+      <span class="brand-soniq">SONIQ</span>
+      <span class="brand-labs">labs</span>
+    </div>
+  </div>
+  <!-- Medium stacked -->
+  <div class="lockup">
+    <canvas id="lk2" width="80" height="66"></canvas>
+    <div class="lockup-text">
+      <span class="brand-soniq-sm">SONIQ</span>
+      <span class="brand-labs-sm">labs</span>
+    </div>
+  </div>
+  <!-- Inline -->
+  <div class="lockup">
+    <canvas id="lk3" width="56" height="46"></canvas>
+    <span class="brand-inline">SONIQ<span>labs</span></span>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<p class="desc">Two symmetric peaks like sound waves colliding. The S-curve valley between them glows burgundy at the point of resonance. Pearl-white wireframe mesh on satin black — precision meets warmth.</p>
+
+<script>
+const PEARL = [235, 230, 222];
+const BURGUNDY = [138, 58, 66];
+const WINE = [114, 47, 55];
+const DARK_WIRE = [40, 36, 32];
+
+function drawWaves(canvas, mode, opts = {}) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const isDark = mode === 'dark';
+  const wire = isDark ? PEARL : DARK_WIRE;
+  const numLines = opts.lines || 18;
+  const cols = opts.cols || 120;
+  const lw = opts.lineWidth || (W > 400 ? 1.2 : W > 150 ? 0.8 : 0.5);
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Burgundy glow BEHIND
+  if (W > 60) {
+    const gx = W * 0.5, gy = H * 0.45;
+    const g1 = ctx.createRadialGradient(gx, gy, 0, gx, gy, W * 0.42);
+    const ga = isDark ? 0.2 : 0.12;
+    g1.addColorStop(0, `rgba(${BURGUNDY[0]},${BURGUNDY[1]},${BURGUNDY[2]},${ga})`);
+    g1.addColorStop(0.4, `rgba(${WINE[0]},${WINE[1]},${WINE[2]},${ga * 0.45})`);
+    g1.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g1;
+    ctx.fillRect(0, 0, W, H);
+    const g2 = ctx.createRadialGradient(gx, gy, 0, gx, gy, W * 0.16);
+    g2.addColorStop(0, `rgba(${BURGUNDY[0]},${BURGUNDY[1]},${BURGUNDY[2]},${ga * 0.65})`);
+    g2.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g2;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  const smooth = t => t * t * (3 - 2 * t);
+
+  // Loose, free-flowing lines — each with its own personality
+  // They drift around each other creating a wave, not locked in parallel
+  const bandCenter = H * 0.5;
+
+  // Give each line a unique, randomish personality using golden ratio offsets
+  const phi = 1.618033988749;
+
+  for (let i = 0; i < numLines; i++) {
+    const t = i / (numLines - 1); // 0 to 1
+
+    // Seed unique values per line using golden ratio for organic spacing
+    const seed = i * phi;
+    const seedFrac = seed - Math.floor(seed);
+
+    // Base Y — tighter vertical grouping
+    const spread = H * 0.06;
+    const baseY = bandCenter + (seedFrac - 0.5) * spread;
+
+    // Flowing curves — tall peaks up and down but lines stay grouped
+    const freqMain = 0.35 + seedFrac * 0.35;
+    const freqSec = 0.6 + (1 - seedFrac) * 0.4;
+    const ampMain = H * (0.10 + seedFrac * 0.12);   // squished down
+    const ampSec = H * (0.035 + (1 - seedFrac) * 0.05);
+    const phaseMain = i * 1.9 + seedFrac * 4;
+    const phaseSec = i * 0.7 + seedFrac * 7;
+
+    const linePoints = [];
+    for (let c = 0; c <= cols; c++) {
+      const u = c / cols;
+      const x = W * 0.04 + u * W * 0.92;
+      const xn = (u - 0.5) * 2;
+
+      // Organic flowing curve — each line unique
+      const wave = Math.sin(xn * Math.PI * freqMain + phaseMain) * ampMain
+                 + Math.sin(xn * Math.PI * freqSec + phaseSec) * ampSec;
+
+      const y = baseY + wave;
+
+      // Edge fade
+      const fadeL = smooth(Math.min(1, u / 0.12));
+      const fadeR = smooth(Math.min(1, (1 - u) / 0.12));
+      const fade = fadeL * fadeR;
+
+      const displacement = Math.abs(wave) / (H * 0.06);
+      linePoints.push({ x, y, fade, displacement });
+    }
+
+    // Varied opacity per line — some bolder, some ghostly
+    const lineAlpha = 0.18 + seedFrac * 0.35;
+    const lineWeight = lw * (0.6 + seedFrac * 0.5);
+
+    for (let c = 0; c < linePoints.length - 1; c++) {
+      const a = linePoints[c];
+      const b = linePoints[c + 1];
+      const fade = Math.min(a.fade, b.fade);
+      if (fade < 0.01) continue;
+
+      const alpha = lineAlpha * fade;
+      const disp = Math.max(a.displacement, b.displacement);
+
+      let cr, cg, cb;
+      if (disp > 0.3) {
+        const bt = Math.min(1, (disp - 0.3) / 0.7);
+        cr = Math.floor(wire[0] + (BURGUNDY[0] - wire[0]) * bt * 0.5);
+        cg = Math.floor(wire[1] + (BURGUNDY[1] - wire[1]) * bt * 0.5);
+        cb = Math.floor(wire[2] + (BURGUNDY[2] - wire[2]) * bt * 0.5);
+      } else {
+        cr = wire[0]; cg = wire[1]; cb = wire[2];
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.strokeStyle = `rgba(${cr},${cg},${cb},${alpha})`;
+      ctx.lineWidth = lineWeight;
+      ctx.stroke();
+    }
+  }
+}
+
+// Hero — 22 lines, fewer and more flowing
+drawWaves(document.getElementById('hero'), 'dark', { lines: 22, cols: 200, lineWidth: 1 });
+
+// Size ladder
+document.querySelectorAll('canvas.sz').forEach(c => {
+  const s = parseInt(c.dataset.s);
+  const lines = s > 150 ? 20 : s > 80 ? 16 : s > 40 ? 11 : 7;
+  const cl = s > 150 ? 140 : s > 80 ? 90 : 50;
+  drawWaves(c, 'dark', { lines, cols: cl });
+});
+
+// Dark vs Light
+drawWaves(document.getElementById('cmpDark'), 'dark', { lines: 20, cols: 130 });
+drawWaves(document.getElementById('cmpLight'), 'light', { lines: 20, cols: 130 });
+
+// Lockups
+drawWaves(document.getElementById('lk1'), 'dark', { lines: 16, cols: 90 });
+drawWaves(document.getElementById('lk2'), 'dark', { lines: 12, cols: 60 });
+drawWaves(document.getElementById('lk3'), 'dark', { lines: 10, cols: 45 });
+</script>
+
+</body>
+</html>

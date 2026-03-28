@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoniqLabs — Resonance Void</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a12;
+    color: #E8E6E3;
+    font-family: 'Sora', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 60px;
+    padding: 60px 20px;
+  }
+
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+  }
+
+  .title {
+    font-size: 10px;
+    font-weight: 300;
+    letter-spacing: 10px;
+    text-transform: uppercase;
+    color: #444;
+  }
+
+  .sizes {
+    display: flex;
+    align-items: flex-end;
+    gap: 48px;
+  }
+
+  .size-label {
+    font-size: 9px;
+    color: #333;
+    letter-spacing: 2px;
+    text-align: center;
+    margin-top: 12px;
+  }
+
+  .size-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .variants {
+    display: flex;
+    gap: 60px;
+    align-items: flex-start;
+    margin-top: 20px;
+  }
+
+  .variant {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .variant-label {
+    font-size: 9px;
+    color: #333;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .light-bg {
+    background: #EDEBE6;
+    border-radius: 24px;
+    padding: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .wordmark {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-top: 40px;
+  }
+
+  .wordmark-text {
+    font-size: 36px;
+    font-weight: 200;
+    letter-spacing: 8px;
+    background: linear-gradient(135deg, #E879F9, #A855F7, #06B6D4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: lowercase;
+  }
+
+  .desc {
+    font-size: 11px;
+    color: #444;
+    text-align: center;
+    line-height: 1.8;
+    max-width: 500px;
+    margin-top: 10px;
+  }
+
+  .divider {
+    width: 80px;
+    height: 1px;
+    background: #1a1a1a;
+  }
+</style>
+</head>
+<body>
+
+<span class="title">Resonance Void</span>
+
+<!-- ===== HERO: Large mark ===== -->
+<div class="hero">
+  <svg width="320" height="320" viewBox="0 0 160 160">
+    <defs>
+      <linearGradient id="rva" x1="0" y1="0" x2="1" y2="0.5">
+        <stop offset="0%" stop-color="#E879F9"/>
+        <stop offset="100%" stop-color="#A855F7"/>
+      </linearGradient>
+      <linearGradient id="rvb" x1="0" y1="0.5" x2="1" y2="1">
+        <stop offset="0%" stop-color="#7C3AED"/>
+        <stop offset="100%" stop-color="#06B6D4"/>
+      </linearGradient>
+    </defs>
+    <!-- Top-left mass -->
+    <path d="
+      M 12 8 L 140 8 Q 152 8, 152 20 L 152 50
+      C 130 48, 110 55, 95 68
+      C 85 76, 80 80, 80 80
+      L 8 80
+      Q 8 80, 8 20
+      Q 8 8, 20 8 Z
+    " fill="url(#rva)"/>
+    <!-- Bottom-right mass -->
+    <path d="
+      M 8 110 L 80 80
+      C 80 80, 75 84, 65 92
+      C 50 105, 30 112, 8 110
+      L 8 140 Q 8 152, 20 152 L 140 152 Q 152 152, 152 140
+      L 152 80 L 80 80
+      Z
+    " fill="url(#rvb)"/>
+    <!-- Sound ripple arcs -->
+    <path d="M 72 72 Q 60 60, 48 72" stroke="#fff" stroke-width="1.2" stroke-opacity="0.2" fill="none" stroke-linecap="round"/>
+    <path d="M 76 68 Q 58 50, 40 68" stroke="#fff" stroke-width="1" stroke-opacity="0.15" fill="none" stroke-linecap="round"/>
+    <path d="M 88 88 Q 100 100, 112 88" stroke="#fff" stroke-width="1.2" stroke-opacity="0.2" fill="none" stroke-linecap="round"/>
+    <path d="M 84 92 Q 102 110, 120 92" stroke="#fff" stroke-width="1" stroke-opacity="0.15" fill="none" stroke-linecap="round"/>
+  </svg>
+</div>
+
+<div class="divider"></div>
+
+<!-- ===== SIZE COMPARISON ===== -->
+<div class="sizes">
+  <div class="size-col">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <defs>
+        <linearGradient id="rva2" x1="0" y1="0" x2="1" y2="0.5"><stop offset="0%" stop-color="#E879F9"/><stop offset="100%" stop-color="#A855F7"/></linearGradient>
+        <linearGradient id="rvb2" x1="0" y1="0.5" x2="1" y2="1"><stop offset="0%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#06B6D4"/></linearGradient>
+      </defs>
+      <path d="M 12 8 L 140 8 Q 152 8, 152 20 L 152 50 C 130 48, 110 55, 95 68 C 85 76, 80 80, 80 80 L 8 80 Q 8 80, 8 20 Q 8 8, 20 8 Z" fill="url(#rva2)"/>
+      <path d="M 8 110 L 80 80 C 80 80, 75 84, 65 92 C 50 105, 30 112, 8 110 L 8 140 Q 8 152, 20 152 L 140 152 Q 152 152, 152 140 L 152 80 L 80 80 Z" fill="url(#rvb2)"/>
+      <path d="M 72 72 Q 60 60, 48 72" stroke="#fff" stroke-width="1.2" stroke-opacity="0.2" fill="none" stroke-linecap="round"/>
+      <path d="M 76 68 Q 58 50, 40 68" stroke="#fff" stroke-width="1" stroke-opacity="0.15" fill="none" stroke-linecap="round"/>
+      <path d="M 88 88 Q 100 100, 112 88" stroke="#fff" stroke-width="1.2" stroke-opacity="0.2" fill="none" stroke-linecap="round"/>
+      <path d="M 84 92 Q 102 110, 120 92" stroke="#fff" stroke-width="1" stroke-opacity="0.15" fill="none" stroke-linecap="round"/>
+    </svg>
+    <span class="size-label">160px</span>
+  </div>
+  <div class="size-col">
+    <svg width="80" height="80" viewBox="0 0 160 160">
+      <path d="M 12 8 L 140 8 Q 152 8, 152 20 L 152 50 C 130 48, 110 55, 95 68 C 85 76, 80 80, 80 80 L 8 80 Q 8 80, 8 20 Q 8 8, 20 8 Z" fill="url(#rva2)"/>
+      <path d="M 8 110 L 80 80 C 80 80, 75 84, 65 92 C 50 105, 30 112, 8 110 L 8 140 Q 8 152, 20 152 L 140 152 Q 152 152, 152 140 L 152 80 L 80 80 Z" fill="url(#rvb2)"/>
+      <path d="M 72 72 Q 60 60, 48 72" stroke="#fff" stroke-width="1.5" stroke-opacity="0.2" fill="none" stroke-linecap="round"/>
+      <path d="M 88 88 Q 100 100, 112 88" stroke="#fff" stroke-width="1.5" stroke-opacity="0.2" fill="none" stroke-linecap="round"/>
+    </svg>
+    <span class="size-label">80px</span>
+  </div>
+  <div class="size-col">
+    <svg width="56" height="56" viewBox="0 0 160 160">
+      <path d="M 12 8 L 140 8 Q 152 8, 152 20 L 152 50 C 130 48, 110 55, 95 68 C 85 76, 80 80, 80 80 L 8 80 Q 8 80, 8 20 Q 8 8, 20 8 Z" fill="url(#rva2)"/>
+      <path d="M 8 110 L 80 80 C 80 80, 75 84, 65 92 C 50 105, 30 112, 8 110 L 8 140 Q 8 152, 20 152 L 140 152 Q 152 152, 152 140 L 152 80 L 80 80 Z" fill="url(#rvb2)"/>
+    </svg>
+    <span class="size-label">56px</span>
+  </div>
+  <div class="size-col">
+    <svg width="32" height="32" viewBox="0 0 160 160">
+      <path d="M 12 8 L 140 8 Q 152 8, 152 20 L 152 50 C 130 48, 110 55, 95 68 C 85 76, 80 80, 80 80 L 8 80 Q 8 80, 8 20 Q 8 8, 20 8 Z" fill="url(#rva2)"/>
+      <path d="M 8 110 L 80 80 C 80 80, 75 84, 65 92 C 50 105, 30 112, 8 110 L 8 140 Q 8 152, 20 152 L 140 152 Q 152 152, 152 140 L 152 80 L 80 80 Z" fill="url(#rvb2)"/>
+    </svg>
+    <span class="size-label">32px</span>
+  </div>
+  <div class="size-col">
+    <svg width="16" height="16" viewBox="0 0 160 160">
+      <path d="M 12 8 L 140 8 Q 152 8, 152 20 L 152 50 C 130 48, 110 55, 95 68 C 85 76, 80 80, 80 80 L 8 80 Q 8 80, 8 20 Q 8 8, 20 8 Z" fill="url(#rva2)"/>
+      <path d="M 8 110 L 80 80 C 80 80, 75 84, 65 92 C 50 105, 30 112, 8 110 L 8 140 Q 8 152, 20 152 L 140 152 Q 152 152, 152 140 L 152 80 L 80 80 Z" fill="url(#rvb2)"/>
+    </svg>
+    <span class="size-label">16px</span>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ===== LIGHT MODE ===== -->
+<div class="variants">
+  <div class="variant">
+    <span class="variant-label">Dark</span>
+    <div style="background:#111119; border-radius:20px; padding:40px; display:flex; align-items:center; justify-content:center;">
+      <svg width="140" height="140" viewBox="0 0 160 160">
+        <path d="M 12 8 L 140 8 Q 152 8, 152 20 L 152 50 C 130 48, 110 55, 95 68 C 85 76, 80 80, 80 80 L 8 80 Q 8 80, 8 20 Q 8 8, 20 8 Z" fill="url(#rva2)"/>
+        <path d="M 8 110 L 80 80 C 80 80, 75 84, 65 92 C 50 105, 30 112, 8 110 L 8 140 Q 8 152, 20 152 L 140 152 Q 152 152, 152 140 L 152 80 L 80 80 Z" fill="url(#rvb2)"/>
+        <path d="M 72 72 Q 60 60, 48 72" stroke="#fff" stroke-width="1.2" stroke-opacity="0.2" fill="none" stroke-linecap="round"/>
+        <path d="M 76 68 Q 58 50, 40 68" stroke="#fff" stroke-width="1" stroke-opacity="0.15" fill="none" stroke-linecap="round"/>
+        <path d="M 88 88 Q 100 100, 112 88" stroke="#fff" stroke-width="1.2" stroke-opacity="0.2" fill="none" stroke-linecap="round"/>
+        <path d="M 84 92 Q 102 110, 120 92" stroke="#fff" stroke-width="1" stroke-opacity="0.15" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+  <div class="variant">
+    <span class="variant-label">Light</span>
+    <div class="light-bg">
+      <svg width="140" height="140" viewBox="0 0 160 160">
+        <path d="M 12 8 L 140 8 Q 152 8, 152 20 L 152 50 C 130 48, 110 55, 95 68 C 85 76, 80 80, 80 80 L 8 80 Q 8 80, 8 20 Q 8 8, 20 8 Z" fill="url(#rva2)"/>
+        <path d="M 8 110 L 80 80 C 80 80, 75 84, 65 92 C 50 105, 30 112, 8 110 L 8 140 Q 8 152, 20 152 L 140 152 Q 152 152, 152 140 L 152 80 L 80 80 Z" fill="url(#rvb2)"/>
+        <path d="M 72 72 Q 60 60, 48 72" stroke="#222" stroke-width="1.2" stroke-opacity="0.15" fill="none" stroke-linecap="round"/>
+        <path d="M 76 68 Q 58 50, 40 68" stroke="#222" stroke-width="1" stroke-opacity="0.1" fill="none" stroke-linecap="round"/>
+        <path d="M 88 88 Q 100 100, 112 88" stroke="#222" stroke-width="1.2" stroke-opacity="0.15" fill="none" stroke-linecap="round"/>
+        <path d="M 84 92 Q 102 110, 120 92" stroke="#222" stroke-width="1" stroke-opacity="0.1" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ===== WORDMARK LOCKUPS ===== -->
+<div class="wordmark">
+  <svg width="48" height="48" viewBox="0 0 160 160">
+    <path d="M 12 8 L 140 8 Q 152 8, 152 20 L 152 50 C 130 48, 110 55, 95 68 C 85 76, 80 80, 80 80 L 8 80 Q 8 80, 8 20 Q 8 8, 20 8 Z" fill="url(#rva2)"/>
+    <path d="M 8 110 L 80 80 C 80 80, 75 84, 65 92 C 50 105, 30 112, 8 110 L 8 140 Q 8 152, 20 152 L 140 152 Q 152 152, 152 140 L 152 80 L 80 80 Z" fill="url(#rvb2)"/>
+  </svg>
+  <span class="wordmark-text">soniqlabs</span>
+</div>
+
+<p class="desc">Two masses with a diagonal S-void cutting through. Sound wave ripples emanate from the channel — the void itself is the source of resonance. The negative space between the gradient forms creates the brand's identity.</p>
+
+</body>
+</html>

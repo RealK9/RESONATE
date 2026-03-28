@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoniqLabs — Wireframe Options</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #080808;
+    color: #E8E6E3;
+    font-family: 'Sora', sans-serif;
+    min-height: 100vh;
+    padding: 50px 20px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 300;
+    letter-spacing: 10px;
+    text-transform: uppercase;
+    color: #3a3a3a;
+    margin-bottom: 40px;
+  }
+  .palette {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin: 0 auto 40px;
+  }
+  .swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .swatch-color {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .swatch-label {
+    font-size: 7px;
+    color: #333;
+    letter-spacing: 1px;
+  }
+  .concept-row {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 24px;
+    max-width: 1400px;
+    margin: 0 auto 50px;
+  }
+  .concept-info {
+    width: 140px;
+    padding-top: 40px;
+    flex-shrink: 0;
+  }
+  .num { font-size: 9px; font-weight: 600; letter-spacing: 3px; color: #2a2a2a; }
+  .name { font-size: 15px; font-weight: 200; letter-spacing: 3px; color: #555; margin-top: 4px; }
+  .desc {
+    font-size: 8px;
+    color: #333;
+    line-height: 1.6;
+    margin-top: 12px;
+  }
+  .pair {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  .version {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .version-label {
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: #333;
+    text-transform: uppercase;
+  }
+  .mark-dark {
+    width: 280px;
+    height: 230px;
+    background: radial-gradient(ellipse at 50% 45%, #111 0%, #0a0a0a 60%, #060606 100%);
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+  .mark-light {
+    width: 280px;
+    height: 230px;
+    background: radial-gradient(ellipse at 50% 45%, #f5f2ed 0%, #ebe8e2 60%, #e4e0da 100%);
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .mark-dark canvas, .mark-light canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .divider {
+    width: 100%;
+    max-width: 1200px;
+    height: 1px;
+    background: #111;
+    margin: 10px auto 40px;
+  }
+  .lockup-section {
+    text-align: center;
+    margin: 40px auto;
+  }
+  .lockup-section h2 {
+    font-size: 9px;
+    font-weight: 300;
+    letter-spacing: 8px;
+    color: #2a2a2a;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+  }
+  .lockup-grid {
+    display: flex;
+    justify-content: center;
+    gap: 60px;
+    flex-wrap: wrap;
+  }
+  .lockup-pair {
+    display: flex;
+    gap: 24px;
+  }
+  .lockup-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 28px;
+    border-radius: 16px;
+  }
+  .lockup-card.dark {
+    background: #0c0c0c;
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+  .lockup-card.light {
+    background: #f0ede8;
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .lockup-text { display: flex; flex-direction: column; }
+  .lockup-soniq-dark {
+    font-size: 22px; font-weight: 600; letter-spacing: 4px; color: #e8e4df;
+  }
+  .lockup-labs-dark {
+    font-size: 11px; font-weight: 200; letter-spacing: 6px; color: #555; margin-top: -1px;
+  }
+  .lockup-soniq-light {
+    font-size: 22px; font-weight: 600; letter-spacing: 4px; color: #1a1a1a;
+  }
+  .lockup-labs-light {
+    font-size: 11px; font-weight: 200; letter-spacing: 6px; color: #888; margin-top: -1px;
+  }
+</style>
+</head>
+<body>
+
+<h1>SoniqLabs &mdash; Wireframe Wave Options</h1>
+
+<div class="palette">
+  <div class="swatch">
+    <div class="swatch-color" style="background: #0a0a0a;"></div>
+    <span class="swatch-label">SATIN BLACK</span>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: linear-gradient(135deg, #f0ede8, #d4d0c8, #f5f2ed, #e8e4de);"></div>
+    <span class="swatch-label">PEARL</span>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background: linear-gradient(135deg, #722F37, #8B3A42, #5C1A22);"></div>
+    <span class="swatch-label">BURGUNDY</span>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- 01: Double Peak -->
+<div class="concept-row">
+  <div class="concept-info">
+    <span class="num">01</span>
+    <div class="name">Double Peak</div>
+    <p class="desc">Two peaks collide — S-curve valley glows burgundy at resonance point</p>
+  </div>
+  <div class="pair">
+    <div class="version">
+      <span class="version-label">Dark</span>
+      <div class="mark-dark"><canvas class="mesh" data-id="1" data-mode="dark" width="560" height="460"></canvas></div>
+    </div>
+    <div class="version">
+      <span class="version-label">Light</span>
+      <div class="mark-light"><canvas class="mesh" data-id="1" data-mode="light" width="560" height="460"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- 02: Vortex -->
+<div class="concept-row">
+  <div class="concept-info">
+    <span class="num">02</span>
+    <div class="name">Vortex</div>
+    <p class="desc">Concentric ripple from center — speaker cone pushing air</p>
+  </div>
+  <div class="pair">
+    <div class="version">
+      <span class="version-label">Dark</span>
+      <div class="mark-dark"><canvas class="mesh" data-id="2" data-mode="dark" width="560" height="460"></canvas></div>
+    </div>
+    <div class="version">
+      <span class="version-label">Light</span>
+      <div class="mark-light"><canvas class="mesh" data-id="2" data-mode="light" width="560" height="460"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- 03: Terrain -->
+<div class="concept-row">
+  <div class="concept-info">
+    <span class="num">03</span>
+    <div class="name">Terrain</div>
+    <p class="desc">Topographic sound landscape — dramatic peaks and deep valleys</p>
+  </div>
+  <div class="pair">
+    <div class="version">
+      <span class="version-label">Dark</span>
+      <div class="mark-dark"><canvas class="mesh" data-id="3" data-mode="dark" width="560" height="460"></canvas></div>
+    </div>
+    <div class="version">
+      <span class="version-label">Light</span>
+      <div class="mark-light"><canvas class="mesh" data-id="3" data-mode="light" width="560" height="460"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- 04: Ribbon -->
+<div class="concept-row">
+  <div class="concept-info">
+    <span class="num">04</span>
+    <div class="name">Ribbon</div>
+    <p class="desc">Single twisting surface — a frequency frozen mid-oscillation</p>
+  </div>
+  <div class="pair">
+    <div class="version">
+      <span class="version-label">Dark</span>
+      <div class="mark-dark"><canvas class="mesh" data-id="4" data-mode="dark" width="560" height="460"></canvas></div>
+    </div>
+    <div class="version">
+      <span class="version-label">Light</span>
+      <div class="mark-light"><canvas class="mesh" data-id="4" data-mode="light" width="560" height="460"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- 05: Pulse -->
+<div class="concept-row">
+  <div class="concept-info">
+    <span class="num">05</span>
+    <div class="name">Pulse</div>
+    <p class="desc">Sharp spike from flat grid — bass drop frozen at impact</p>
+  </div>
+  <div class="pair">
+    <div class="version">
+      <span class="version-label">Dark</span>
+      <div class="mark-dark"><canvas class="mesh" data-id="5" data-mode="dark" width="560" height="460"></canvas></div>
+    </div>
+    <div class="version">
+      <span class="version-label">Light</span>
+      <div class="mark-light"><canvas class="mesh" data-id="5" data-mode="light" width="560" height="460"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- 06: Harmonic -->
+<div class="concept-row">
+  <div class="concept-info">
+    <span class="num">06</span>
+    <div class="name">Harmonic</div>
+    <p class="desc">Layered sine harmonics — complex waveforms made visible</p>
+  </div>
+  <div class="pair">
+    <div class="version">
+      <span class="version-label">Dark</span>
+      <div class="mark-dark"><canvas class="mesh" data-id="6" data-mode="dark" width="560" height="460"></canvas></div>
+    </div>
+    <div class="version">
+      <span class="version-label">Light</span>
+      <div class="mark-light"><canvas class="mesh" data-id="6" data-mode="light" width="560" height="460"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Wordmark Lockups -->
+<div class="lockup-section">
+  <h2>Wordmark Lockups</h2>
+  <div class="lockup-grid">
+    <div class="lockup-pair">
+      <div class="lockup-card dark">
+        <canvas class="lockup-mesh" data-id="1" data-mode="dark" width="80" height="66"></canvas>
+        <div class="lockup-text">
+          <span class="lockup-soniq-dark">SONIQ</span>
+          <span class="lockup-labs-dark">labs</span>
+        </div>
+      </div>
+      <div class="lockup-card light">
+        <canvas class="lockup-mesh" data-id="1" data-mode="light" width="80" height="66"></canvas>
+        <div class="lockup-text">
+          <span class="lockup-soniq-light">SONIQ</span>
+          <span class="lockup-labs-light">labs</span>
+        </div>
+      </div>
+    </div>
+    <div class="lockup-pair">
+      <div class="lockup-card dark">
+        <canvas class="lockup-mesh" data-id="5" data-mode="dark" width="80" height="66"></canvas>
+        <div class="lockup-text">
+          <span class="lockup-soniq-dark">SONIQ</span>
+          <span class="lockup-labs-dark">labs</span>
+        </div>
+      </div>
+      <div class="lockup-card light">
+        <canvas class="lockup-mesh" data-id="5" data-mode="light" width="80" height="66"></canvas>
+        <div class="lockup-text">
+          <span class="lockup-soniq-light">SONIQ</span>
+          <span class="lockup-labs-light">labs</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Color palettes
+const DARK = {
+  wire: [235, 230, 222],
+  wireHi: [245, 242, 237],
+  glow: [138, 58, 66],
+  glowDeep: [114, 47, 55],
+};
+const LIGHT = {
+  wire: [40, 36, 32],
+  wireHi: [20, 18, 16],
+  glow: [138, 58, 66],
+  glowDeep: [114, 47, 55],
+};
+
+// Wave functions
+const waves = {
+  1: (x, z) => {
+    const w = Math.sin(x * Math.PI * 1.5) * Math.cos(z * Math.PI * 0.9);
+    const w2 = Math.sin(z * Math.PI * 1.1) * 0.4;
+    return (w + w2) * 0.13 * Math.exp(-(x*x + z*z) * 0.5);
+  },
+  2: (x, z) => {
+    const d = Math.sqrt(x*x + z*z);
+    return Math.sin(d * Math.PI * 3) * 0.12 * Math.exp(-d * 1.2);
+  },
+  3: (x, z) => {
+    const n1 = Math.sin(x*2.5+0.3) * Math.sin(z*1.8+0.7) * 0.1;
+    const n2 = Math.sin(x*4.1-1.2) * Math.sin(z*3.3) * 0.05;
+    const n3 = Math.sin(x*1.2 + z*2.5) * 0.08;
+    return (n1+n2+n3) * Math.exp(-(x*x*0.3 + z*z*0.3));
+  },
+  4: (x, z) => {
+    return Math.sin(z * Math.PI * 2 + x * Math.PI) * 0.15 * Math.exp(-x*x * 6);
+  },
+  5: (x, z) => {
+    const d = Math.sqrt(x*x + z*z);
+    return Math.exp(-d*d*8) * 0.22 + Math.sin(d*Math.PI*4) * 0.03 * Math.exp(-d*0.8);
+  },
+  6: (x, z) => {
+    const h1 = Math.sin(x*Math.PI*2) * 0.08;
+    const h2 = Math.sin(x*Math.PI*4) * 0.04;
+    const h3 = Math.sin(x*Math.PI*6) * 0.02;
+    return (h1+h2+h3) * Math.cos(z*Math.PI*0.8) * Math.exp(-z*z*0.5);
+  }
+};
+
+function drawMesh(canvas, waveFn, mode, opts = {}) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const pal = mode === 'dark' ? DARK : LIGHT;
+  const cols = opts.cols || 30;
+  const rows = opts.rows || 20;
+  const perspective = 0.5;
+  const offsetY = opts.offsetY || 0.5;
+  const lw = opts.lineWidth || (W > 200 ? 1 : 0.6);
+
+  ctx.clearRect(0, 0, W, H);
+
+  const pts = [];
+  let maxY = 0;
+  for (let r = 0; r <= rows; r++) {
+    const row = [];
+    for (let c = 0; c <= cols; c++) {
+      const u = c / cols, v = r / rows;
+      const x3d = (u - 0.5) * 2, z3d = (v - 0.5) * 2;
+      const y3d = waveFn(x3d, z3d);
+      if (Math.abs(y3d) > maxY) maxY = Math.abs(y3d);
+      const scale = 1 / (1 + z3d * perspective * 0.35 + 0.4);
+      const sx = W * 0.5 + x3d * W * 0.42 * scale;
+      const sy = H * offsetY + z3d * H * 0.28 * scale - y3d * H * 0.9 * scale;
+      row.push({ sx, sy, y3d });
+    }
+    pts.push(row);
+  }
+
+  function getColor(intensity, alpha, shimmer) {
+    const t = Math.min(1, Math.max(0, intensity));
+    if (t < 0.25) {
+      const sh = shimmer || 0;
+      // Pearl shimmer effect
+      const r = pal.wire[0] + sh * (mode === 'dark' ? 8 : -5);
+      const g = pal.wire[1] + sh * (mode === 'dark' ? 4 : -3);
+      const b = pal.wire[2] + sh * (mode === 'dark' ? -6 : 2);
+      return `rgba(${r},${g},${b},${alpha})`;
+    } else {
+      const bt = (t - 0.25) / 0.75;
+      const r = Math.floor(pal.wire[0] + (pal.glow[0] - pal.wire[0]) * bt);
+      const g = Math.floor(pal.wire[1] + (pal.glow[1] - pal.wire[1]) * bt);
+      const b = Math.floor(pal.wire[2] + (pal.glow[2] - pal.wire[2]) * bt);
+      return `rgba(${r},${g},${b},${alpha + bt * 0.25})`;
+    }
+  }
+
+  // Horizontal lines
+  for (let r = 0; r <= rows; r++) {
+    ctx.beginPath();
+    for (let c = 0; c <= cols; c++) {
+      const p = pts[r][c];
+      if (c === 0) ctx.moveTo(p.sx, p.sy); else ctx.lineTo(p.sx, p.sy);
+    }
+    const depthFade = 0.05 + (r / rows) * 0.45;
+    let rowMax = 0;
+    for (let c = 0; c <= cols; c++) if (Math.abs(pts[r][c].y3d) > rowMax) rowMax = Math.abs(pts[r][c].y3d);
+    const intensity = maxY > 0 ? rowMax / maxY : 0;
+    ctx.strokeStyle = getColor(intensity, depthFade, Math.sin(r * 0.5) * 0.5 + 0.5);
+    ctx.lineWidth = lw * (1 + intensity * 0.5);
+    ctx.stroke();
+  }
+
+  // Vertical lines
+  for (let c = 0; c <= cols; c++) {
+    ctx.beginPath();
+    for (let r = 0; r <= rows; r++) {
+      const p = pts[r][c];
+      if (r === 0) ctx.moveTo(p.sx, p.sy); else ctx.lineTo(p.sx, p.sy);
+    }
+    let colMax = 0;
+    for (let r = 0; r <= rows; r++) if (Math.abs(pts[r][c].y3d) > colMax) colMax = Math.abs(pts[r][c].y3d);
+    const centerDist = Math.abs(c / cols - 0.5) * 2;
+    const alpha = 0.04 + (1 - centerDist) * 0.3;
+    const intensity = maxY > 0 ? colMax / maxY : 0;
+    ctx.strokeStyle = getColor(intensity, alpha, Math.cos(c * 0.4) * 0.5 + 0.5);
+    ctx.lineWidth = lw * (1 + intensity * 0.3);
+    ctx.stroke();
+  }
+
+  // Glow
+  if (W > 100) {
+    const gx = W * 0.5, gy = H * (offsetY - 0.05);
+    const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, W * 0.3);
+    const glowAlpha = mode === 'dark' ? 0.12 : 0.08;
+    grad.addColorStop(0, `rgba(${pal.glow[0]},${pal.glow[1]},${pal.glow[2]},${glowAlpha})`);
+    grad.addColorStop(0.5, `rgba(${pal.glowDeep[0]},${pal.glowDeep[1]},${pal.glowDeep[2]},${glowAlpha * 0.4})`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+// Render all main meshes
+document.querySelectorAll('canvas.mesh').forEach(c => {
+  const id = parseInt(c.dataset.id);
+  const mode = c.dataset.mode;
+  const extra = id === 3 ? { cols: 34, rows: 22 } : id === 4 ? { cols: 34 } : id === 6 ? { cols: 36 } : {};
+  drawMesh(c, waves[id], mode, extra);
+});
+
+// Render lockup meshes
+document.querySelectorAll('canvas.lockup-mesh').forEach(c => {
+  const id = parseInt(c.dataset.id);
+  const mode = c.dataset.mode;
+  drawMesh(c, waves[id], mode, { cols: 14, rows: 10, lineWidth: 0.5 });
+});
+</script>
+
+</body>
+</html>

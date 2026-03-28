@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoniqLabs — All Concepts</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a12;
+    color: #E8E6E3;
+    font-family: 'Sora', sans-serif;
+    padding: 40px 20px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    color: #444;
+    margin-bottom: 10px;
+  }
+  h2 {
+    text-align: center;
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: #333;
+    margin: 40px 0 20px;
+    padding-top: 30px;
+    border-top: 1px solid #1a1a1a;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+    max-width: 1200px;
+    margin: 0 auto 20px;
+  }
+  .item {
+    background: #111119;
+    border: 1px solid #1c1c28;
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .item svg { max-width: 100px; max-height: 100px; }
+  .label {
+    font-size: 8px;
+    font-weight: 400;
+    letter-spacing: 2px;
+    color: #555;
+    text-transform: uppercase;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<h1>SoniqLabs — Every Concept</h1>
+
+<!-- ===================== ROUND 2: The 6 concepts ===================== -->
+<h2>Round 2 — Style Exploration</h2>
+<div class="grid">
+
+  <!-- The Blade -->
+  <div class="item">
+    <svg viewBox="0 0 120 160">
+      <defs><linearGradient id="blade" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0%" stop-color="#E879F9"/><stop offset="100%" stop-color="#06B6D4"/></linearGradient></defs>
+      <path d="M 95 4 L 85 4 C 42 4, 6 18, 6 48 C 6 72, 30 82, 58 88 C 78 92, 92 98, 92 112 C 92 134, 62 148, 30 148 L 18 156 L 28 156 C 74 156, 114 140, 114 112 C 114 88, 88 78, 60 72 C 40 68, 28 60, 28 48 C 28 28, 52 12, 88 12 Z" fill="url(#blade)"/>
+    </svg>
+    <span class="label">The Blade</span>
+  </div>
+
+  <!-- The Void -->
+  <div class="item">
+    <svg viewBox="0 0 160 180">
+      <defs><linearGradient id="v2a" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#D946EF"/><stop offset="100%" stop-color="#7C3AED"/></linearGradient><linearGradient id="v2b" x1="1" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#06B6D4"/></linearGradient></defs>
+      <path d="M 0 0 L 160 0 L 160 82 C 130 82, 95 76, 80 70 C 58 60, 35 72, 0 82 Z" fill="url(#v2a)"/>
+      <path d="M 160 180 L 0 180 L 0 98 C 30 98, 65 104, 80 110 C 102 120, 125 108, 160 98 Z" fill="url(#v2b)"/>
+    </svg>
+    <span class="label">The Void</span>
+  </div>
+
+  <!-- Parallel -->
+  <div class="item">
+    <svg viewBox="0 0 140 150">
+      <defs><linearGradient id="par1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#D946EF"/><stop offset="100%" stop-color="#C026D3"/></linearGradient><linearGradient id="par2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#7C3AED"/></linearGradient><linearGradient id="par3" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#06B6D4"/><stop offset="100%" stop-color="#0891B2"/></linearGradient></defs>
+      <path d="M 27 8 C 17 8, 10 15, 10 25 C 10 35, 17 42, 27 42 L 140 42 L 140 8 Z" fill="url(#par1)"/>
+      <path d="M 0 58 L 113 58 C 123 58, 130 65, 130 75 C 130 85, 123 92, 113 92 L 0 92 Z" fill="url(#par2)"/>
+      <path d="M 27 108 C 17 108, 10 115, 10 125 C 10 135, 17 142, 27 142 L 140 142 L 140 108 Z" fill="url(#par3)"/>
+    </svg>
+    <span class="label">Parallel</span>
+  </div>
+
+  <!-- The Twist -->
+  <div class="item">
+    <svg viewBox="0 0 130 170">
+      <defs><linearGradient id="tw1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D946EF"/><stop offset="100%" stop-color="#8B5CF6"/></linearGradient></defs>
+      <path d="M 100 8 C 50 8, 10 28, 10 52 C 10 70, 30 80, 65 85 C 65 85, 45 87, 45 87 C 18 82, 2 72, 2 52 C 2 24, 46 0, 100 0 Z" fill="url(#tw1)"/>
+      <path d="M 65 85 C 100 90, 120 100, 120 118 C 120 146, 76 170, 22 162 L 22 170 C 80 178, 128 150, 128 118 C 128 96, 104 86, 65 85 Z" fill="url(#tw1)"/>
+    </svg>
+    <span class="label">The Twist</span>
+  </div>
+
+  <!-- The Slab -->
+  <div class="item">
+    <svg viewBox="0 0 130 160">
+      <defs><linearGradient id="slab" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#E879F9"/><stop offset="45%" stop-color="#A78BFA"/><stop offset="100%" stop-color="#22D3EE"/></linearGradient></defs>
+      <path d="M 110 14 L 24 14 C 10 14, 0 28, 0 44 C 0 60, 10 74, 24 74 L 106 74 C 116 74, 124 82, 124 92 C 124 102, 116 110, 106 110 L 8 110 L 8 146 L 106 146 C 120 146, 130 132, 130 116 L 130 92 C 130 76, 120 62, 106 62 L 24 62 C 16 62, 12 56, 12 48 C 12 40, 16 34, 24 34 L 110 34 Z" fill="url(#slab)"/>
+    </svg>
+    <span class="label">The Slab</span>
+  </div>
+
+  <!-- The Split -->
+  <div class="item">
+    <svg viewBox="0 0 130 160">
+      <defs><clipPath id="lhA"><rect x="0" y="0" width="63" height="160"/></clipPath><clipPath id="rhA"><rect x="67" y="0" width="63" height="160"/></clipPath></defs>
+      <g clip-path="url(#lhA)" transform="translate(0,-3)"><path d="M 105 10 C 60 2, 14 14, 14 46 C 14 68, 34 78, 65 84 C 96 90, 116 100, 116 118 C 116 148, 70 162, 25 154" stroke="#D946EF" stroke-width="18" fill="none" stroke-linecap="round"/></g>
+      <g clip-path="url(#rhA)" transform="translate(0,3)"><path d="M 105 10 C 60 2, 14 14, 14 46 C 14 68, 34 78, 65 84 C 96 90, 116 100, 116 118 C 116 148, 70 162, 25 154" stroke="#06B6D4" stroke-width="18" fill="none" stroke-linecap="round"/></g>
+    </svg>
+    <span class="label">The Split</span>
+  </div>
+</div>
+
+<!-- ===================== ROUND 3: Void Variations ===================== -->
+<h2>Round 3 — Void Variations</h2>
+<div class="grid">
+  <div class="item">
+    <svg viewBox="0 0 160 180"><path d="M 0 0 L 160 0 L 160 82 C 130 82, 95 76, 80 70 C 58 60, 35 72, 0 82 Z" fill="url(#v2a)"/><path d="M 160 180 L 0 180 L 0 98 C 30 98, 65 104, 80 110 C 102 120, 125 108, 160 98 Z" fill="url(#v2b)"/></svg>
+    <span class="label">Sine Channel</span>
+  </div>
+  <div class="item">
+    <svg viewBox="0 0 160 180"><defs><linearGradient id="v2c" x1="0" y1="0" x2="0.8" y2="1"><stop offset="0%" stop-color="#E879F9"/><stop offset="100%" stop-color="#8B5CF6"/></linearGradient><linearGradient id="v2d" x1="0.2" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#06B6D4"/></linearGradient></defs><path d="M 0 0 L 160 0 L 160 70 L 120 78 L 80 62 L 40 78 L 0 86 Z" fill="url(#v2c)"/><path d="M 160 180 L 0 180 L 0 100 L 40 92 L 80 108 L 120 92 L 160 84 Z" fill="url(#v2d)"/></svg>
+    <span class="label">Sharp Canyon</span>
+  </div>
+  <div class="item">
+    <svg viewBox="0 0 160 180"><defs><linearGradient id="v3g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#D946EF"/><stop offset="50%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#06B6D4"/></linearGradient><clipPath id="v3cl"><rect x="0" y="0" width="160" height="180" rx="32"/></clipPath></defs><g clip-path="url(#v3cl)"><rect x="0" y="0" width="160" height="180" rx="32" fill="url(#v3g)"/><path d="M -5 86 C 25 86, 55 98, 80 106 C 105 114, 135 98, 165 86 L 165 94 C 135 106, 105 122, 80 114 C 55 106, 25 94, -5 94 Z" fill="#0a0a12"/></g></svg>
+    <span class="label">Contained</span>
+  </div>
+  <div class="item">
+    <svg viewBox="0 0 160 180"><defs><linearGradient id="v4a" x1="0" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#F0ABFC"/><stop offset="100%" stop-color="#8B5CF6"/></linearGradient><linearGradient id="v4b" x1="0.5" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6D28D9"/><stop offset="100%" stop-color="#06B6D4"/></linearGradient></defs><path d="M 0 0 L 160 0 L 160 60 C 140 65, 115 80, 95 85 C 70 92, 45 75, 20 65 C 12 62, 5 62, 0 64 Z" fill="url(#v4a)"/><path d="M 160 180 L 0 180 L 0 116 C 20 118, 45 105, 65 98 C 90 88, 115 105, 140 115 C 148 118, 155 118, 160 116 Z" fill="url(#v4b)"/></svg>
+    <span class="label">Deep Canyon</span>
+  </div>
+  <div class="item">
+    <svg viewBox="0 0 180 180"><defs><linearGradient id="v5a" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#D946EF"/><stop offset="100%" stop-color="#8B5CF6"/></linearGradient><linearGradient id="v5b" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#06B6D4"/><stop offset="100%" stop-color="#7C3AED"/></linearGradient><clipPath id="v5c"><circle cx="90" cy="90" r="88"/></clipPath></defs><g clip-path="url(#v5c)"><path d="M 0 0 L 180 0 L 180 82 C 150 82, 120 96, 90 104 C 60 112, 30 96, 0 82 Z" fill="url(#v5a)"/><path d="M 180 180 L 0 180 L 0 98 C 30 98, 60 84, 90 76 C 120 68, 150 84, 180 98 Z" fill="url(#v5b)"/></g></svg>
+    <span class="label">Eclipse</span>
+  </div>
+  <div class="item">
+    <svg viewBox="0 0 160 180"><defs><linearGradient id="v6a" x1="0" y1="0" x2="1" y2="0.5"><stop offset="0%" stop-color="#D946EF"/><stop offset="100%" stop-color="#A855F7"/></linearGradient><linearGradient id="v6b" x1="0" y1="0.5" x2="1" y2="1"><stop offset="0%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#06B6D4"/></linearGradient></defs><path d="M 0 0 L 160 0 L 160 30 C 140 38, 120 52, 100 68 C 85 80, 75 85, 65 88 C 45 94, 25 85, 0 72 Z" fill="url(#v6a)"/><path d="M 160 180 L 0 180 L 0 108 C 25 100, 45 106, 65 100 C 75 96, 85 92, 100 82 C 120 68, 140 55, 160 46 Z" fill="url(#v6b)"/></svg>
+    <span class="label">Fault Line</span>
+  </div>
+</div>
+
+<!-- ===================== ROUND 4: Carved SL / Geometric ===================== -->
+<h2>Round 4 — Carved SL</h2>
+<div class="grid">
+  <div class="item">
+    <svg viewBox="0 0 200 200"><defs><linearGradient id="g2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#D946EF"/><stop offset="45%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#06B6D4"/></linearGradient><clipPath id="c2x"><rect width="200" height="200" rx="40"/></clipPath></defs><g clip-path="url(#c2x)"><rect width="200" height="200" fill="url(#g2)"/><path d="M 155 18 L 65 18 Q 22 18, 22 50 Q 22 82, 65 82 L 135 82 Q 178 82, 178 114 Q 178 138, 145 142 L 55 142 L 55 182 L 178 182 L 178 156 L 70 156 Q 70 156, 100 152 Q 125 148, 145 130 Q 164 112, 164 96 Q 164 72, 135 68 L 65 68 Q 42 68, 42 50 Q 42 34, 65 34 L 155 34 Z" fill="#0a0a12"/></g></svg>
+    <span class="label">Carved SL</span>
+  </div>
+  <div class="item">
+    <svg viewBox="0 0 200 220"><defs><linearGradient id="g6x" x1="0" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#D946EF"/><stop offset="50%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#06B6D4"/></linearGradient></defs><path d="M 160 12 L 60 12 Q 12 12, 12 48 Q 12 84, 60 84 L 140 84 Q 180 84, 180 116 Q 180 148, 140 148 L 40 148 L 40 210 L 170 210 L 170 196 L 54 196 L 54 162 L 140 162 Q 194 162, 194 116 Q 194 70, 140 70 L 60 70 Q 28 70, 28 48 Q 28 28, 60 28 L 160 28 Z" fill="url(#g6x)"/></svg>
+    <span class="label">One Line</span>
+  </div>
+  <div class="item">
+    <svg viewBox="0 0 170 170"><rect width="170" height="170" rx="36" fill="url(#g2)"/><rect x="30" y="20" width="110" height="16" rx="8" fill="#0a0a12"/><rect x="30" y="20" width="16" height="50" rx="8" fill="#0a0a12"/><rect x="30" y="54" width="110" height="16" rx="8" fill="#0a0a12"/><rect x="124" y="54" width="16" height="50" rx="8" fill="#0a0a12"/><rect x="30" y="88" width="110" height="16" rx="8" fill="#0a0a12"/><rect x="30" y="88" width="16" height="60" rx="8" fill="#0a0a12"/><rect x="30" y="132" width="80" height="16" rx="8" fill="#0a0a12"/></svg>
+    <span class="label">Punched</span>
+  </div>
+</div>
+
+<!-- ===================== ROUND 5: Sonic + SL ===================== -->
+<h2>Round 5 — Sonic + SL</h2>
+<div class="grid">
+  <div class="item">
+    <svg viewBox="0 0 160 160">
+      <defs><linearGradient id="w1x" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0%" stop-color="#D946EF"/><stop offset="50%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#06B6D4"/></linearGradient></defs>
+      <path d="M 130 18 L 65 18 Q 10 18, 10 55 Q 10 92, 65 92 L 95 92 Q 150 92, 150 129 Q 150 155, 110 155" stroke="url(#w1x)" stroke-width="14" fill="none" stroke-linecap="round"/>
+      <line x1="30" y1="120" x2="30" y2="155" stroke="#06B6D4" stroke-width="12" stroke-linecap="round"/>
+      <line x1="30" y1="155" x2="110" y2="155" stroke="#06B6D4" stroke-width="12" stroke-linecap="round"/>
+      <path d="M 130 18 L 65 18 Q 10 18, 10 55 Q 10 92, 65 92 L 95 92 Q 150 92, 150 129" stroke="url(#w1x)" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.2" transform="translate(5,-5)"/>
+    </svg>
+    <span class="label">Waveform SL</span>
+  </div>
+  <div class="item">
+    <svg viewBox="0 0 160 165">
+      <defs><linearGradient id="sa1x" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#D946EF"/><stop offset="100%" stop-color="#8B5CF6"/></linearGradient><linearGradient id="sa2x" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#06B6D4"/></linearGradient></defs>
+      <path d="M 85 10 A 45 45 0 0 0 85 80" stroke="url(#sa1x)" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M 105 20 A 35 35 0 0 0 105 70" stroke="url(#sa1x)" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.6"/>
+      <path d="M 120 28 A 25 25 0 0 0 120 62" stroke="url(#sa1x)" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.3"/>
+      <path d="M 75 70 A 45 45 0 0 1 75 140" stroke="url(#sa2x)" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M 55 80 A 35 35 0 0 1 55 130" stroke="url(#sa2x)" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.6"/>
+      <path d="M 40 88 A 25 25 0 0 1 40 122" stroke="url(#sa2x)" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.3"/>
+      <line x1="75" y1="70" x2="85" y2="80" stroke="#8B5CF6" stroke-width="10" stroke-linecap="round"/>
+      <line x1="75" y1="140" x2="75" y2="160" stroke="#06B6D4" stroke-width="10" stroke-linecap="round"/>
+      <line x1="75" y1="160" x2="140" y2="160" stroke="#06B6D4" stroke-width="10" stroke-linecap="round"/>
+    </svg>
+    <span class="label">Sound Arcs</span>
+  </div>
+  <div class="item">
+    <svg viewBox="0 0 155 160">
+      <defs><linearGradient id="eqx" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#06B6D4"/><stop offset="50%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#D946EF"/></linearGradient></defs>
+      <rect x="15" y="5" width="8" height="22" rx="4" fill="url(#eqx)" opacity="0.5"/><rect x="28" y="0" width="8" height="32" rx="4" fill="url(#eqx)" opacity="0.7"/><rect x="41" y="3" width="8" height="26" rx="4" fill="url(#eqx)" opacity="0.9"/><rect x="54" y="0" width="8" height="32" rx="4" fill="url(#eqx)"/><rect x="67" y="5" width="8" height="22" rx="4" fill="url(#eqx)" opacity="0.9"/><rect x="80" y="2" width="8" height="28" rx="4" fill="url(#eqx)" opacity="0.7"/><rect x="93" y="8" width="8" height="16" rx="4" fill="url(#eqx)" opacity="0.5"/>
+      <rect x="55" y="42" width="8" height="20" rx="4" fill="url(#eqx)" opacity="0.5"/><rect x="68" y="38" width="8" height="28" rx="4" fill="url(#eqx)" opacity="0.7"/><rect x="81" y="35" width="8" height="34" rx="4" fill="url(#eqx)" opacity="0.9"/><rect x="94" y="38" width="8" height="28" rx="4" fill="url(#eqx)"/><rect x="107" y="42" width="8" height="20" rx="4" fill="url(#eqx)" opacity="0.9"/><rect x="120" y="39" width="8" height="26" rx="4" fill="url(#eqx)" opacity="0.7"/><rect x="133" y="44" width="8" height="16" rx="4" fill="url(#eqx)" opacity="0.5"/>
+      <rect x="15" y="78" width="8" height="18" rx="4" fill="url(#eqx)" opacity="0.5"/><rect x="28" y="74" width="8" height="26" rx="4" fill="url(#eqx)" opacity="0.7"/><rect x="41" y="72" width="8" height="30" rx="4" fill="url(#eqx)" opacity="0.9"/><rect x="54" y="74" width="8" height="26" rx="4" fill="url(#eqx)"/><rect x="67" y="78" width="8" height="18" rx="4" fill="url(#eqx)" opacity="0.9"/><rect x="80" y="75" width="8" height="24" rx="4" fill="url(#eqx)" opacity="0.7"/><rect x="93" y="80" width="8" height="14" rx="4" fill="url(#eqx)" opacity="0.5"/>
+      <rect x="15" y="78" width="8" height="72" rx="4" fill="#06B6D4"/><rect x="15" y="142" width="90" height="8" rx="4" fill="#06B6D4"/>
+    </svg>
+    <span class="label">EQ Bars</span>
+  </div>
+  <div class="item">
+    <svg viewBox="0 0 170 175">
+      <defs><linearGradient id="vcx" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#D946EF"/><stop offset="45%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#06B6D4"/></linearGradient></defs>
+      <path d="M 150 80 A 65 65 0 0 0 20 80" stroke="url(#vcx)" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M 20 88 A 65 65 0 0 0 150 88" stroke="url(#vcx)" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M 130 80 A 45 45 0 0 0 40 80" stroke="url(#vcx)" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.7"/>
+      <path d="M 40 88 A 45 45 0 0 0 130 88" stroke="url(#vcx)" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.7"/>
+      <path d="M 110 80 A 25 25 0 0 0 60 80" stroke="url(#vcx)" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.5"/>
+      <path d="M 60 88 A 25 25 0 0 0 110 88" stroke="url(#vcx)" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.5"/>
+      <circle cx="85" cy="84" r="5" fill="url(#vcx)"/>
+      <line x1="30" y1="148" x2="30" y2="170" stroke="#06B6D4" stroke-width="8" stroke-linecap="round"/>
+      <line x1="30" y1="170" x2="110" y2="170" stroke="#06B6D4" stroke-width="8" stroke-linecap="round"/>
+    </svg>
+    <span class="label">Vinyl Cut</span>
+  </div>
+  <div class="item">
+    <svg viewBox="0 0 160 165">
+      <defs><linearGradient id="plsx" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#D946EF"/><stop offset="45%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#06B6D4"/></linearGradient></defs>
+      <path d="M 130 8 L 110 8 L 100 28 L 90 0 L 80 32 L 70 4 L 60 28 L 50 8 L 20 8 L 20 55 L 40 55 L 50 35 L 60 60 L 70 30 L 80 58 L 90 34 L 100 55 L 140 55 L 140 60 L 100 60 L 90 80 L 80 55 L 70 82 L 60 58 L 50 80 L 40 60 L 20 60 L 20 100 L 50 100 L 60 80 L 70 105 L 80 78 L 90 102 L 100 82 L 110 100 L 140 100" stroke="url(#plsx)" stroke-width="3" fill="none" stroke-linejoin="round"/>
+      <line x1="20" y1="100" x2="20" y2="155" stroke="#06B6D4" stroke-width="10" stroke-linecap="round"/>
+      <line x1="20" y1="155" x2="120" y2="155" stroke="#06B6D4" stroke-width="10" stroke-linecap="round"/>
+    </svg>
+    <span class="label">Pulse</span>
+  </div>
+  <div class="item">
+    <svg viewBox="0 0 160 170">
+      <defs><linearGradient id="hpx" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#D946EF"/><stop offset="50%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#06B6D4"/></linearGradient></defs>
+      <path d="M 25 75 A 55 55 0 0 1 135 75" stroke="url(#hpx)" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <rect x="15" y="70" width="22" height="40" rx="8" fill="url(#hpx)"/>
+      <rect x="123" y="70" width="22" height="40" rx="8" fill="url(#hpx)"/>
+      <path d="M 134 110 A 50 50 0 0 1 30 130" stroke="url(#hpx)" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <line x1="30" y1="130" x2="30" y2="162" stroke="#06B6D4" stroke-width="10" stroke-linecap="round"/>
+      <line x1="30" y1="162" x2="120" y2="162" stroke="#06B6D4" stroke-width="10" stroke-linecap="round"/>
+    </svg>
+    <span class="label">Headphone</span>
+  </div>
+</div>
+
+<div style="height:40px;"></div>
+
+</body>
+</html>

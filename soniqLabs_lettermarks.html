@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoniqLabs — Sonic Void</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a12;
+    color: #E8E6E3;
+    font-family: 'Sora', sans-serif;
+    min-height: 100vh;
+    padding: 60px 20px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 10px;
+    text-transform: uppercase;
+    color: #444;
+    margin-bottom: 50px;
+  }
+  .row {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    flex-wrap: wrap;
+    max-width: 1200px;
+    margin: 0 auto 40px;
+  }
+  .card {
+    width: 340px;
+    background: #111119;
+    border: 1px solid #222;
+    border-radius: 20px;
+    padding: 32px 20px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+  }
+  .num { font-size: 9px; font-weight: 600; letter-spacing: 3px; color: #444; }
+  .name { font-size: 16px; font-weight: 200; letter-spacing: 2px; color: #aaa; }
+  .mark {
+    width: 180px;
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .desc {
+    font-size: 10px;
+    color: #555;
+    text-align: center;
+    line-height: 1.7;
+    max-width: 280px;
+  }
+  .thumbs { display: flex; gap: 10px; align-items: flex-end; }
+  .t { display: flex; align-items: center; justify-content: center; }
+  .t56 { width: 56px; height: 56px; border-radius: 14px; background: #161620; }
+  .t32 { width: 32px; height: 32px; border-radius: 8px; background: #161620; }
+  .tlt { background: #EDEBE6 !important; }
+  .divider { width: 160px; height: 1px; background: #1a1a1a; margin: 10px auto 40px; }
+</style>
+</head>
+<body>
+
+<h1>SoniqLabs &mdash; Sonic Void</h1>
+
+<div class="row">
+
+<!-- ======== 1: WAVE VOID ======== -->
+<!-- Two gradient masses separated by a sine-wave channel (S-curve). The edges of the masses ripple like sound waves. -->
+<div class="card">
+  <span class="num">01</span>
+  <span class="name">Wave Void</span>
+  <div class="mark">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <defs>
+        <linearGradient id="sv1a" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#D946EF"/>
+          <stop offset="100%" stop-color="#8B5CF6"/>
+        </linearGradient>
+        <linearGradient id="sv1b" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#8B5CF6"/>
+          <stop offset="100%" stop-color="#06B6D4"/>
+        </linearGradient>
+      </defs>
+      <!-- Top mass with sine-wave bottom edge -->
+      <path d="
+        M 8 8 L 152 8 L 152 60
+        C 130 55, 115 45, 100 50
+        C 85 55, 75 70, 60 72
+        C 45 74, 30 62, 8 58
+        Z
+      " fill="url(#sv1a)" rx="12"/>
+      <!-- Bottom mass with sine-wave top edge -->
+      <path d="
+        M 8 152 L 152 152 L 152 95
+        C 130 100, 115 110, 100 105
+        C 85 100, 75 85, 60 83
+        C 45 81, 30 93, 8 97
+        Z
+      " fill="url(#sv1b)"/>
+      <!-- Subtle L hint: thin vertical + horizontal in the void channel -->
+      <line x1="22" y1="65" x2="22" y2="90" stroke="#fff" stroke-width="2" stroke-opacity="0.4" stroke-linecap="round"/>
+      <line x1="22" y1="90" x2="42" y2="90" stroke="#fff" stroke-width="2" stroke-opacity="0.4" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="thumbs">
+    <div class="t t56"><svg width="40" height="40" viewBox="0 0 160 160"><path d="M 8 8 L 152 8 L 152 60 C 130 55, 115 45, 100 50 C 85 55, 75 70, 60 72 C 45 74, 30 62, 8 58 Z" fill="url(#sv1a)"/><path d="M 8 152 L 152 152 L 152 95 C 130 100, 115 110, 100 105 C 85 100, 75 85, 60 83 C 45 81, 30 93, 8 97 Z" fill="url(#sv1b)"/><line x1="22" y1="65" x2="22" y2="90" stroke="#fff" stroke-width="3" stroke-opacity="0.4" stroke-linecap="round"/><line x1="22" y1="90" x2="42" y2="90" stroke="#fff" stroke-width="3" stroke-opacity="0.4" stroke-linecap="round"/></svg></div>
+    <div class="t t32"><svg width="22" height="22" viewBox="0 0 160 160"><path d="M 8 8 L 152 8 L 152 60 C 130 55, 115 45, 100 50 C 85 55, 75 70, 60 72 C 45 74, 30 62, 8 58 Z" fill="url(#sv1a)"/><path d="M 8 152 L 152 152 L 152 95 C 130 100, 115 110, 100 105 C 85 100, 75 85, 60 83 C 45 81, 30 93, 8 97 Z" fill="url(#sv1b)"/></svg></div>
+    <div class="t t56 tlt"><svg width="40" height="40" viewBox="0 0 160 160"><path d="M 8 8 L 152 8 L 152 60 C 130 55, 115 45, 100 50 C 85 55, 75 70, 60 72 C 45 74, 30 62, 8 58 Z" fill="url(#sv1a)"/><path d="M 8 152 L 152 152 L 152 95 C 130 100, 115 110, 100 105 C 85 100, 75 85, 60 83 C 45 81, 30 93, 8 97 Z" fill="url(#sv1b)"/><line x1="22" y1="65" x2="22" y2="90" stroke="#222" stroke-width="3" stroke-opacity="0.5" stroke-linecap="round"/><line x1="22" y1="90" x2="42" y2="90" stroke="#222" stroke-width="3" stroke-opacity="0.5" stroke-linecap="round"/></svg></div>
+  </div>
+  <p class="desc">The void between two masses is a sine wave — sound itself carves the S-channel. Subtle L anchors the lower left.</p>
+</div>
+
+<!-- ======== 2: FREQUENCY SPLIT ======== -->
+<!-- Two rounded-rect masses. The gap between them forms an S, and inside the gap are horizontal frequency lines like an audio spectrum. -->
+<div class="card">
+  <span class="num">02</span>
+  <span class="name">Frequency Split</span>
+  <div class="mark">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <defs>
+        <linearGradient id="sv2a" x1="0" y1="0" x2="0.5" y2="1">
+          <stop offset="0%" stop-color="#D946EF"/>
+          <stop offset="100%" stop-color="#A855F7"/>
+        </linearGradient>
+        <linearGradient id="sv2b" x1="0.5" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#7C3AED"/>
+          <stop offset="100%" stop-color="#06B6D4"/>
+        </linearGradient>
+        <clipPath id="sv2clip">
+          <!-- S-shaped channel between two masses -->
+          <path d="
+            M 0 0 L 160 0 L 160 68
+            C 120 68, 100 78, 80 78
+            C 60 78, 40 68, 0 68
+            Z
+          "/>
+          <path d="
+            M 0 160 L 160 160 L 160 92
+            C 120 92, 100 82, 80 82
+            C 60 82, 40 92, 0 92
+            Z
+          "/>
+        </clipPath>
+      </defs>
+      <!-- Top mass -->
+      <rect x="6" y="6" width="148" height="68" rx="16" fill="url(#sv2a)"/>
+      <!-- Bottom mass -->
+      <rect x="6" y="86" width="148" height="68" rx="16" fill="url(#sv2b)"/>
+      <!-- Frequency lines in the void channel -->
+      <line x1="20" y1="77" x2="35" y2="77" stroke="#D946EF" stroke-width="1.5" stroke-opacity="0.5" stroke-linecap="round"/>
+      <line x1="40" y1="77" x2="62" y2="77" stroke="#A855F7" stroke-width="1.5" stroke-opacity="0.6" stroke-linecap="round"/>
+      <line x1="68" y1="77" x2="78" y2="77" stroke="#8B5CF6" stroke-width="1.5" stroke-opacity="0.5" stroke-linecap="round"/>
+      <line x1="83" y1="77" x2="105" y2="77" stroke="#7C3AED" stroke-width="1.5" stroke-opacity="0.6" stroke-linecap="round"/>
+      <line x1="110" y1="77" x2="120" y2="77" stroke="#06B6D4" stroke-width="1.5" stroke-opacity="0.5" stroke-linecap="round"/>
+      <line x1="125" y1="77" x2="145" y2="77" stroke="#06B6D4" stroke-width="1.5" stroke-opacity="0.4" stroke-linecap="round"/>
+      <!-- S-curve through the gap -->
+      <path d="M 12 74 C 50 74, 50 86, 80 80 C 110 74, 110 86, 148 86" stroke="#fff" stroke-width="2" stroke-opacity="0.15" fill="none" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="thumbs">
+    <div class="t t56"><svg width="40" height="40" viewBox="0 0 160 160"><rect x="6" y="6" width="148" height="68" rx="16" fill="url(#sv2a)"/><rect x="6" y="86" width="148" height="68" rx="16" fill="url(#sv2b)"/><path d="M 12 74 C 50 74, 50 86, 80 80 C 110 74, 110 86, 148 86" stroke="#fff" stroke-width="3" stroke-opacity="0.15" fill="none"/></svg></div>
+    <div class="t t32"><svg width="22" height="22" viewBox="0 0 160 160"><rect x="6" y="6" width="148" height="68" rx="16" fill="url(#sv2a)"/><rect x="6" y="86" width="148" height="68" rx="16" fill="url(#sv2b)"/></svg></div>
+    <div class="t t56 tlt"><svg width="40" height="40" viewBox="0 0 160 160"><rect x="6" y="6" width="148" height="68" rx="16" fill="url(#sv2a)"/><rect x="6" y="86" width="148" height="68" rx="16" fill="url(#sv2b)"/><path d="M 12 74 C 50 74, 50 86, 80 80 C 110 74, 110 86, 148 86" stroke="#222" stroke-width="3" stroke-opacity="0.2" fill="none"/></svg></div>
+  </div>
+  <p class="desc">Two solid masses split by a gap. Frequency spectrum lines float in the void. The negative space hints at an S-curve.</p>
+</div>
+
+<!-- ======== 3: RESONANCE VOID ======== -->
+<!-- Two masses shaped so the void between them forms an S. The inner edges of each mass have concentric arc ripples like sound emanating from the gap. -->
+<div class="card">
+  <span class="num">03</span>
+  <span class="name">Resonance Void</span>
+  <div class="mark">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <defs>
+        <linearGradient id="sv3a" x1="0" y1="0" x2="1" y2="0.5">
+          <stop offset="0%" stop-color="#E879F9"/>
+          <stop offset="100%" stop-color="#A855F7"/>
+        </linearGradient>
+        <linearGradient id="sv3b" x1="0" y1="0.5" x2="1" y2="1">
+          <stop offset="0%" stop-color="#7C3AED"/>
+          <stop offset="100%" stop-color="#06B6D4"/>
+        </linearGradient>
+      </defs>
+      <!-- Top-left mass with curved bottom-right edge (S-curve upper half) -->
+      <path d="
+        M 12 8 L 140 8 Q 152 8, 152 20 L 152 50
+        C 130 48, 110 55, 95 68
+        C 85 76, 80 80, 80 80
+        L 8 80
+        Q 8 80, 8 20
+        Q 8 8, 20 8 Z
+      " fill="url(#sv3a)"/>
+      <!-- Bottom-right mass with curved top-left edge (S-curve lower half) -->
+      <path d="
+        M 8 110 L 80 80
+        C 80 80, 75 84, 65 92
+        C 50 105, 30 112, 8 110
+        L 8 140 Q 8 152, 20 152 L 140 152 Q 152 152, 152 140
+        L 152 80 L 80 80
+        Z
+      " fill="url(#sv3b)"/>
+      <!-- Sound ripple arcs emanating from the S-channel -->
+      <path d="M 72 72 Q 60 60, 48 72" stroke="#fff" stroke-width="1.2" stroke-opacity="0.2" fill="none" stroke-linecap="round"/>
+      <path d="M 76 68 Q 58 50, 40 68" stroke="#fff" stroke-width="1" stroke-opacity="0.15" fill="none" stroke-linecap="round"/>
+      <path d="M 88 88 Q 100 100, 112 88" stroke="#fff" stroke-width="1.2" stroke-opacity="0.2" fill="none" stroke-linecap="round"/>
+      <path d="M 84 92 Q 102 110, 120 92" stroke="#fff" stroke-width="1" stroke-opacity="0.15" fill="none" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="thumbs">
+    <div class="t t56"><svg width="40" height="40" viewBox="0 0 160 160"><path d="M 12 8 L 140 8 Q 152 8, 152 20 L 152 50 C 130 48, 110 55, 95 68 C 85 76, 80 80, 80 80 L 8 80 Q 8 80, 8 20 Q 8 8, 20 8 Z" fill="url(#sv3a)"/><path d="M 8 110 L 80 80 C 80 80, 75 84, 65 92 C 50 105, 30 112, 8 110 L 8 140 Q 8 152, 20 152 L 140 152 Q 152 152, 152 140 L 152 80 L 80 80 Z" fill="url(#sv3b)"/></svg></div>
+    <div class="t t32"><svg width="22" height="22" viewBox="0 0 160 160"><path d="M 12 8 L 140 8 Q 152 8, 152 20 L 152 50 C 130 48, 110 55, 95 68 C 85 76, 80 80, 80 80 L 8 80 Q 8 80, 8 20 Q 8 8, 20 8 Z" fill="url(#sv3a)"/><path d="M 8 110 L 80 80 C 80 80, 75 84, 65 92 C 50 105, 30 112, 8 110 L 8 140 Q 8 152, 20 152 L 140 152 Q 152 152, 152 140 L 152 80 L 80 80 Z" fill="url(#sv3b)"/></svg></div>
+    <div class="t t56 tlt"><svg width="40" height="40" viewBox="0 0 160 160"><path d="M 12 8 L 140 8 Q 152 8, 152 20 L 152 50 C 130 48, 110 55, 95 68 C 85 76, 80 80, 80 80 L 8 80 Q 8 80, 8 20 Q 8 8, 20 8 Z" fill="url(#sv3a)"/><path d="M 8 110 L 80 80 C 80 80, 75 84, 65 92 C 50 105, 30 112, 8 110 L 8 140 Q 8 152, 20 152 L 140 152 Q 152 152, 152 140 L 152 80 L 80 80 Z" fill="url(#sv3b)"/></svg></div>
+  </div>
+  <p class="desc">Two masses with a diagonal S-void cutting through. Sound wave ripples emanate from the channel — the void itself is the source of resonance.</p>
+</div>
+
+</div>
+
+<div class="row">
+
+<!-- ======== 4: WAVEFORM CANYON ======== -->
+<!-- The original Void concept but the inner edges of both masses are audio waveforms instead of smooth curves. The S-channel looks like a waveform visualizer. -->
+<div class="card">
+  <span class="num">04</span>
+  <span class="name">Waveform Canyon</span>
+  <div class="mark">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <defs>
+        <linearGradient id="sv4a" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#D946EF"/>
+          <stop offset="100%" stop-color="#8B5CF6"/>
+        </linearGradient>
+        <linearGradient id="sv4b" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#8B5CF6"/>
+          <stop offset="100%" stop-color="#06B6D4"/>
+        </linearGradient>
+      </defs>
+      <!-- Top mass: smooth top, waveform bottom edge -->
+      <path d="
+        M 8 8 Q 8 4, 12 4 L 148 4 Q 152 4, 152 8
+        L 152 55
+        L 142 50 L 132 62 L 122 48 L 112 58 L 102 45
+        L 92 60 L 82 52 L 72 65 L 62 55 L 52 68
+        L 42 58 L 32 70 L 22 60 L 12 72 L 8 65
+        Z
+      " fill="url(#sv4a)"/>
+      <!-- Bottom mass: waveform top edge, smooth bottom -->
+      <path d="
+        M 8 95 L 12 88 L 22 100 L 32 90 L 42 102
+        L 52 92 L 62 105 L 72 95 L 82 108 L 92 98
+        L 102 110 L 112 100 L 122 112 L 132 102 L 142 108
+        L 152 100
+        L 152 152 Q 152 156, 148 156 L 12 156 Q 8 156, 8 152
+        Z
+      " fill="url(#sv4b)"/>
+    </svg>
+  </div>
+  <div class="thumbs">
+    <div class="t t56"><svg width="40" height="40" viewBox="0 0 160 160"><path d="M 8 8 Q 8 4, 12 4 L 148 4 Q 152 4, 152 8 L 152 55 L 142 50 L 132 62 L 122 48 L 112 58 L 102 45 L 92 60 L 82 52 L 72 65 L 62 55 L 52 68 L 42 58 L 32 70 L 22 60 L 12 72 L 8 65 Z" fill="url(#sv4a)"/><path d="M 8 95 L 12 88 L 22 100 L 32 90 L 42 102 L 52 92 L 62 105 L 72 95 L 82 108 L 92 98 L 102 110 L 112 100 L 122 112 L 132 102 L 142 108 L 152 100 L 152 152 Q 152 156, 148 156 L 12 156 Q 8 156, 8 152 Z" fill="url(#sv4b)"/></svg></div>
+    <div class="t t32"><svg width="22" height="22" viewBox="0 0 160 160"><path d="M 8 8 Q 8 4, 12 4 L 148 4 Q 152 4, 152 8 L 152 55 L 142 50 L 132 62 L 122 48 L 112 58 L 102 45 L 92 60 L 82 52 L 72 65 L 62 55 L 52 68 L 42 58 L 32 70 L 22 60 L 12 72 L 8 65 Z" fill="url(#sv4a)"/><path d="M 8 95 L 12 88 L 22 100 L 32 90 L 42 102 L 52 92 L 62 105 L 72 95 L 82 108 L 92 98 L 102 110 L 112 100 L 122 112 L 132 102 L 142 108 L 152 100 L 152 152 Q 152 156, 148 156 L 12 156 Q 8 156, 8 152 Z" fill="url(#sv4b)"/></svg></div>
+    <div class="t t56 tlt"><svg width="40" height="40" viewBox="0 0 160 160"><path d="M 8 8 Q 8 4, 12 4 L 148 4 Q 152 4, 152 8 L 152 55 L 142 50 L 132 62 L 122 48 L 112 58 L 102 45 L 92 60 L 82 52 L 72 65 L 62 55 L 52 68 L 42 58 L 32 70 L 22 60 L 12 72 L 8 65 Z" fill="url(#sv4a)"/><path d="M 8 95 L 12 88 L 22 100 L 32 90 L 42 102 L 52 92 L 62 105 L 72 95 L 82 108 L 92 98 L 102 110 L 112 100 L 122 112 L 132 102 L 142 108 L 152 100 L 152 152 Q 152 156, 148 156 L 12 156 Q 8 156, 8 152 Z" fill="url(#sv4b)"/></svg></div>
+  </div>
+  <p class="desc">The Void, but the inner edges ARE audio waveforms. The gap between the masses looks like a waveform visualizer — sound carved through solid.</p>
+</div>
+
+<!-- ======== 5: SONIC RIFT ======== -->
+<!-- Two masses with rounded corners. The S-shaped gap between them contains concentric sound wave arcs radiating outward, like sound is being emitted from the rift. -->
+<div class="card">
+  <span class="num">05</span>
+  <span class="name">Sonic Rift</span>
+  <div class="mark">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <defs>
+        <linearGradient id="sv5a" x1="0" y1="0" x2="0.8" y2="0.8">
+          <stop offset="0%" stop-color="#E879F9"/>
+          <stop offset="100%" stop-color="#A855F7"/>
+        </linearGradient>
+        <linearGradient id="sv5b" x1="0.2" y1="0.2" x2="1" y2="1">
+          <stop offset="0%" stop-color="#7C3AED"/>
+          <stop offset="100%" stop-color="#06B6D4"/>
+        </linearGradient>
+      </defs>
+      <!-- Top mass -->
+      <path d="
+        M 12 6 L 148 6 Q 154 6, 154 12 L 154 52
+        Q 140 50, 120 58
+        Q 100 66, 80 74
+        L 6 74 L 6 12 Q 6 6, 12 6 Z
+      " fill="url(#sv5a)"/>
+      <!-- Bottom mass -->
+      <path d="
+        M 6 86 L 80 86
+        Q 100 94, 120 102
+        Q 140 110, 154 108
+        L 154 148 Q 154 154, 148 154 L 12 154 Q 6 154, 6 148 Z
+      " fill="url(#sv5b)"/>
+      <!-- Sound wave arcs in the S-void -->
+      <path d="M 30 77 Q 50 72, 70 77" stroke="#D946EF" stroke-width="1.2" stroke-opacity="0.35" fill="none" stroke-linecap="round"/>
+      <path d="M 25 74 Q 50 66, 75 74" stroke="#A855F7" stroke-width="1" stroke-opacity="0.25" fill="none" stroke-linecap="round"/>
+      <path d="M 90 83 Q 110 88, 130 83" stroke="#7C3AED" stroke-width="1.2" stroke-opacity="0.35" fill="none" stroke-linecap="round"/>
+      <path d="M 85 86 Q 110 94, 135 86" stroke="#06B6D4" stroke-width="1" stroke-opacity="0.25" fill="none" stroke-linecap="round"/>
+      <!-- Central S-path -->
+      <path d="M 6 74 Q 45 74, 80 80 Q 115 86, 154 86" stroke="#fff" stroke-width="1.5" stroke-opacity="0.1" fill="none"/>
+    </svg>
+  </div>
+  <div class="thumbs">
+    <div class="t t56"><svg width="40" height="40" viewBox="0 0 160 160"><path d="M 12 6 L 148 6 Q 154 6, 154 12 L 154 52 Q 140 50, 120 58 Q 100 66, 80 74 L 6 74 L 6 12 Q 6 6, 12 6 Z" fill="url(#sv5a)"/><path d="M 6 86 L 80 86 Q 100 94, 120 102 Q 140 110, 154 108 L 154 148 Q 154 154, 148 154 L 12 154 Q 6 154, 6 148 Z" fill="url(#sv5b)"/></svg></div>
+    <div class="t t32"><svg width="22" height="22" viewBox="0 0 160 160"><path d="M 12 6 L 148 6 Q 154 6, 154 12 L 154 52 Q 140 50, 120 58 Q 100 66, 80 74 L 6 74 L 6 12 Q 6 6, 12 6 Z" fill="url(#sv5a)"/><path d="M 6 86 L 80 86 Q 100 94, 120 102 Q 140 110, 154 108 L 154 148 Q 154 154, 148 154 L 12 154 Q 6 154, 6 148 Z" fill="url(#sv5b)"/></svg></div>
+    <div class="t t56 tlt"><svg width="40" height="40" viewBox="0 0 160 160"><path d="M 12 6 L 148 6 Q 154 6, 154 12 L 154 52 Q 140 50, 120 58 Q 100 66, 80 74 L 6 74 L 6 12 Q 6 6, 12 6 Z" fill="url(#sv5a)"/><path d="M 6 86 L 80 86 Q 100 94, 120 102 Q 140 110, 154 108 L 154 148 Q 154 154, 148 154 L 12 154 Q 6 154, 6 148 Z" fill="url(#sv5b)"/></svg></div>
+  </div>
+  <p class="desc">Two gradient slabs with an S-shaped rift between them. Sound wave arcs ripple through the void — the gap is alive with frequency.</p>
+</div>
+
+<!-- ======== 6: BASS DROP ======== -->
+<!-- Two masses stacked. The bottom edge of the top mass and top edge of the bottom mass mirror each other like a bass waveform. The S emerges in the negative space, and vertical EQ bars float in the channel. -->
+<div class="card">
+  <span class="num">06</span>
+  <span class="name">Bass Drop</span>
+  <div class="mark">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <defs>
+        <linearGradient id="sv6a" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#D946EF"/>
+          <stop offset="100%" stop-color="#A855F7"/>
+        </linearGradient>
+        <linearGradient id="sv6b" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#7C3AED"/>
+          <stop offset="100%" stop-color="#06B6D4"/>
+        </linearGradient>
+      </defs>
+      <!-- Top mass with deep bass-curve bottom -->
+      <path d="
+        M 8 6 Q 8 2, 12 2 L 148 2 Q 152 2, 152 6
+        L 152 40
+        C 135 42, 120 70, 100 72
+        C 80 74, 65 50, 45 48
+        C 30 46, 15 55, 8 58
+        Z
+      " fill="url(#sv6a)"/>
+      <!-- Bottom mass with bass-curve top -->
+      <path d="
+        M 8 102
+        C 15 105, 30 96, 45 98
+        C 65 100, 80 126, 100 128
+        C 120 130, 135 108, 152 110
+        L 152 154 Q 152 158, 148 158 L 12 158 Q 8 158, 8 154
+        Z
+      " fill="url(#sv6b)"/>
+      <!-- EQ bars floating in the void -->
+      <rect x="24" y="68" width="3" height="18" rx="1.5" fill="#D946EF" opacity="0.4"/>
+      <rect x="34" y="62" width="3" height="28" rx="1.5" fill="#C026D3" opacity="0.35"/>
+      <rect x="44" y="56" width="3" height="38" rx="1.5" fill="#A855F7" opacity="0.4"/>
+      <rect x="54" y="60" width="3" height="32" rx="1.5" fill="#9333EA" opacity="0.35"/>
+      <rect x="64" y="64" width="3" height="24" rx="1.5" fill="#8B5CF6" opacity="0.4"/>
+      <rect x="74" y="68" width="3" height="18" rx="1.5" fill="#7C3AED" opacity="0.35"/>
+      <rect x="84" y="72" width="3" height="14" rx="1.5" fill="#6D28D9" opacity="0.4"/>
+      <rect x="94" y="76" width="3" height="10" rx="1.5" fill="#5B21B6" opacity="0.35"/>
+      <rect x="104" y="78" width="3" height="8" rx="1.5" fill="#22D3EE" opacity="0.3"/>
+      <rect x="114" y="80" width="3" height="12" rx="1.5" fill="#06B6D4" opacity="0.35"/>
+      <rect x="124" y="78" width="3" height="16" rx="1.5" fill="#0891B2" opacity="0.4"/>
+      <rect x="134" y="82" width="3" height="10" rx="1.5" fill="#0E7490" opacity="0.35"/>
+    </svg>
+  </div>
+  <div class="thumbs">
+    <div class="t t56"><svg width="40" height="40" viewBox="0 0 160 160"><path d="M 8 6 Q 8 2, 12 2 L 148 2 Q 152 2, 152 6 L 152 40 C 135 42, 120 70, 100 72 C 80 74, 65 50, 45 48 C 30 46, 15 55, 8 58 Z" fill="url(#sv6a)"/><path d="M 8 102 C 15 105, 30 96, 45 98 C 65 100, 80 126, 100 128 C 120 130, 135 108, 152 110 L 152 154 Q 152 158, 148 158 L 12 158 Q 8 158, 8 154 Z" fill="url(#sv6b)"/><rect x="24" y="68" width="4" height="18" rx="2" fill="#D946EF" opacity="0.4"/><rect x="44" y="56" width="4" height="38" rx="2" fill="#A855F7" opacity="0.4"/><rect x="64" y="64" width="4" height="24" rx="2" fill="#8B5CF6" opacity="0.4"/><rect x="84" y="72" width="4" height="14" rx="2" fill="#6D28D9" opacity="0.4"/><rect x="104" y="78" width="4" height="8" rx="2" fill="#22D3EE" opacity="0.3"/><rect x="124" y="78" width="4" height="16" rx="2" fill="#0891B2" opacity="0.4"/></svg></div>
+    <div class="t t32"><svg width="22" height="22" viewBox="0 0 160 160"><path d="M 8 6 Q 8 2, 12 2 L 148 2 Q 152 2, 152 6 L 152 40 C 135 42, 120 70, 100 72 C 80 74, 65 50, 45 48 C 30 46, 15 55, 8 58 Z" fill="url(#sv6a)"/><path d="M 8 102 C 15 105, 30 96, 45 98 C 65 100, 80 126, 100 128 C 120 130, 135 108, 152 110 L 152 154 Q 152 158, 148 158 L 12 158 Q 8 158, 8 154 Z" fill="url(#sv6b)"/></svg></div>
+    <div class="t t56 tlt"><svg width="40" height="40" viewBox="0 0 160 160"><path d="M 8 6 Q 8 2, 12 2 L 148 2 Q 152 2, 152 6 L 152 40 C 135 42, 120 70, 100 72 C 80 74, 65 50, 45 48 C 30 46, 15 55, 8 58 Z" fill="url(#sv6a)"/><path d="M 8 102 C 15 105, 30 96, 45 98 C 65 100, 80 126, 100 128 C 120 130, 135 108, 152 110 L 152 154 Q 152 158, 148 158 L 12 158 Q 8 158, 8 154 Z" fill="url(#sv6b)"/></svg></div>
+  </div>
+  <p class="desc">Deep bass-curve masses with an S-shaped waveform canyon between them. EQ spectrum bars float in the void like a frozen audio visualizer.</p>
+</div>
+
+</div>
+
+</body>
+</html>
