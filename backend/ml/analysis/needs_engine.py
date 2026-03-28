@@ -330,11 +330,12 @@ class NeedsEngine:
 
         # --- Weak attack support ---
         # Kick and snare expected in rhythmic styles
+        # Only flag when truly absent — dense mixes dilute detection scores
         kick_conf = roles.get("kick", 0.0)
         snare_conf = roles.get("snare_clap", 0.0)
-        if is_rhythmic and (kick_conf + snare_conf) / 2.0 < 0.25:
+        if is_rhythmic and kick_conf < 0.08 and snare_conf < 0.08:
             avg = (kick_conf + snare_conf) / 2.0
-            severity = _clamp(1.0 - avg * 4.0)  # lower confidence → higher severity
+            severity = _clamp(1.0 - avg * 8.0)
             needs.append(NeedOpportunity(
                 category="role",
                 description=(
@@ -347,9 +348,10 @@ class NeedsEngine:
             ))
 
         # --- No rhythmic sparkle ---
+        # Only flag when hats are genuinely absent
         hats_conf = roles.get("hats_tops", 0.0)
-        if is_rhythmic and hats_conf < 0.20:
-            severity = _clamp(1.0 - hats_conf * 5.0)
+        if is_rhythmic and hats_conf < 0.08:
+            severity = _clamp(1.0 - hats_conf * 10.0)
             needs.append(NeedOpportunity(
                 category="role",
                 description=(

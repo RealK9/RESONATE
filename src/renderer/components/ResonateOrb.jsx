@@ -70,8 +70,14 @@ export function ResonateOrb({ progress = 0, size = 320 }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const particlesRef = useRef(null);
+  const progressRef = useRef(progress);
+  const isDarkRef = useRef(false);
   const { mode } = useTheme();
   const isDark = mode === "dark";
+
+  // Keep refs in sync without re-running effect
+  progressRef.current = progress;
+  isDarkRef.current = isDark;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -94,12 +100,13 @@ export function ResonateOrb({ progress = 0, size = 320 }) {
 
     function draw() {
       const t = (Date.now() - startTime) / 1000;
-      const p = progress / 100;
+      const p = progressRef.current / 100;
       ctx.clearRect(0, 0, size, size);
 
       // ── 1. Deep background glow ──────────────────────────────────────
       const bgGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, baseR * 1.8);
-      const bgA = isDark ? 0.04 + p * 0.06 : 0.02 + p * 0.03;
+      const dk = isDarkRef.current;
+      const bgA = dk ? 0.04 + p * 0.06 : 0.02 + p * 0.03;
       bgGlow.addColorStop(0, `rgba(139, 92, 246, ${bgA})`);
       bgGlow.addColorStop(0.4, `rgba(217, 70, 239, ${bgA * 0.6})`);
       bgGlow.addColorStop(0.7, `rgba(6, 182, 212, ${bgA * 0.3})`);
@@ -170,7 +177,7 @@ export function ResonateOrb({ progress = 0, size = 320 }) {
       // ── 4. Energetic core glow (pulsating) ──────────────────────────
       const coreSize = baseR * (0.35 + p * 0.15) * (0.9 + Math.sin(t * 2) * 0.1);
       const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreSize);
-      const coreA = isDark ? 0.08 + p * 0.12 : 0.04 + p * 0.06;
+      const coreA = dk ? 0.08 + p * 0.12 : 0.04 + p * 0.06;
       core.addColorStop(0, `rgba(255, 255, 255, ${coreA * 0.3})`);
       core.addColorStop(0.2, `rgba(217, 70, 239, ${coreA})`);
       core.addColorStop(0.5, `rgba(139, 92, 246, ${coreA * 0.6})`);
@@ -188,7 +195,7 @@ export function ResonateOrb({ progress = 0, size = 320 }) {
         const r = pt.color < 0.33 ? 217 : pt.color < 0.66 ? 139 : 6;
         const g = pt.color < 0.33 ? 70 : pt.color < 0.66 ? 92 : 182;
         const b = pt.color < 0.33 ? 239 : pt.color < 0.66 ? 246 : 212;
-        const pa = pt.life * (0.3 + p * 0.5) * (isDark ? 1 : 0.6);
+        const pa = pt.life * (0.3 + p * 0.5) * (dk ? 1 : 0.6);
 
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, pt.size * (0.5 + p * 0.5), 0, Math.PI * 2);
@@ -256,7 +263,7 @@ export function ResonateOrb({ progress = 0, size = 320 }) {
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
-  }, [size, progress, isDark]);
+  }, [size]);
 
   return (
     <div style={{ position: "relative", width: size, height: size }}>

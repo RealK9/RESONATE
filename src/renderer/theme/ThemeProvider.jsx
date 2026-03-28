@@ -11,7 +11,7 @@ const ThemeContext = createContext();
 export function ThemeProvider({ children }) {
   const [mode, setMode] = useState(() => {
     const saved = localStorage.getItem("resonate_theme");
-    return saved || "light";
+    return saved || "dark";
   });
 
   const theme = mode === "dark" ? darkTheme : lightTheme;

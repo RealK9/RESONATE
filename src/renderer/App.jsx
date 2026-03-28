@@ -10,7 +10,7 @@ import { SERIF, AF, MONO } from "./theme/fonts";
 import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useWaveformData } from "./hooks/useWaveformData";
 import { useApi, API } from "./hooks/useApi";
-import { mergeV2WithV1, formatNeeds, formatGapAnalysis, NEED_CATEGORY_COLORS, POLICY_LABELS } from "./utils/v2Adapter";
+import { mergeV2WithV1, formatNeeds, formatGapAnalysis, buildV1Compat, NEED_CATEGORY_COLORS, POLICY_LABELS } from "./utils/v2Adapter";
 import { Titlebar } from "./components/Titlebar";
 import { ResonateOrb } from "./components/ResonateOrb";
 import { SkeletonRow } from "./components/SkeletonRow";
@@ -156,6 +156,10 @@ export default function App() {
   const audio = useAudioPlayer();
   const bridge = useBridge();
 
+  // ── Sidebar UI State ──
+  const [analyzerExpanded, setAnalyzerExpanded] = useState(false);
+  const [catsExpanded, setCatsExpanded] = useState(false);
+
   // ── New Feature State ──
   const [ratings, setRatings] = useState({});          // { sampleId: 1-5 }
   const [similarSamples, setSimilarSamples] = useState(null);  // similarity panel
@@ -276,8 +280,7 @@ export default function App() {
         // Fetch chart comparison in background
         api.getChartComparison().then(c => setChartComparison(c)).catch(() => {});
         // Build v1-compatible analysis result
-        const v1Compat = { analysis: { key: mp?.analysis?.key || "", bpm: mp?.analysis?.bpm || 0, genre: fullResult.summary?.blueprint_used || mp?.style?.primary_cluster || "", mood: "", energy_label: "", summary: fullResult.summary?.gap_summary || "", what_track_needs: (mp?.needs || []).map(n => n.description).slice(0, 6), frequency_bands: {}, frequency_gaps: [], detected_instruments: [] } };
-        setAnalysisResult(v1Compat);
+        setAnalysisResult(buildV1Compat(mp, fullResult.summary));
       } catch {
         // Full endpoint not available — try v2 analyze + separate recommend
         try {
@@ -290,8 +293,7 @@ export default function App() {
           setV2Available(true);
           // Fetch chart comparison in background
           api.getChartComparison().then(c => setChartComparison(c)).catch(() => {});
-          const v1Compat = { analysis: { key: v2Result?.analysis?.key || "", bpm: v2Result?.analysis?.bpm || 0, genre: v2Result?.style?.primary_cluster || "", mood: "", energy_label: "", summary: "", what_track_needs: (v2Result?.needs || []).map(n => n.description).slice(0, 6), frequency_bands: {}, frequency_gaps: [], detected_instruments: [] } };
-          setAnalysisResult(v1Compat);
+          setAnalysisResult(buildV1Compat(v2Result));
         } catch {
           // v2 not available — fall back to v1
           setV2Available(false);
@@ -442,7 +444,7 @@ export default function App() {
     try {
       const r = await fetch(API + "/sessions/" + sessionId);
       const d = await r.json();
-      setAnalysisResult({ analysis: d.ai_analysis || d.track_profile });
+      setAnalysisResult({ analysis: { ...d.track_profile, ...d.ai_analysis } });
       setFileName(d.track_filename);
       setCurrentSessionId(d.id);
       setShowSessions(false);
@@ -760,11 +762,40 @@ export default function App() {
             : "radial-gradient(ellipse 50% 40% at 70% 80%, rgba(6,182,212,0.04) 0%, transparent 60%)", pointerEvents: "none" }} />
           {/* Logo + Title */}
           <div style={{ marginBottom: 40, animation: "fadeInUp 0.5s ease", position: "relative", zIndex: 1 }}>
-            <div style={{ position: "relative", width: 88, height: 88, margin: "0 auto 28px" }}>
-              <LogoBlend size={88} isDark={isDark} />
+            <div style={{ position: "relative", width: 100, height: 100, margin: "0 auto 28px" }}>
+              <LogoBlend size={100} isDark={isDark} />
+              {/* Circular equalizer — radial bars that pulse like music */}
+              <div style={{ position: "absolute", inset: -40, width: 180, height: 180, pointerEvents: "none" }}>
+                {Array.from({ length: 48 }, (_, i) => {
+                  const angle = (i / 48) * 360;
+                  const colors = ["#D946EF", "#C026D3", "#A855F7", "#8B5CF6", "#7C3AED", "#06B6D4"];
+                  const c = colors[i % colors.length];
+                  const dur = 0.8 + (i % 6) * 0.2;
+                  const delay = (i % 9) * 0.1;
+                  return (
+                    <div key={i} style={{
+                      position: "absolute", left: "50%", top: "50%",
+                      width: 2.5, height: 18,
+                      transformOrigin: "center 0px",
+                      transform: `rotate(${angle}deg) translateY(-76px)`,
+                    }}>
+                      <div style={{
+                        width: "100%", height: "100%", borderRadius: 1.5,
+                        background: `linear-gradient(to top, ${c}, ${c}80)`,
+                        opacity: isDark ? 0.5 : 0.4,
+                        transformOrigin: "bottom center",
+                        animation: `eqBar ${dur}s ease-in-out infinite ${delay}s`,
+                        boxShadow: isDark ? `0 0 6px ${c}50` : `0 0 3px ${c}30`,
+                      }} />
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Warm glow behind logo */}
+              <div style={{ position: "absolute", inset: -30, borderRadius: "50%", background: isDark ? "radial-gradient(circle, rgba(217,70,239,0.1) 0%, rgba(139,92,246,0.05) 35%, transparent 65%)" : "radial-gradient(circle, rgba(217,70,239,0.04) 0%, transparent 60%)", filter: "blur(18px)", pointerEvents: "none", animation: "logoPulse 4s ease-in-out infinite" }} />
             </div>
             <h1 className="gradient-text shimmer-text" style={{ fontSize: 30, fontWeight: 300, letterSpacing: 12, fontFamily: AF, margin: "0 0 8px" }}>RESONATE</h1>
-            <p style={{ fontSize: 10, color: theme.textMuted, letterSpacing: 5, textTransform: "uppercase", fontFamily: AF }}>Smart Sampling</p>
+            <p style={{ fontSize: 9, color: theme.textMuted, letterSpacing: 6, textTransform: "uppercase", fontFamily: AF, opacity: 0.5 }}>Production Intelligence</p>
           </div>
 
           {error && <div style={{ padding: "8px 14px", borderRadius: 6, background: isDark ? "rgba(220,38,38,0.12)" : "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.12)", color: theme.red, fontSize: 11, marginBottom: 16, maxWidth: 440, position: "relative", zIndex: 1 }}>{error}</div>}
@@ -805,23 +836,26 @@ export default function App() {
           <div style={{ width: 40, height: 1, background: "linear-gradient(90deg, #D946EF, #06B6D4)", opacity: 0.3, margin: "32px 0", position: "relative", zIndex: 1, borderRadius: 1 }} />
 
           {/* Stats */}
-          <div style={{ display: "flex", gap: 44, position: "relative", zIndex: 1 }}>
-            {[{ v: samples.length || "—", l: "Samples" }, { v: cats.length - 1 || "—", l: "Categories" }, { v: "AI", l: "Analysis" }].map((s, i) => (
+          <div style={{ display: "flex", gap: 56, position: "relative", zIndex: 1 }}>
+            {[{ v: samples.length || "\u2014", l: "Samples" }, { v: cats.length - 1 || "\u2014", l: "Categories" }, { v: "RPM", l: "Engine" }].map((s, i) => (
               <div key={s.l} style={{ textAlign: "center", animation: `fadeInUp 0.5s ease ${0.1 + i * 0.08}s both` }}>
-                <div style={{ fontSize: 22, fontWeight: 200, color: theme.text, fontFamily: SERIF }}>{s.v}</div>
-                <div style={{ fontSize: 8, color: theme.textMuted, textTransform: "uppercase", letterSpacing: 2.5, marginTop: 4, fontFamily: AF, fontWeight: 500 }}>{s.l}</div>
+                <div className="gradient-text" style={{ fontSize: 28, fontWeight: 200, fontFamily: MONO, lineHeight: 1, letterSpacing: -1 }}>{typeof s.v === "number" ? s.v.toLocaleString() : s.v}</div>
+                <div style={{ fontSize: 7, color: theme.textFaint, textTransform: "uppercase", letterSpacing: 4, marginTop: 8, fontFamily: AF, fontWeight: 500 }}>{s.l}</div>
               </div>
             ))}
           </div>
 
           {/* Session History + Shortcut Hints */}
-          <div style={{ marginTop: 28, display: "flex", gap: 12, position: "relative", zIndex: 1 }}>
+          <div style={{ marginTop: 32, display: "flex", gap: 12, position: "relative", zIndex: 1 }}>
             {sessions.length > 0 && (
-              <button onClick={() => setShowSessions(true)} style={{ fontSize: 10, padding: "6px 16px", borderRadius: 8, border: "1px solid " + theme.border, background: isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.6)", color: theme.textSec, cursor: "pointer", fontFamily: AF, backdropFilter: "blur(8px)", transition: "all 0.2s" }}>Load Session ({sessions.length})</button>
+              <button onClick={() => setShowSessions(true)} style={{ fontSize: 10, padding: "7px 18px", borderRadius: 8, border: "1px solid " + theme.border, background: isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.7)", color: theme.textSec, cursor: "pointer", fontFamily: AF, backdropFilter: "blur(8px)", transition: "all 0.2s" }}>Load Session ({sessions.length})</button>
             )}
           </div>
-          <div style={{ marginTop: 16, fontSize: 9, color: theme.textFaint, fontFamily: AF, position: "relative", zIndex: 1 }}>
-            Press <span style={{ fontFamily: MONO, padding: "1px 5px", borderRadius: 3, background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", fontSize: 10 }}>?</span> for keyboard shortcuts
+          <div style={{ marginTop: 18, fontSize: 9, color: theme.textFaint, fontFamily: AF, position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 5 }}>
+            Press <span style={{ fontFamily: MONO, padding: "2px 7px", borderRadius: 4, background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: "1px solid " + theme.borderLight, fontSize: 10 }}>?</span> for shortcuts
+          </div>
+          <div style={{ marginTop: 24, fontSize: 8, fontFamily: MONO, position: "relative", zIndex: 1, letterSpacing: 2, textTransform: "uppercase", color: isDark ? "rgba(255,255,255,0.4)" : "#111111", fontWeight: 500 }}>
+            SONIQlabs · v0.1
           </div>
         </div>
       )}
@@ -851,15 +885,47 @@ export default function App() {
         <div style={{ display: "flex", height: "calc(100vh - 46px)", fontFamily: SERIF }}>
           {/* Sidebar */}
           <div style={{ width: 250, borderRight: "1px solid " + theme.border, padding: 12, overflowY: "auto", flexShrink: 0, background: theme.surface }}>
-            <div style={{ padding: 12, borderRadius: 8, marginBottom: 12, background: theme.bg, border: "1px solid " + theme.borderLight }}>
-              <div style={lbl}>Analysis</div>
-              <div style={{ fontSize: 9, color: theme.textMuted, marginBottom: 6, fontFamily: MONO, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fileName}</div>
-              {[["Key", a.key], ["BPM", a.bpm ? Math.round(a.bpm) : "—"], ["Genre", a.genre], ["Energy", a.energy_label], ["Mood", a.mood]].map(([k, v]) => (
-                <div key={k} style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                  <span style={{ fontSize: 10, color: theme.textMuted, fontFamily: AF }}>{k}</span>
-                  <span style={{ fontSize: 10, color: theme.text, fontWeight: 600, fontFamily: MONO }}>{v || "—"}</span>
+            <div style={{ padding: 12, borderRadius: 8, marginBottom: 12, background: theme.bg, border: "1px solid " + theme.borderLight, transition: "border-color 0.2s" }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = isDark ? "rgba(217,70,239,0.2)" : "rgba(139,92,246,0.2)"}
+              onMouseLeave={e => e.currentTarget.style.borderColor = theme.borderLight}
+            >
+              <div style={{ fontSize: 9, color: theme.textMuted, marginBottom: 8, fontFamily: MONO, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fileName}</div>
+              {/* Key / BPM / Genre — prominent */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                {[["Key", a.key], ["BPM", a.bpm ? Math.round(a.bpm) : "—"], ["Genre", a.genre]].map(([k, v]) => (
+                  <div key={k} style={{ flex: k === "Genre" ? 2 : 1, textAlign: "center" }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: theme.text, fontFamily: AF, lineHeight: 1.2 }}>{v || "—"}</div>
+                    <div style={{ fontSize: 7, color: theme.textFaint, fontFamily: AF, textTransform: "uppercase", letterSpacing: 1.5, marginTop: 2 }}>{k}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Dropdown for secondary stats */}
+              <button onClick={() => setAnalyzerExpanded(!analyzerExpanded)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "4px 0", border: "none", background: "transparent", color: theme.textMuted, fontSize: 8, fontFamily: AF, cursor: "pointer", letterSpacing: 1, textTransform: "uppercase" }}>
+                {analyzerExpanded ? "Less" : "More Details"}
+                <svg width="8" height="8" viewBox="0 0 8 8" style={{ transition: "transform 0.2s", transform: analyzerExpanded ? "rotate(180deg)" : "rotate(0)" }}>
+                  <path d="M1 2.5l3 3 3-3" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+                </svg>
+              </button>
+              {analyzerExpanded && (
+                <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid " + theme.borderLight }}>
+                  {[["Energy", a.energy_label], ["Mood", a.mood], ["Duration", a.duration ? `${Math.floor(a.duration / 60)}:${String(Math.floor(a.duration % 60)).padStart(2, "0")}` : "—"]].map(([k, v]) => (
+                    <div key={k} style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                      <span style={{ fontSize: 10, color: theme.textMuted, fontFamily: AF }}>{k}</span>
+                      <span style={{ fontSize: 10, color: theme.text, fontWeight: 600, fontFamily: AF }}>{v || "—"}</span>
+                    </div>
+                  ))}
+                  {a.detected_instruments?.length > 0 && (
+                    <div style={{ marginTop: 4 }}>
+                      <span style={{ fontSize: 10, color: theme.textMuted, fontFamily: AF }}>Detected</span>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginTop: 3 }}>
+                        {a.detected_instruments.map((inst) => (
+                          <span key={inst} style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: isDark ? "rgba(139,92,246,0.15)" : "rgba(139,92,246,0.1)", color: isDark ? "#A78BFA" : "#7C3AED", fontFamily: AF, fontWeight: 500 }}>{inst}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
+              )}
               {/* Session + Re-Analyze actions */}
               <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
                 <button onClick={saveSession} style={{ flex: 1, fontSize: 8, padding: "4px 0", borderRadius: 4, border: "1px solid " + theme.border, background: "transparent", color: theme.textSec, cursor: "pointer", fontFamily: AF }}>Save Session</button>
@@ -876,17 +942,20 @@ export default function App() {
                 </button>
               )}
             </div>
-            {/* v2 Mix Needs */}
+            {/* v2 Mix Needs — fully readable, no truncation */}
             {mixNeeds.length > 0 && (
-              <div style={{ padding: 12, borderRadius: 8, marginBottom: 12, background: theme.bg, border: "1px solid " + theme.borderLight }}>
+              <div style={{ padding: 12, borderRadius: 8, marginBottom: 12, background: theme.bg, border: "1px solid " + theme.borderLight, transition: "border-color 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = isDark ? "rgba(217,70,239,0.2)" : "rgba(139,92,246,0.2)"}
+                onMouseLeave={e => e.currentTarget.style.borderColor = theme.borderLight}
+              >
                 <div style={lbl}>Your Mix Needs</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                   {mixNeeds.slice(0, 8).map((need, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
                       <span style={{ width: 5, height: 5, borderRadius: "50%", background: NEED_CATEGORY_COLORS[need.category] || theme.textMuted, flexShrink: 0, marginTop: 4, opacity: 0.4 + need.severity * 0.6 }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 10, color: theme.text, fontFamily: AF, lineHeight: 1.3 }}>{need.description}</div>
-                        {need.policy && <div style={{ fontSize: 8, color: theme.textFaint, fontFamily: AF, marginTop: 1 }}>{POLICY_LABELS[need.policy] || need.policy}</div>}
+                        <div style={{ fontSize: 10, color: theme.text, fontFamily: AF, lineHeight: 1.4, wordBreak: "break-word" }}>{need.description}</div>
+                        {need.policy && <div style={{ fontSize: 8, color: theme.textFaint, fontFamily: AF, marginTop: 2 }}>{POLICY_LABELS[need.policy] || need.policy}</div>}
                       </div>
                     </div>
                   ))}
@@ -896,7 +965,10 @@ export default function App() {
 
             {/* Gap Analysis Panel */}
             {gapAnalysis && (
-              <div style={{ padding: 12, borderRadius: 8, marginBottom: 12, background: theme.bg, border: "1px solid " + theme.borderLight }}>
+              <div style={{ padding: 12, borderRadius: 8, marginBottom: 12, background: theme.bg, border: "1px solid " + theme.borderLight, transition: "border-color 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = isDark ? "rgba(217,70,239,0.2)" : "rgba(139,92,246,0.2)"}
+                onMouseLeave={e => e.currentTarget.style.borderColor = theme.borderLight}
+              >
                 <div style={lbl}>Production Readiness</div>
                 {/* Score ring */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
@@ -1048,10 +1120,18 @@ export default function App() {
             </div>
             <div style={{ marginBottom: 12 }}>
               <div style={lbl}>Category</div>
-              {cats.map(cat => {
+              {(catsExpanded ? cats : cats.slice(0, 4)).map(cat => {
                 const cnt = cat === "all" ? samples.length : samples.filter(s => s.category.toLowerCase() === cat).length;
                 return <button key={cat} onClick={() => setCategory(cat)} style={{ display: "flex", justifyContent: "space-between", width: "100%", textAlign: "left", padding: "5px 7px", marginBottom: 1, borderRadius: 4, border: "none", background: category === cat ? (isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)") : "transparent", color: category === cat ? theme.text : theme.textSec, fontSize: 11, fontWeight: category === cat ? 600 : 400, cursor: "pointer", textTransform: "capitalize", fontFamily: AF }}><span>{cat === "all" ? "All" : cat}</span><span style={{ fontSize: 9, opacity: 0.5 }}>{cnt}</span></button>;
               })}
+              {cats.length > 4 && (
+                <button onClick={() => setCatsExpanded(!catsExpanded)} style={{ width: "100%", padding: "4px 7px", border: "none", background: "transparent", color: theme.textMuted, fontSize: 9, fontFamily: AF, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 4 }}>
+                  {catsExpanded ? "Show less" : `+${cats.length - 4} more`}
+                  <svg width="8" height="8" viewBox="0 0 8 8" style={{ transition: "transform 0.2s", transform: catsExpanded ? "rotate(180deg)" : "rotate(0)" }}>
+                    <path d="M1 2.5l3 3 3-3" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+                  </svg>
+                </button>
+              )}
             </div>
             <div style={{ marginBottom: 12 }}><div style={lbl}>Key</div><select value={selectedKey} onChange={e => setSelectedKey(e.target.value)} style={{ ...iStyle, width: "100%", boxSizing: "border-box", cursor: "pointer" }}>{KEYS.map(k => <option key={k} value={k}>{k}</option>)}</select></div>
 
@@ -1163,9 +1243,10 @@ export default function App() {
                 {a.what_track_needs && a.what_track_needs.length > 0 && (
                   <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 9, color: theme.textMuted, fontFamily: AF, alignSelf: "center" }}>Needs:</span>
-                    {a.what_track_needs.slice(0, 6).map((need, i) => (
-                      <span key={i} style={{ fontSize: 9, padding: "2px 7px", borderRadius: 4, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", color: theme.textSec, fontFamily: AF }}>{need}</span>
-                    ))}
+                    {a.what_track_needs.slice(0, 6).map((need, i) => {
+                      const short = need.split(/\s*--\s*|\s*—\s*/)[0].replace(/_/g, " ");
+                      return <span key={i} style={{ fontSize: 9, padding: "2px 7px", borderRadius: 4, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", color: theme.textSec, fontFamily: AF, whiteSpace: "nowrap" }}>{short}</span>;
+                    })}
                   </div>
                 )}
               </div>

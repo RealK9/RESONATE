@@ -199,42 +199,12 @@ class CandidateGenerator:
         Returns up to *max_candidates* SampleProfile objects, ordered so that
         candidates addressing the highest-severity needs come first.
         """
-        if not needs:
-            return []
-
-        # Sort needs by severity (highest first) so we prioritize accordingly.
-        sorted_needs = sorted(needs, key=lambda n: n.severity, reverse=True)
-
         mix_key = mix_profile.analysis.key
-
-        # Collect candidates per need, preserving need priority order.
         seen_filepaths: set[str] = set()
         ordered_candidates: list[SampleProfile] = []
 
-        for need in sorted_needs:
-            roles = self._roles_for_need(need)
-            if not roles:
-                continue
-
-            for role in roles:
-                samples = self._store.search_by_role(role)
-                for sample in samples:
-                    if sample.filepath in seen_filepaths:
-                        continue
-                    # Quality floor.
-                    if sample.labels.commercial_readiness < _QUALITY_FLOOR:
-                        continue
-                    # Tonal compatibility.
-                    if mix_key and sample.labels.tonal:
-                        sample_key = self._infer_sample_key(sample)
-                        if sample_key and not is_tonally_compatible(
-                            mix_key, sample_key
-                        ):
-                            continue
-                    seen_filepaths.add(sample.filepath)
-                    ordered_candidates.append(sample)
-
-        # If vector index is available, add embedding-based candidates too.
+        # 1. Embedding-based candidates FIRST — sonic similarity is the best
+        #    signal for what actually complements a mix.
         if self._index is not None:
             embedding_candidates = self._embedding_search(
                 mix_profile, max_candidates
@@ -253,8 +223,48 @@ class CandidateGenerator:
                 seen_filepaths.add(sample.filepath)
                 ordered_candidates.append(sample)
 
-        # Cap at max_candidates.  The list is already in need-priority order,
-        # so truncating keeps the most important candidates.
+        # 2. Need-based candidates supplement the embedding results.
+        if needs:
+            sorted_needs = sorted(needs, key=lambda n: n.severity, reverse=True)
+            for need in sorted_needs:
+                roles = self._roles_for_need(need)
+                if not roles:
+                    continue
+
+                for role in roles:
+                    samples = self._store.search_by_role(role)
+                    for sample in samples:
+                        if sample.filepath in seen_filepaths:
+                            continue
+                        if sample.labels.commercial_readiness < _QUALITY_FLOOR:
+                            continue
+                        if mix_key and sample.labels.tonal:
+                            sample_key = self._infer_sample_key(sample)
+                            if sample_key and not is_tonally_compatible(
+                                mix_key, sample_key
+                            ):
+                                continue
+                        seen_filepaths.add(sample.filepath)
+                        ordered_candidates.append(sample)
+
+        # 3. If we still have no candidates (no index, no needs), pull top
+        #    quality samples from the store as a fallback.
+        if not ordered_candidates:
+            all_samples = self._store.get_all() if hasattr(self._store, "get_all") else []
+            for sample in all_samples:
+                if sample.labels.commercial_readiness < _QUALITY_FLOOR:
+                    continue
+                if mix_key and sample.labels.tonal:
+                    sample_key = self._infer_sample_key(sample)
+                    if sample_key and not is_tonally_compatible(
+                        mix_key, sample_key
+                    ):
+                        continue
+                seen_filepaths.add(sample.filepath)
+                ordered_candidates.append(sample)
+                if len(ordered_candidates) >= max_candidates:
+                    break
+
         return ordered_candidates[:max_candidates]
 
     # ------------------------------------------------------------------

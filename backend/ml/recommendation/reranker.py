@@ -46,14 +46,14 @@ from ml.recommendation.candidate_generator import (
 # ---------------------------------------------------------------------------
 
 _DEFAULT_WEIGHTS: dict[str, float] = {
-    "alpha": 0.20,    # need_fit
-    "beta": 0.15,     # role_fit
-    "gamma": 0.15,    # spectral_complement
-    "delta": 0.10,    # tonal_compatibility
-    "epsilon": 0.08,  # rhythmic_compatibility
+    "alpha": 0.10,    # need_fit — reduced: only matters when gaps are real
+    "beta": 0.08,     # role_fit — reduced: role labels alone don't make a match
+    "gamma": 0.22,    # spectral_complement — boosted: the sonic fit is king
+    "delta": 0.15,    # tonal_compatibility — boosted: key match matters
+    "epsilon": 0.12,  # rhythmic_compatibility — boosted: groove alignment
     "zeta": 0.08,     # style_prior_fit
     "eta": 0.10,      # quality_prior
-    "theta": 0.04,    # user_preference
+    "theta": 0.05,    # user_preference
     "lambda_": 0.05,  # masking_penalty
     "mu": 0.05,       # redundancy_penalty
 }

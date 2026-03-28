@@ -336,17 +336,34 @@ def _source_role_presence(mono: np.ndarray, sr: int) -> SourceRolePresence:
 
     roles: dict[str, float] = {}
 
+    # Percussive onset sharpness — better indicator than overall perc_ratio
+    # for detecting individual hits within a dense mix
+    perc_sharpness = perc_onset_mean / max(perc_onset_max, 1e-10)
+
     # kick: sub + bass energy with percussive transients
     kick_energy = (norm["sub"] + norm["bass"]) / 2.0
-    roles["kick"] = min(1.0, kick_energy * perc_ratio * 2.0)
+    # Use max of perc_ratio and sharpness so kicks aren't buried in dense mixes
+    kick_perc = max(perc_ratio, perc_sharpness)
+    roles["kick"] = min(1.0, kick_energy * kick_perc * 2.5)
 
     # snare_clap: mid + upper_mid transients
+    # In a full mix, mids are shared with bass/vocals — use percussive band
+    # energy specifically (not total band energy)
+    perc_mid = _bandpass(percussive, 400, 2500, sr)
+    perc_mid_energy = _rms(perc_mid) / max(total_energy, 1e-10)
     snare_energy = (norm["mid"] + norm["upper_mid"]) / 2.0
-    roles["snare_clap"] = min(1.0, snare_energy * perc_ratio * 1.5)
+    # Blend: half from percussive-only mid energy, half from full band
+    snare_combined = (perc_mid_energy * 3.0 + snare_energy) / 2.0
+    roles["snare_clap"] = min(1.0, snare_combined * max(perc_ratio, 0.3) * 2.0)
 
     # hats_tops: high-frequency transient energy (8k+)
+    # Use percussive HF specifically — harmonics above 8k are rare
+    perc_hf = _bandpass(percussive, 8000, min(sr // 2 - 1, 20000), sr)
+    perc_hf_energy = _rms(perc_hf) / max(total_energy, 1e-10)
     hf_energy = (norm["air"] + norm["ultra_high"] + norm["ceiling"]) / 3.0
-    roles["hats_tops"] = min(1.0, hf_energy * perc_ratio * 2.0)
+    # Blend: percussive HF is more reliable than total HF
+    hats_combined = (perc_hf_energy * 3.0 + hf_energy) / 2.0
+    roles["hats_tops"] = min(1.0, hats_combined * max(perc_ratio, 0.3) * 2.5)
 
     # bass: sustained low-frequency energy (60-250Hz range)
     bass_sustained = (norm["bass"] + norm["low_mid"]) / 2.0

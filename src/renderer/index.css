@@ -62,6 +62,31 @@ body {
   50% { background-position: 100% 50%; }
 }
 
+@keyframes logoSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes logoPulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes eqBar {
+  0%, 100% { transform: scaleY(0.3); opacity: 0.2; }
+  25% { transform: scaleY(1); opacity: 0.7; }
+  50% { transform: scaleY(0.5); opacity: 0.35; }
+  75% { transform: scaleY(0.85); opacity: 0.55; }
+}
+
+@keyframes shimmerDown {
+  0% { clip-path: inset(0 0 100% 0); opacity: 0; }
+  10% { opacity: 1; }
+  50% { clip-path: inset(0 0 0 0); opacity: 1; }
+  90% { opacity: 1; }
+  100% { clip-path: inset(100% 0 0 0); opacity: 0; }
+}
+
 @keyframes breathe {
   0%, 100% { border-color: rgba(217,70,239,0.08); }
   50% { border-color: rgba(6,182,212,0.15); }
@@ -205,6 +230,24 @@ input::placeholder {
 }
 
 .shimmer-text {
+  background: linear-gradient(
+    90deg,
+    #D946EF 0%,
+    #8B5CF6 20%,
+    #06B6D4 40%,
+    #F0ABFC 50%,
+    #06B6D4 60%,
+    #8B5CF6 80%,
+    #D946EF 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmerSweep 4s ease-in-out infinite;
+}
+
+[data-theme="dark"] .shimmer-text {
   background: linear-gradient(
     90deg,
     #D946EF 0%,
