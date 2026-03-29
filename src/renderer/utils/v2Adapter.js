@@ -176,12 +176,29 @@ export function buildV1Compat(mp, summary) {
     .sort((a, b) => b[1] - a[1])
     .map(([k]) => ROLE_DISPLAY[k] || k);
 
-  // Spectral occupancy → frequency bands
+  // Spectral occupancy → frequency bands (map 10-band analyzer names to 7-band SpectrumViz keys)
+  const BAND_MAP = {
+    sub: "sub_bass_20_80",
+    bass: "bass_80_250",
+    low_mid: "low_mid_250_500",
+    mid: "mid_500_2k",
+    upper_mid: "upper_mid_2k_6k",
+    presence: "presence_6k_12k",
+    brilliance: "air_12k_20k",   // merge brilliance into air
+    air: "air_12k_20k",          // both map to air
+    ultra_high: "air_12k_20k",   // merge ultra_high into air
+    ceiling: "air_12k_20k",      // merge ceiling into air
+  };
   const bands = {};
   const bandNames = mp?.spectral_occupancy?.bands || [];
   const bandMeans = mp?.spectral_occupancy?.mean_by_band || [];
   bandNames.forEach((name, i) => {
-    if (i < bandMeans.length) bands[name] = Math.round(bandMeans[i] * 100);
+    if (i < bandMeans.length) {
+      const key = BAND_MAP[name] || name;
+      const val = Math.round(bandMeans[i] * 100);
+      // For merged bands (air), take the max
+      bands[key] = Math.max(bands[key] || 0, val);
+    }
   });
 
   return {
