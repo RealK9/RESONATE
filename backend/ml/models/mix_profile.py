@@ -101,6 +101,7 @@ class MixProfile:
     needs: list[NeedOpportunity] = field(default_factory=list)
     density_map: list[float] = field(default_factory=list)
     gap_analysis: dict = field(default_factory=dict)  # serialized GapAnalysisResult
+    rpm_embedding: list[float] = field(default_factory=list)  # 768-d RPM embedding for FAISS query
 
     def to_dict(self) -> dict:
         return asdict(self)

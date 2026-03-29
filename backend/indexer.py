@@ -247,11 +247,54 @@ v2_indexing_status = {"done": False, "total": 0, "processed": 0, "phase": "dsp"}
 
 # Global vector index — loaded at startup, updated during embedding pass
 _vector_index = None
+_rpm_extractor = None
 
 
 def get_vector_index():
     """Get the current vector index (may be None if not yet built)."""
     return _vector_index
+
+
+def get_rpm_extractor():
+    """Get the RPM extractor singleton (may be None if RPM model not available).
+
+    Lazily instantiated on first call so the analyze routes can extract
+    RPM embeddings for uploaded mixes without waiting for background indexing.
+    """
+    global _rpm_extractor
+    if _rpm_extractor is not None:
+        return _rpm_extractor
+
+    try:
+        from ml.embeddings.rpm_extractor import RPMExtractor
+        from pathlib import Path as _Path
+        rpm_models_dir = _Path("~/.resonate/rpm_models").expanduser()
+        if (rpm_models_dir / "rpm_final.pt").exists() or (rpm_models_dir / "rpm_embedding.onnx").exists():
+            # Load genre and instrument label mappings
+            genre_labels = {}
+            instrument_labels = []
+            try:
+                from ml.training.knowledge.genre_taxonomy import get_top_level_genres, get_genre_labels
+                top_genres = get_top_level_genres()
+                genre_labels = {i: name for i, name in enumerate(top_genres)}
+                for gid, gname in get_genre_labels():
+                    genre_labels[gid] = gname
+            except Exception:
+                pass
+            try:
+                from ml.training.knowledge.instruments import get_instrument_labels
+                instrument_labels = get_instrument_labels()
+            except Exception:
+                pass
+
+            _rpm_extractor = RPMExtractor(
+                genre_labels=genre_labels,
+                instrument_labels=instrument_labels,
+            )
+    except ImportError:
+        pass
+
+    return _rpm_extractor
 
 
 def background_index_v2():
@@ -265,7 +308,7 @@ def background_index_v2():
     first use), extract embeddings, build FAISS vector index. Slow but
     non-blocking — server is usable during this phase.
     """
-    global v2_indexing_status, _vector_index
+    global v2_indexing_status, _vector_index, _rpm_extractor
 
     try:
         from ml.pipeline.batch_processor import BatchProcessor
@@ -359,6 +402,7 @@ def background_index_v2():
                 genre_labels=genre_labels,
                 instrument_labels=instrument_labels,
             )
+            _rpm_extractor = rpm_extractor  # store globally for analyze routes
 
             processor_emb = BatchProcessor(
                 skip_embeddings=False,

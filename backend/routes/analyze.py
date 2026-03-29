@@ -189,6 +189,17 @@ async def analyze_v2(file: UploadFile = File(...)):
     print("\n  [v2] Running mix analysis...")
     mix_profile = await run_in_threadpool(analyze_mix, str(dest))
 
+    # Extract RPM embedding for the mix (used as FAISS query vector)
+    from indexer import get_rpm_extractor
+    rpm_ext = get_rpm_extractor()
+    if rpm_ext is not None:
+        print("  [v2] Extracting RPM embedding for mix...")
+        rpm_emb = await run_in_threadpool(rpm_ext.extract_embedding_only, str(dest))
+        mix_profile.rpm_embedding = rpm_emb.tolist()
+        print(f"  [v2] RPM embedding extracted ({len(mix_profile.rpm_embedding)}-d)")
+    else:
+        print("  [v2] RPM model not available — skipping mix embedding")
+
     print("  [v2] Classifying style...")
     mix_profile.style = await run_in_threadpool(StyleClassifier().classify, mix_profile)
 
@@ -337,7 +348,7 @@ async def recommend_v2(max_results: int = 20):
 
     # Stage 2: reranking (with learned preferences + gap intelligence)
     print(f"  [v2] Reranking {len(candidates)} candidates... (gap analysis: {'yes' if gap_result else 'no'})")
-    reranker = Reranker(corpus=corpus, preference_server=pref_server, gap_result=gap_result)
+    reranker = Reranker(corpus=corpus, preference_server=pref_server, gap_result=gap_result, vector_index=vector_index)
     recommendations = await run_in_threadpool(reranker.rerank, candidates, mix_profile, needs)
 
     # Stage 3: explanations (gap-aware)
@@ -397,6 +408,17 @@ async def analyze_and_recommend(
     print("\n  [v2/full] Running mix analysis...")
     mix_profile = await run_in_threadpool(analyze_mix, str(dest))
 
+    # Extract RPM embedding for the mix (used as FAISS query vector)
+    from indexer import get_rpm_extractor
+    rpm_ext = get_rpm_extractor()
+    if rpm_ext is not None:
+        print("  [v2/full] Extracting RPM embedding for mix...")
+        rpm_emb = await run_in_threadpool(rpm_ext.extract_embedding_only, str(dest))
+        mix_profile.rpm_embedding = rpm_emb.tolist()
+        print(f"  [v2/full] RPM embedding extracted ({len(mix_profile.rpm_embedding)}-d)")
+    else:
+        print("  [v2/full] RPM model not available — skipping mix embedding")
+
     print("  [v2/full] Classifying style...")
     mix_profile.style = await run_in_threadpool(StyleClassifier().classify, mix_profile)
 
@@ -440,7 +462,7 @@ async def analyze_and_recommend(
         pref_server.load()
 
         print(f"  [v2/full] Reranking {len(candidates)} candidates...")
-        reranker = Reranker(corpus=corpus, preference_server=pref_server, gap_result=gap_result)
+        reranker = Reranker(corpus=corpus, preference_server=pref_server, gap_result=gap_result, vector_index=vector_index)
         recommendations_list = await run_in_threadpool(reranker.rerank, candidates, mix_profile, needs)
 
         print("  [v2/full] Generating explanations...")

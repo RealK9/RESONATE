@@ -23,6 +23,8 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
+
 from ml.models.mix_profile import MixProfile, NeedOpportunity, SpectralOccupancy
 from ml.models.sample_profile import SampleProfile
 from ml.models.recommendation import (
@@ -46,18 +48,19 @@ from ml.recommendation.candidate_generator import (
 # ---------------------------------------------------------------------------
 
 _DEFAULT_WEIGHTS: dict[str, float] = {
-    "alpha": 0.14,    # need_fit (reduced from 0.20 to budget chart factors)
-    "beta": 0.11,     # role_fit (reduced from 0.15)
-    "gamma": 0.15,    # spectral_complement
-    "delta": 0.10,    # tonal_compatibility
-    "epsilon": 0.08,  # rhythmic_compatibility
-    "zeta": 0.08,     # style_prior_fit
-    "eta": 0.10,      # quality_prior
+    "alpha": 0.12,    # need_fit
+    "beta": 0.09,     # role_fit
+    "gamma": 0.12,    # spectral_complement
+    "delta": 0.08,    # tonal_compatibility
+    "epsilon": 0.06,  # rhythmic_compatibility
+    "zeta": 0.06,     # style_prior_fit
+    "eta": 0.08,      # quality_prior
     "theta": 0.04,    # user_preference
     "lambda_": 0.05,  # masking_penalty
     "mu": 0.05,       # redundancy_penalty
-    "nu": 0.08,       # chart_potential_lift
+    "nu": 0.07,       # chart_potential_lift
     "xi": 0.04,       # genre_coherence_lift
+    "omicron": 0.15,  # embedding_similarity (RPM cosine similarity — strongest signal)
 }
 
 # Spectral band boundaries in Hz (10 bands, matching SpectralOccupancy).
@@ -87,10 +90,12 @@ class Reranker:
         weights: dict[str, float] | None = None,
         preference_server: PreferenceServer | None = None,
         gap_result=None,
+        vector_index=None,
     ):
         self._corpus = corpus
         self._preference_server = preference_server
         self._gap_result = gap_result  # GapAnalysisResult or None
+        self._vector_index = vector_index  # VectorIndex for embedding lookups
         self._weights = dict(_DEFAULT_WEIGHTS)
         # Apply learned weight deltas from the preference server.
         if preference_server is not None and preference_server.is_loaded:
@@ -136,6 +141,7 @@ class Reranker:
                 + w["theta"] * bd.user_preference
                 + w.get("nu", 0) * bd.chart_potential_lift
                 + w.get("xi", 0) * bd.genre_coherence_lift
+                + w.get("omicron", 0) * bd.embedding_similarity
                 - w["lambda_"] * bd.masking_penalty
                 - w["mu"] * bd.redundancy_penalty
             )
@@ -242,6 +248,7 @@ class Reranker:
             redundancy_penalty=self._redundancy_penalty(sample, already_selected),
             chart_potential_lift=self._chart_potential_lift(sample, mix),
             genre_coherence_lift=self._genre_coherence_lift(sample, mix),
+            embedding_similarity=self._embedding_similarity(sample, mix),
         )
 
     # 1. Need fit -------------------------------------------------------
@@ -532,6 +539,35 @@ class Reranker:
             return 0.65  # genre match
         return 0.3  # doesn't help genre coherence
 
+    # 13. Embedding similarity (RPM cosine) --------------------------------
+
+    def _embedding_similarity(self, sample: SampleProfile, mix: MixProfile) -> float:
+        """
+        Cosine similarity between the mix's RPM embedding and the sample's
+        RPM embedding from the FAISS vector index.  Returns 0-1 where 1 means
+        identical style/timbre fingerprint.
+        """
+        if not mix.rpm_embedding:
+            return 0.0
+        if self._vector_index is None:
+            return 0.0
+
+        sample_vec = self._vector_index.get_vector(sample.filepath)
+        if sample_vec is None:
+            return 0.0
+
+        mix_vec = np.array(mix.rpm_embedding, dtype=np.float32)
+        # Both vectors should already be L2-normalized in the index,
+        # but normalize again for safety.
+        mix_norm = np.linalg.norm(mix_vec)
+        sample_norm = np.linalg.norm(sample_vec)
+        if mix_norm < 1e-10 or sample_norm < 1e-10:
+            return 0.0
+
+        cosine_sim = float(np.dot(mix_vec, sample_vec) / (mix_norm * sample_norm))
+        # Clamp to [0, 1] — negative similarity means actively dissimilar
+        return max(0.0, min(1.0, cosine_sim))
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
@@ -580,6 +616,8 @@ class Reranker:
         if need:
             parts.append(f"Addresses: {need.description}")
         parts.append(f"Role: {sample.labels.role} (confidence {bd.role_fit:.0%})")
+        if bd.embedding_similarity > 0.6:
+            parts.append(f"Strong style match ({bd.embedding_similarity:.0%})")
         if bd.spectral_complement > 0.7:
             parts.append("Fills a spectral gap")
         if bd.tonal_compatibility >= 0.8:

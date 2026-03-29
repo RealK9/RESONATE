@@ -324,17 +324,18 @@ class CandidateGenerator:
     def _embedding_search(
         self, mix_profile: MixProfile, k: int
     ) -> list[SampleProfile]:
-        """Use vector index to find stylistically similar samples."""
+        """Use the mix's RPM embedding to query the FAISS vector index for
+        stylistically similar samples."""
         if self._index is None or self._index.size() == 0:
             return []
 
-        # Build a query vector from the mix's style cluster probabilities.
-        # This is a rough heuristic -- we average all sample embeddings
-        # that the index knows about, weighted by style overlap.
-        # For now, just search with a random-ish approach: if the mix has
-        # a filepath in the index, use that as the query.
-        query_vec = self._index.get_vector(mix_profile.filepath)
-        if query_vec is None:
+        # Use the mix's own RPM embedding as the query vector.
+        # This embedding is extracted during /analyze/v2 or /analyze/v2/full.
+        if not mix_profile.rpm_embedding:
+            return []
+
+        query_vec = np.array(mix_profile.rpm_embedding, dtype=np.float32)
+        if query_vec.shape[0] != self._index.dim:
             return []
 
         results = self._index.search(query_vec, k=k)

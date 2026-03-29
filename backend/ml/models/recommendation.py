@@ -41,6 +41,7 @@ class ScoringBreakdown:
     redundancy_penalty: float = 0.0  # mu -- too similar to existing elements
     chart_potential_lift: float = 0.0  # nu -- how much this improves chart readiness
     genre_coherence_lift: float = 0.0  # xi -- how much this tightens genre identity
+    embedding_similarity: float = 0.0  # omicron -- RPM embedding cosine similarity
 
 
 @dataclass
