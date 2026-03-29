@@ -45,3 +45,24 @@ __pycache__/
 
 # Startup notes with secrets
 STARTUP TERMINAL PROMPTS/
+
+# Large binary files
+*.pt
+*.onnx
+*.tar.gz
+RPMmodelV1.pt
+backend/ml/models/*.pt
+data/checkpoints/
+
+# Database files
+backend/sample_profiles*.db*
+backend/versions.db*
+backend/batch_index.log
+
+# Vector indexes (rebuilt on startup)
+backend/vector_indexes/
+
+# Cache directories
+.cache/
+backend/.cache/
+.superpowers/
