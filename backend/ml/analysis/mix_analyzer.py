@@ -125,14 +125,27 @@ def _detect_key(mono: np.ndarray, sr: int) -> tuple[str, float, float]:
 # ---------------------------------------------------------------------------
 
 def _detect_bpm(mono: np.ndarray, sr: int) -> tuple[float, float]:
-    """Return (bpm, confidence) with robust octave-aware detection.
+    """Return (bpm, confidence) with robust multi-engine detection.
 
-    librosa.beat.beat_track frequently returns double or half the true
-    tempo (e.g. 262 for a 131 BPM track).  We run multiple estimation
-    methods and pick the candidate that falls in the most common music
-    range (70-170 BPM), preferring the one closest to the median of all
-    candidates.
+    Uses 4 independent methods (3 librosa + 1 essentia) to avoid
+    single-engine bias.  When librosa methods all agree on the wrong
+    subdivision (e.g. 131 for a 97 BPM track), essentia's
+    RhythmExtractor2013 often breaks the tie correctly.
+
+    For each raw candidate we also generate the octave variant (×2, /2)
+    and keep whichever falls closer to the "sweet spot" 70-170 BPM range.
+    Final pick: candidate closest to the median of all normalized values.
     """
+
+    def _octave_normalize(bpm: float) -> float:
+        if bpm <= 0:
+            return 120.0
+        while bpm > 180:
+            bpm /= 2.0
+        while bpm < 60:
+            bpm *= 2.0
+        return bpm
+
     # --- Method 1: librosa default beat tracker ---
     tempo1, beat_frames = librosa.beat.beat_track(y=mono, sr=sr)
     bpm1 = float(np.atleast_1d(tempo1)[0])
@@ -144,27 +157,28 @@ def _detect_bpm(mono: np.ndarray, sr: int) -> tuple[float, float]:
     # --- Method 3: onset-based autocorrelation (plp) ---
     try:
         oenv = librosa.onset.onset_strength(y=mono, sr=sr)
-        pulse = librosa.beat.plp(onset_envelope=oenv, sr=sr)
         bpm3 = float(np.atleast_1d(
             librosa.beat.tempo(onset_envelope=oenv, sr=sr)
         )[0])
     except Exception:
         bpm3 = bpm1
 
+    # --- Method 4: essentia RhythmExtractor2013 (independent engine) ---
+    bpm4 = bpm1  # fallback
+    try:
+        import essentia.standard as es
+        # essentia wants float32 mono at original sample rate
+        audio_es = mono.astype(np.float32)
+        rhythm = es.RhythmExtractor2013(method="multifeature")
+        bpm_es, *_ = rhythm(audio_es)
+        bpm4 = float(bpm_es)
+        if not (0 < bpm4 < 10000):
+            bpm4 = bpm1
+    except Exception:
+        pass  # essentia not available, fall back to librosa-only
+
     # Collect all raw candidates
-    raw_candidates = [bpm1, bpm2, bpm3]
-
-    # Generate octave variants for each candidate and pick the one
-    # closest to the sweet spot (70-170 BPM range for most music)
-    def _octave_normalize(bpm: float) -> float:
-        if bpm <= 0:
-            return 120.0
-        while bpm > 180:
-            bpm /= 2.0
-        while bpm < 60:
-            bpm *= 2.0
-        return bpm
-
+    raw_candidates = [bpm1, bpm2, bpm3, bpm4]
     candidates = [_octave_normalize(b) for b in raw_candidates]
 
     # Pick the candidate closest to the median (most agreement)
@@ -174,7 +188,7 @@ def _detect_bpm(mono: np.ndarray, sr: int) -> tuple[float, float]:
 
     # Confidence: how well do methods agree + beat count check
     spread = float(np.std(candidates))
-    agreement = max(0.0, 1.0 - spread / 30.0)  # within 30 BPM spread → high conf
+    agreement = max(0.0, 1.0 - spread / 30.0)
     n_beats = len(beat_frames)
     duration = len(mono) / sr
     expected_beats = (bpm / 60.0) * duration if bpm > 0 else 1.0
