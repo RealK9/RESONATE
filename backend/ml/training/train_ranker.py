@@ -149,9 +149,14 @@ class RankerTrainer:
             style = pair.context_style
             if not style:
                 continue
-            # The preference occurred in this style context — the user
-            # actively chose within it, so treat as a positive signal.
-            counts[style] += pair.strength
+            # Increment for preferred sample's style, decrement for rejected
+            pref_profile = self._store.load(pair.preferred_filepath) if self._store else None
+            rej_profile = self._store.load(pair.rejected_filepath) if self._store else None
+            pref_style = pref_profile.labels.style_tags[0] if pref_profile and pref_profile.labels.style_tags else style
+            rej_style = rej_profile.labels.style_tags[0] if rej_profile and rej_profile.labels.style_tags else None
+            counts[pref_style] += pair.strength
+            if rej_style:
+                counts[rej_style] -= pair.strength
         return _normalize_bias(dict(counts))
 
     def _compute_weight_deltas(

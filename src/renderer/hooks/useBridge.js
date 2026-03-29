@@ -29,6 +29,8 @@ export function useBridge() {
   const failCountRef = useRef(0);
   const wasConnectedRef = useRef(false);
 
+  const connectedRef = useRef(false);
+
   // Poll bridge status with crash detection
   useEffect(() => {
     const poll = async () => {
@@ -39,6 +41,8 @@ export function useBridge() {
 
         failCountRef.current = 0;
         setError(null);
+        const wasConn = connectedRef.current;
+        connectedRef.current = d.connected;
         setConnected(d.connected);
 
         if (d.connected) {
@@ -58,26 +62,35 @@ export function useBridge() {
           setDawSync(false);
           wasConnectedRef.current = false;
         }
+
+        // Adjust polling rate based on connection state change
+        if (d.connected !== wasConn) {
+          clearInterval(pollRef.current);
+          pollRef.current = setInterval(poll, d.connected ? POLL_FAST : POLL_SLOW);
+        }
       } catch (e) {
         failCountRef.current++;
         if (failCountRef.current >= STALE_THRESHOLD) {
+          const wasConn = connectedRef.current;
+          connectedRef.current = false;
           setConnected(false);
           setError("Backend unreachable");
           if (wasConnectedRef.current) {
             setDawSync(false);
             wasConnectedRef.current = false;
           }
+          if (wasConn) {
+            clearInterval(pollRef.current);
+            pollRef.current = setInterval(poll, POLL_SLOW);
+          }
         }
       }
     };
 
-    const start = () => {
-      poll();
-      pollRef.current = setInterval(poll, connected ? POLL_FAST : POLL_SLOW);
-    };
-    start();
+    poll();
+    pollRef.current = setInterval(poll, POLL_SLOW);
     return () => clearInterval(pollRef.current);
-  }, [connected]);
+  }, []);
 
   const clearRescore = useCallback(() => setRescoreNeeded(false), []);
 

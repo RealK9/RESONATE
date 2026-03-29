@@ -47,6 +47,15 @@ class SampleStore:
         finally:
             conn.close()
 
+    @contextmanager
+    def _read_db(self):
+        """Read-only context manager -- skips commit for better performance."""
+        conn = self._connect()
+        try:
+            yield conn
+        finally:
+            conn.close()
+
     def init(self):
         """Create the sample_profiles table."""
         with self._db() as conn:
@@ -110,7 +119,7 @@ class SampleStore:
 
     def load(self, filepath: str) -> SampleProfile | None:
         """Load a sample profile by filepath."""
-        with self._db() as conn:
+        with self._read_db() as conn:
             row = conn.execute(
                 "SELECT * FROM sample_profiles WHERE filepath = ?", (filepath,)
             ).fetchone()
@@ -125,7 +134,7 @@ class SampleStore:
 
     def list_all(self, limit: int = 0) -> list[SampleProfile]:
         """List all sample profiles."""
-        with self._db() as conn:
+        with self._read_db() as conn:
             query = "SELECT * FROM sample_profiles ORDER BY updated_at DESC"
             if limit > 0:
                 query += f" LIMIT {limit}"
@@ -134,13 +143,13 @@ class SampleStore:
 
     def count(self) -> int:
         """Count total profiles."""
-        with self._db() as conn:
+        with self._read_db() as conn:
             row = conn.execute("SELECT COUNT(*) as c FROM sample_profiles").fetchone()
             return row["c"]
 
     def search_by_role(self, role: str) -> list[SampleProfile]:
         """Find samples by their classified role."""
-        with self._db() as conn:
+        with self._read_db() as conn:
             rows = conn.execute(
                 "SELECT * FROM sample_profiles WHERE json_extract(labels, '$.role') = ?",
                 (role,)
@@ -149,7 +158,7 @@ class SampleStore:
 
     def needs_reanalysis(self, filepath: str, current_hash: str) -> bool:
         """Check if a file needs (re)analysis based on its hash."""
-        with self._db() as conn:
+        with self._read_db() as conn:
             row = conn.execute(
                 "SELECT file_hash FROM sample_profiles WHERE filepath = ?", (filepath,)
             ).fetchone()

@@ -50,8 +50,8 @@ SYNC_MAP = {
     "charts": {
         "local": RESONATE_HOME / "charts",
         "remote": f"{REMOTE}/charts",
-        "patterns": ["*.db", "*.json", "*.csv"],
-        "description": "Billboard chart data + Spotify enrichment",
+        "patterns": None,  # sync everything (DB + previews MP3s)
+        "description": "Billboard chart data + Deezer/Spotify previews",
     },
     "profiles": {
         "local": Path(__file__).parent.parent / "sample_profiles.db",

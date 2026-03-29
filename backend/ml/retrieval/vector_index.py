@@ -4,16 +4,21 @@ Supports add, remove, search, save/load.
 """
 from __future__ import annotations
 import json
+import threading
 import numpy as np
 import faiss
 from pathlib import Path
 
 
 class VectorIndex:
-    """FAISS vector index mapping filepaths to embedding vectors."""
+    """FAISS vector index mapping filepaths to embedding vectors.
+
+    Thread-safe: all public methods are guarded by a reentrant lock.
+    """
 
     def __init__(self, dim: int):
         self.dim = dim
+        self._lock = threading.RLock()
         # Use IndexFlatIP (inner product) for cosine similarity on normalized vectors
         self.index = faiss.IndexFlatIP(dim)
         self._id_to_filepath: list[str] = []
@@ -22,53 +27,62 @@ class VectorIndex:
 
     def add(self, filepath: str, vector: np.ndarray):
         """Add a vector for a filepath. Overwrites if exists."""
-        if filepath in self._filepath_to_id:
-            self.remove(filepath)
+        with self._lock:
+            if filepath in self._filepath_to_id:
+                self._remove_unlocked(filepath)
 
-        vec = vector.astype(np.float32).reshape(1, -1)
-        # L2 normalize for cosine similarity via inner product
-        norm = np.linalg.norm(vec)
-        if norm > 1e-10:
-            vec = vec / norm
+            vec = vector.astype(np.float32).reshape(1, -1)
+            # L2 normalize for cosine similarity via inner product
+            norm = np.linalg.norm(vec)
+            if norm > 1e-10:
+                vec = vec / norm
 
-        idx = len(self._id_to_filepath)
-        self.index.add(vec)
-        self._id_to_filepath.append(filepath)
-        self._filepath_to_id[filepath] = idx
-        self._vectors[filepath] = vec.flatten()
+            idx = len(self._id_to_filepath)
+            self.index.add(vec)
+            self._id_to_filepath.append(filepath)
+            self._filepath_to_id[filepath] = idx
+            self._vectors[filepath] = vec.flatten()
 
     def search(self, query: np.ndarray, k: int = 10) -> list[tuple[str, float]]:
         """Search for k nearest neighbors. Returns [(filepath, score), ...]."""
-        if self.index.ntotal == 0:
-            return []
+        with self._lock:
+            if self.index.ntotal == 0:
+                return []
 
-        q = query.astype(np.float32).reshape(1, -1)
-        norm = np.linalg.norm(q)
-        if norm > 1e-10:
-            q = q / norm
+            q = query.astype(np.float32).reshape(1, -1)
+            norm = np.linalg.norm(q)
+            if norm > 1e-10:
+                q = q / norm
 
-        k = min(k, self.index.ntotal)
-        scores, indices = self.index.search(q, k)
+            k = min(k, self.index.ntotal)
+            scores, indices = self.index.search(q, k)
 
-        results = []
-        for score, idx in zip(scores[0], indices[0]):
-            if 0 <= idx < len(self._id_to_filepath):
-                results.append((self._id_to_filepath[idx], float(score)))
-        return results
+            results = []
+            for score, idx in zip(scores[0], indices[0]):
+                if 0 <= idx < len(self._id_to_filepath):
+                    results.append((self._id_to_filepath[idx], float(score)))
+            return results
 
     def get_vector(self, filepath: str) -> np.ndarray | None:
         """Get the stored vector for a filepath."""
-        return self._vectors.get(filepath)
+        with self._lock:
+            return self._vectors.get(filepath)
 
     def remove(self, filepath: str):
         """Remove a filepath from the index. Rebuilds index."""
+        with self._lock:
+            self._remove_unlocked(filepath)
+
+    def _remove_unlocked(self, filepath: str):
+        """Remove without acquiring lock (caller must hold lock)."""
         if filepath not in self._filepath_to_id:
             return
         del self._vectors[filepath]
         self._rebuild()
 
     def size(self) -> int:
-        return self.index.ntotal
+        with self._lock:
+            return self.index.ntotal
 
     def _rebuild(self):
         """Rebuild the FAISS index from stored vectors."""
@@ -84,20 +98,21 @@ class VectorIndex:
 
     def save(self, path: str):
         """Save index to disk (FAISS index + metadata)."""
-        p = Path(path)
-        p.mkdir(parents=True, exist_ok=True)
-        faiss.write_index(self.index, str(p / "index.faiss"))
-        metadata = {
-            "dim": self.dim,
-            "filepaths": self._id_to_filepath,
-        }
-        with open(p / "metadata.json", "w") as f:
-            json.dump(metadata, f)
-        # Save vectors for rebuild capability
-        np.savez(str(p / "vectors.npz"), **{
-            fp.replace("/", "__SLASH__"): vec
-            for fp, vec in self._vectors.items()
-        })
+        with self._lock:
+            p = Path(path)
+            p.mkdir(parents=True, exist_ok=True)
+            faiss.write_index(self.index, str(p / "index.faiss"))
+            metadata = {
+                "dim": self.dim,
+                "filepaths": list(self._id_to_filepath),
+            }
+            with open(p / "metadata.json", "w") as f:
+                json.dump(metadata, f)
+            # Save vectors for rebuild capability
+            np.savez(str(p / "vectors.npz"), **{
+                fp.replace("/", "__SLASH__"): vec
+                for fp, vec in self._vectors.items()
+            })
 
     @classmethod
     def load(cls, path: str) -> VectorIndex:

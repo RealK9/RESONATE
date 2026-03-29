@@ -3,6 +3,8 @@
  * Centralized backend API calls.
  */
 
+import { useMemo } from "react";
+
 // Configurable API URL — set VITE_RESONATE_API_URL for remote server
 const API = (typeof import.meta !== "undefined" && import.meta.env?.VITE_RESONATE_API_URL)
   || "http://localhost:8000";
@@ -233,7 +235,7 @@ export function useApi() {
     return r.json();
   };
 
-  return {
+  return useMemo(() => ({
     checkHealth, getSettings, setSampleDir,
     analyzeTrack, getSamples, getSampleAbsPath,
     // v2
@@ -248,7 +250,7 @@ export function useApi() {
     // smart collections
     getCollections, exportCollection,
     API,
-  };
+  }), []);
 }
 
 export { API };

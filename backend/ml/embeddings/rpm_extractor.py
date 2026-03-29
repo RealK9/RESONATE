@@ -71,6 +71,7 @@ class RPMResult:
     genre_top_confidence: float = 0.0
     genre_sub: str = "unknown"
     genre_sub_confidence: float = 0.0
+    genre_distribution: dict[str, float] = field(default_factory=dict)
 
     # Head 3: Instruments
     instruments: list[tuple[str, float]] = field(default_factory=list)  # (name, confidence) pairs
@@ -103,6 +104,7 @@ class RPMResult:
             "genre_top_confidence": self.genre_top_confidence,
             "genre_sub": self.genre_sub,
             "genre_sub_confidence": self.genre_sub_confidence,
+            "genre_distribution": self.genre_distribution,
             "instruments": self.instruments,
             "key": self.key,
             "key_confidence": self.key_confidence,
@@ -160,7 +162,7 @@ class RPMExtractor:
 
         # Resolve backend
         if backend == "auto":
-            if (self.model_dir / "rpm_full.onnx").exists():
+            if (self.model_dir / "rpm_full.onnx").exists() or (self.model_dir / "rpm_embedding.onnx").exists():
                 try:
                     import onnxruntime
                     self._backend = "onnx"
@@ -211,10 +213,14 @@ class RPMExtractor:
             if path.exists():
                 cfg = RPMConfig(freeze_backbone=False)
                 self._model = RPMModel(cfg)
-                state = torch.load(str(path), map_location=self._device)
+                state = torch.load(str(path), map_location=self._device, weights_only=False)
                 if "model_state_dict" in state:
                     state = state["model_state_dict"]
-                self._model.load_state_dict(state, strict=False)
+                # Strip _orig_mod. prefix from torch.compile'd checkpoints
+                cleaned = {}
+                for k, v in state.items():
+                    cleaned[k.replace("_orig_mod.", "")] = v
+                self._model.load_state_dict(cleaned, strict=False)
                 self._model = self._model.to(self._device)
                 self._model.eval()
                 logger.info(f"PyTorch model loaded from {path}")
@@ -382,6 +388,10 @@ class RPMExtractor:
         top_idx = int(np.argmax(top_probs))
         result.genre_top = self.genre_labels.get(top_idx, f"genre_{top_idx}")
         result.genre_top_confidence = float(top_probs[top_idx])
+        result.genre_distribution = {
+            self.genre_labels.get(i, f"genre_{i}"): float(top_probs[i])
+            for i in range(len(top_probs))
+        }
 
         if sub_logits is not None:
             sub_probs = _softmax(sub_logits.flatten())

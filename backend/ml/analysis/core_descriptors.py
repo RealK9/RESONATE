@@ -26,12 +26,8 @@ def extract_core_descriptors(filepath: str) -> CoreDescriptors:
     try:
         lufs = float(meter.integrated_loudness(audio))
     except Exception:
-        # Short audio (<400ms) raises an error; fall back to short-term or default
-        try:
-            # Try short-term loudness (3s window, but may work on shorter clips)
-            lufs = float(meter.integrated_loudness(audio))
-        except Exception:
-            lufs = -100.0
+        # Short audio (<400ms) raises an error; use default
+        lufs = -100.0
     if np.isinf(lufs) or np.isnan(lufs):
         lufs = -100.0
 

@@ -321,23 +321,6 @@ class CandidateGenerator:
         peak_idx = int(np.argmax(chroma))
         return note_names[peak_idx]
 
-    @staticmethod
-    def _fills_missing_role(sample: SampleProfile, missing_roles: set[str]) -> bool:
-        """Check if a sample's detected role matches any missing role."""
-        sample_role = sample.labels.role.lower() if sample.labels.role else ""
-        # Map sample role labels to gap analysis role names
-        role_map = {
-            "kick": "kick", "snare": "snare_clap", "clap": "snare_clap",
-            "hat": "hats_tops", "hihat": "hats_tops", "hi-hat": "hats_tops",
-            "bass": "bass", "lead": "lead", "pad": "pad",
-            "chord": "chord_support", "keys": "chord_support",
-            "vocal": "vocal_texture", "vox": "vocal_texture",
-            "fx": "fx_transitions", "transition": "fx_transitions",
-            "texture": "ambience", "ambient": "ambience",
-        }
-        mapped = role_map.get(sample_role, sample_role)
-        return mapped in missing_roles
-
     def _embedding_search(
         self, mix_profile: MixProfile, k: int
     ) -> list[SampleProfile]:

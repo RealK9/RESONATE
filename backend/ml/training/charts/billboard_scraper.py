@@ -65,6 +65,20 @@ CREATE TABLE IF NOT EXISTS chart_entries (
     chart_name      TEXT    NOT NULL,
     spotify_id      TEXT,
     spotify_features TEXT,
+    popularity      INTEGER DEFAULT NULL,
+    duration_ms     INTEGER DEFAULT NULL,
+    preview_url     TEXT    DEFAULT NULL,
+    tempo           REAL    DEFAULT NULL,
+    key             INTEGER DEFAULT NULL,
+    mode            INTEGER DEFAULT NULL,
+    danceability    REAL    DEFAULT NULL,
+    energy          REAL    DEFAULT NULL,
+    speechiness     REAL    DEFAULT NULL,
+    acousticness    REAL    DEFAULT NULL,
+    instrumentalness REAL   DEFAULT NULL,
+    liveness        REAL    DEFAULT NULL,
+    valence         REAL    DEFAULT NULL,
+    loudness        REAL    DEFAULT NULL,
     UNIQUE(title, artist, chart_name)
 );
 """
@@ -128,7 +142,26 @@ class BillboardScraper:
     def _load_existing_entries(self) -> None:
         """Load previously scraped entries from SQLite into memory."""
         rows = self._conn.execute("SELECT * FROM chart_entries").fetchall()
+        col_names = set(rows[0].keys()) if rows else set()
         for row in rows:
+            # Build spotify_features dict from individual columns if present
+            spotify_features = None
+            if "spotify_features" in col_names:
+                # Legacy: JSON blob column
+                raw = row["spotify_features"]
+                spotify_features = json.loads(raw) if raw else None
+            elif "tempo" in col_names and row["tempo"] is not None:
+                # Modern: individual feature columns
+                spotify_features = {
+                    k: row[k] for k in [
+                        "key", "mode", "tempo", "time_signature", "duration_ms",
+                        "danceability", "energy", "speechiness", "acousticness",
+                        "instrumentalness", "liveness", "valence", "loudness",
+                    ] if k in col_names and row[k] is not None
+                }
+                if not spotify_features:
+                    spotify_features = None
+
             entry = ChartEntry(
                 title=row["title"],
                 artist=row["artist"],
@@ -136,12 +169,8 @@ class BillboardScraper:
                 weeks_on_chart=row["weeks_on_chart"],
                 year=row["year"],
                 chart_name=row["chart_name"],
-                spotify_id=row["spotify_id"],
-                spotify_features=(
-                    json.loads(row["spotify_features"])
-                    if row["spotify_features"]
-                    else None
-                ),
+                spotify_id=row["spotify_id"] if "spotify_id" in col_names else None,
+                spotify_features=spotify_features,
             )
             self._entries[entry.dedup_key] = entry
         if rows:
@@ -254,8 +283,6 @@ class BillboardScraper:
                     chart_name=chart_name,
                 )
 
-            # Persist resume checkpoint
-            self._set_last_scraped_date(chart_name, current_date_str)
             total_weeks_scraped += 1
 
             if total_weeks_scraped % 50 == 0:
@@ -267,6 +294,9 @@ class BillboardScraper:
                 )
                 # Flush to DB periodically
                 self._flush_to_db()
+
+            # Persist resume checkpoint AFTER flush succeeds
+            self._set_last_scraped_date(chart_name, current_date_str)
 
             # Advance to next week
             next_date = datetime.strptime(current_date_str, "%Y-%m-%d") + timedelta(days=7)

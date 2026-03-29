@@ -67,23 +67,49 @@ class GenreEraClassifier:
 
         return scores
 
+    # Typical centroid/bandwidth centroids per decade (empirically derived)
+    _ERA_CENTROIDS: dict[str, tuple[float, float]] = {
+        "1970s": (1800.0, 1800.0),
+        "1980s": (2200.0, 2200.0),
+        "1990s": (2600.0, 2800.0),
+        "2000s": (3000.0, 3200.0),
+        "2010s": (3400.0, 3800.0),
+        "2020s": (3800.0, 4200.0),
+    }
+
+    # Standard deviations (spread) per decade
+    _ERA_SIGMA: dict[str, tuple[float, float]] = {
+        "1970s": (800.0, 700.0),
+        "1980s": (900.0, 800.0),
+        "1990s": (1000.0, 900.0),
+        "2000s": (1000.0, 1000.0),
+        "2010s": (1100.0, 1100.0),
+        "2020s": (1200.0, 1200.0),
+    }
+
     def classify_era(self, filepath: str) -> dict[str, float]:
-        """Return era affinity scores. Rule-based on spectral characteristics."""
+        """Return era affinity scores using Gaussian distance from per-decade centroids."""
         features = self._extract_features(filepath)
         scores = {}
 
         centroid = features["centroid"]
         bandwidth = features["bandwidth"]
 
-        # Older eras: narrower bandwidth, lower centroid
-        # Newer eras: wider bandwidth, higher centroid (generally)
+        raw_scores = {}
         for era in ERAS:
-            decade = int(era[:4])
-            # Simple model: more modern = brighter, wider bandwidth
-            modernity = (decade - 1970) / 50.0  # 0 to 1
-            centroid_score = 1.0 - abs(centroid / 6000.0 - modernity)
-            bw_score = 1.0 - abs(bandwidth / 5000.0 - modernity)
-            scores[era] = round(float(np.clip((centroid_score + bw_score) / 2, 0, 1)), 4)
+            c_mu, bw_mu = self._ERA_CENTROIDS[era]
+            c_sigma, bw_sigma = self._ERA_SIGMA[era]
+            # Gaussian distance: how well does the sample match this era's profile
+            c_dist = ((centroid - c_mu) / c_sigma) ** 2
+            bw_dist = ((bandwidth - bw_mu) / bw_sigma) ** 2
+            raw_scores[era] = float(np.exp(-0.5 * (c_dist + bw_dist)))
+
+        # Normalize scores to sum to 1
+        total = sum(raw_scores.values())
+        if total > 1e-10:
+            scores = {era: round(s / total, 4) for era, s in raw_scores.items()}
+        else:
+            scores = {era: round(1.0 / len(ERAS), 4) for era in ERAS}
 
         return scores
 

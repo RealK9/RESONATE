@@ -108,12 +108,13 @@ def resolve_device(device_str: str = "auto") -> str:
 class TrainingMetrics:
     """Track and log training metrics."""
 
-    def __init__(self, log_dir: str):
+    def __init__(self, log_dir: str, patience: int = 3):
         self.log_dir = Path(log_dir).expanduser()
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.metrics: list[dict] = []
         self.best_val_loss = float("inf")
         self.epochs_without_improvement = 0
+        self.patience = patience
 
     def log(self, phase: str, epoch: int, step: int, metrics: dict):
         """Log a metrics snapshot."""
@@ -143,7 +144,7 @@ class TrainingMetrics:
             return False
         else:
             self.epochs_without_improvement += 1
-            return self.epochs_without_improvement >= 3  # patience
+            return self.epochs_without_improvement >= self.patience
 
     def save(self):
         """Save metrics to disk."""
@@ -165,7 +166,7 @@ class RPMTrainer:
         for d in [self.cfg.output_dir, self.cfg.checkpoint_dir, self.cfg.log_dir]:
             Path(d).expanduser().mkdir(parents=True, exist_ok=True)
 
-        self.metrics = TrainingMetrics(self.cfg.log_dir)
+        self.metrics = TrainingMetrics(self.cfg.log_dir, patience=self.cfg.patience)
         self.global_step = 0
 
         logger.info(f"RPMTrainer initialized — device: {self.device}")
@@ -269,16 +270,16 @@ class RPMTrainer:
             # Forward pass
             use_amp = scaler is not None and self.device == "cuda"
 
+            targets = {k: v.to(self.device) for k, v in batch.items() if k != "input_values"}
+            genre_top = targets.get("genre_top", None)
+
             if use_amp:
                 with autocast():
-                    outputs = model(input_values, batch.get("genre_top", None))
-                    targets = {k: v.to(self.device) for k, v in batch.items() if k != "input_values"}
+                    outputs = model(input_values, genre_top)
                     losses = loss_fn(outputs, targets)
                     loss = losses["total"] / accum_steps
             else:
-                outputs = model(input_values,
-                              batch.get("genre_top", {}).to(self.device) if "genre_top" in batch else None)
-                targets = {k: v.to(self.device) for k, v in batch.items() if k != "input_values"}
+                outputs = model(input_values, genre_top)
                 losses = loss_fn(outputs, targets)
                 loss = losses["total"] / accum_steps
 
@@ -631,7 +632,7 @@ if __name__ == "__main__":
     parser.add_argument("--local-samples", type=str, default="", help="Path to local samples")
     parser.add_argument("--local-profiles", type=str, default="", help="Path to sample profiles")
     parser.add_argument("--fma-dir", type=str, default="", help="Path to FMA dataset")
-    parser.add_argument("--nsyth-dir", type=str, default="", help="Path to NSynth dataset")
+    parser.add_argument("--nsynth-dir", type=str, default="", help="Path to NSynth dataset")
     parser.add_argument("--jamendo-dir", type=str, default="", help="Path to MTG-Jamendo")
     parser.add_argument("--chart-dir", type=str, default="", help="Path to chart previews")
     parser.add_argument("--output-dir", type=str, default="~/.resonate/rpm_training")
@@ -647,7 +648,7 @@ if __name__ == "__main__":
         local_samples_dir=args.local_samples,
         local_profiles_dir=args.local_profiles,
         fma_dir=args.fma_dir,
-        nsyth_dir=args.nsyth_dir,
+        nsynth_dir=args.nsynth_dir,
         jamendo_dir=args.jamendo_dir,
         chart_dir=args.chart_dir,
     )

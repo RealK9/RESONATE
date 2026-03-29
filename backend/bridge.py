@@ -28,11 +28,11 @@ bridge_state = {
 }
 
 _clients: dict[asyncio.StreamWriter, asyncio.StreamReader] = {}
-_clients_lock = asyncio.Lock()
+_clients_lock = threading.Lock()
 _server: Optional[asyncio.AbstractServer] = None
 
 # Audio capture state (protected by _capture_lock)
-_capture_lock = asyncio.Lock()
+_capture_lock = threading.Lock()
 _capture_event: Optional[asyncio.Event] = None
 _captured_wav: Optional[bytes] = None
 
@@ -41,25 +41,25 @@ async def request_audio_capture() -> Optional[bytes]:
     """Request audio capture from the connected bridge plugin. Returns WAV bytes or None."""
     global _capture_event, _captured_wav
 
-    async with _clients_lock:
+    with _clients_lock:
         if not _clients:
             return None
 
-    async with _capture_lock:
+    with _capture_lock:
         _capture_event = asyncio.Event()
         _captured_wav = None
 
     await send_to_plugin({"type": "captureAudio"})
 
     try:
-        async with _capture_lock:
+        with _capture_lock:
             evt = _capture_event
         if evt:
             await asyncio.wait_for(evt.wait(), timeout=10.0)
     except asyncio.TimeoutError:
         print("  ✗ Bridge: Audio capture timed out (10s)")
 
-    async with _capture_lock:
+    with _capture_lock:
         result = _captured_wav
         _capture_event = None
         _captured_wav = None
@@ -74,7 +74,7 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
     addr = writer.get_extra_info("peername")
     print(f"  ✓ Bridge: VST3 plugin connected from {addr}")
 
-    async with _clients_lock:
+    with _clients_lock:
         _clients[writer] = reader
         bridge_state["connected"] = True
 
@@ -103,7 +103,7 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
                     buffer = buffer[awaiting_wav_bytes:]
                     awaiting_wav_bytes = 0
 
-                    async with _capture_lock:
+                    with _capture_lock:
                         _captured_wav = wav_data
                         if _capture_event:
                             _capture_event.set()
@@ -157,7 +157,7 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
                 elif msg_type == "audioCapture":
                     if msg.get("error"):
                         print(f"  ✗ Bridge: Capture error: {msg['error']}")
-                        async with _capture_lock:
+                        with _capture_lock:
                             if _capture_event:
                                 _capture_event.set()
                     else:
@@ -169,7 +169,7 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
     except (asyncio.CancelledError, ConnectionResetError, BrokenPipeError, OSError):
         pass
     finally:
-        async with _clients_lock:
+        with _clients_lock:
             _clients.pop(writer, None)
             bridge_state["connected"] = len(_clients) > 0
 
@@ -191,7 +191,7 @@ async def send_to_plugin(message: dict):
     data = (json.dumps(message) + "\n").encode("utf-8")
     dead = []
 
-    async with _clients_lock:
+    with _clients_lock:
         writers = list(_clients.keys())
 
     for writer in writers:
@@ -202,7 +202,7 @@ async def send_to_plugin(message: dict):
             dead.append(writer)
 
     if dead:
-        async with _clients_lock:
+        with _clients_lock:
             for w in dead:
                 _clients.pop(w, None)
             bridge_state["connected"] = len(_clients) > 0

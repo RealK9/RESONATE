@@ -59,9 +59,10 @@ class QualityScorer:
             # Entropy-based balance score
             ratios = np.array(ratios)
             ratios = ratios[ratios > 0]
+            ratios = ratios / ratios.sum()  # re-normalize after filtering zeros
             entropy = -np.sum(ratios * np.log2(ratios + 1e-10))
-            max_entropy = np.log2(len(bands))
-            scores.append(entropy / max_entropy)
+            max_entropy = np.log2(len(ratios))
+            scores.append(entropy / max_entropy if max_entropy > 0 else 0.0)
         else:
             scores.append(0.0)
 

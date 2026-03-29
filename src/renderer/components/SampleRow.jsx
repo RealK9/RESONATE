@@ -23,7 +23,7 @@ const ROLE_COLORS = {
   ambience: "#34D399", percussion: "#FB923C",
 };
 
-export const SampleRow = memo(function SampleRow({ sample, isActive, isPlaying, onPlay, onPreviewInContext, isSelected, isChecked, onCheck, onHoverWaveform, dawSync = false }) {
+export const SampleRow = memo(function SampleRow({ sample, isActive, isPlaying, onPlay, onPreviewInContext, isSelected, isChecked, onCheck, onHoverWaveform }) {
   const [hov, setHov] = useState(false);
   const rowRef = useRef(null);
   const { theme, mode } = useTheme();
@@ -35,7 +35,7 @@ export const SampleRow = memo(function SampleRow({ sample, isActive, isPlaying, 
   return (
     <div ref={rowRef} onClick={() => onPlay(sample)} onMouseEnter={() => { setHov(true); if (onHoverWaveform && rowRef.current) { const r = rowRef.current.getBoundingClientRect(); onHoverWaveform(sample.path, r); } }} onMouseLeave={() => { setHov(false); onHoverWaveform?.(null, null); }}
       className={isActive ? "sample-row-active" : ""}
-      style={{ display: "grid", gridTemplateColumns: "22px 30px 1fr 54px 40px 40px 42px", alignItems: "center", gap: 6, padding: "9px 14px", background: isActive ? (isDark ? "rgba(217,70,239,0.04)" : "rgba(217,70,239,0.03)") : isSelected ? (isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)") : hov ? theme.surfaceHover : "transparent", borderLeft: isActive ? "2px solid #D946EF" : "2px solid transparent", cursor: "pointer", transition: "all 0.15s ease", borderBottom: "1px solid " + theme.border }}>
+      style={{ display: "grid", gridTemplateColumns: "22px 30px 1fr 54px 40px 40px 42px", alignItems: "center", gap: 6, padding: "9px 14px", background: isActive ? (isDark ? "rgba(139,92,246,0.04)" : "rgba(139,92,246,0.03)") : isSelected ? (isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)") : hov ? theme.surfaceHover : "transparent", borderLeft: isActive ? "2px solid #8B5CF6" : "2px solid transparent", cursor: "pointer", transition: "all 0.15s ease", borderBottom: "1px solid " + theme.border }}>
       {/* Checkbox for batch select */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }} onClick={e => { e.stopPropagation(); onCheck?.(sample.id); }}>
         <div style={{ width: 13, height: 13, borderRadius: 3, border: "1.5px solid " + (isChecked ? theme.text : theme.borderLight), background: isChecked ? theme.text : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s", cursor: "pointer" }}>
@@ -55,9 +55,9 @@ export const SampleRow = memo(function SampleRow({ sample, isActive, isPlaying, 
             style={{ cursor: "pointer", opacity: hov ? 1 : 0.5, transition: "opacity 0.15s" }}
           >
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <path d="M2 4v8l5-4z" fill={hov ? "#D946EF" : theme.textFaint} />
-              <path d="M6 4v8l5-4z" fill={hov ? "#D946EF" : theme.textFaint} opacity="0.5" />
-              <rect x="12" y="3" width="1.5" height="10" rx="0.5" fill={hov ? "#D946EF" : theme.textFaint} opacity="0.3" />
+              <path d="M2 4v8l5-4z" fill={hov ? "#8B5CF6" : theme.textFaint} />
+              <path d="M6 4v8l5-4z" fill={hov ? "#8B5CF6" : theme.textFaint} opacity="0.5" />
+              <rect x="12" y="3" width="1.5" height="10" rx="0.5" fill={hov ? "#8B5CF6" : theme.textFaint} opacity="0.3" />
             </svg>
           </div>
         )}
@@ -82,19 +82,9 @@ export const SampleRow = memo(function SampleRow({ sample, isActive, isPlaying, 
           )}
         </div>
       </div>
-      <span style={{ fontSize: 11, fontWeight: 700, color: (sample.match || 50) >= 70 ? "#D946EF" : (sample.match || 50) >= 55 ? theme.text : theme.textMuted, fontFamily: MONO }}>{Math.round(sample.match || 50)}%</span>
-      <span style={{ fontSize: 10, color: theme.textMuted, fontFamily: MONO }}>
-        {sample.key || "—"}
-        {dawSync && sample.synced_key && sample.synced_key !== sample.key && (
-          <span style={{ fontSize: 7, color: "#22C55E", marginLeft: 2 }}>{">" + sample.synced_key}</span>
-        )}
-      </span>
-      <span style={{ fontSize: 10, color: theme.textMuted, fontFamily: MONO }}>
-        {sample.bpm ? Math.round(sample.bpm) : "—"}
-        {dawSync && sample.synced_bpm && Math.round(sample.synced_bpm) !== Math.round(sample.bpm || 0) && (
-          <span style={{ fontSize: 7, color: "#22C55E", marginLeft: 2 }}>{">" + Math.round(sample.synced_bpm)}</span>
-        )}
-      </span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: (sample.match || 50) >= 70 ? "#8B5CF6" : (sample.match || 50) >= 55 ? theme.text : theme.textMuted, fontFamily: MONO }}>{Math.round(sample.match || 50)}%</span>
+      <span style={{ fontSize: 10, color: theme.textMuted, fontFamily: MONO }}>{sample.key || "—"}</span>
+      <span style={{ fontSize: 10, color: theme.textMuted, fontFamily: MONO }}>{sample.bpm ? Math.round(sample.bpm) : "—"}</span>
       <span style={{ fontSize: 9, color: theme.textFaint }}>{typeof sample.duration === "number" ? dur(sample.duration) : "—"}</span>
     </div>
   );

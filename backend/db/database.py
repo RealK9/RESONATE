@@ -23,7 +23,7 @@ def get_connection():
 
 @contextmanager
 def get_db():
-    """Context manager for database connections."""
+    """Context manager for database connections with auto-commit."""
     conn = get_connection()
     try:
         yield conn
@@ -31,6 +31,16 @@ def get_db():
     except Exception:
         conn.rollback()
         raise
+    finally:
+        conn.close()
+
+
+@contextmanager
+def get_read_db():
+    """Read-only context manager — no commit/rollback overhead."""
+    conn = get_connection()
+    try:
+        yield conn
     finally:
         conn.close()
 
@@ -145,7 +155,7 @@ def save_session(track_filename, track_profile, ai_analysis, name=None):
 
 def get_sessions(limit=50):
     """Get recent analysis sessions."""
-    with get_db() as conn:
+    with get_read_db() as conn:
         rows = conn.execute(
             "SELECT id, name, track_filename, created_at FROM sessions ORDER BY created_at DESC LIMIT ?",
             (limit,)
@@ -155,7 +165,7 @@ def get_sessions(limit=50):
 
 def get_session(session_id):
     """Get a single session with full data."""
-    with get_db() as conn:
+    with get_read_db() as conn:
         row = conn.execute(
             "SELECT * FROM sessions WHERE id = ?", (session_id,)
         ).fetchone()
@@ -197,7 +207,7 @@ def rate_sample(sample_filepath, rating, session_id=None):
 
 def get_sample_ratings(sample_filepath):
     """Get all ratings for a sample."""
-    with get_db() as conn:
+    with get_read_db() as conn:
         rows = conn.execute(
             "SELECT rating, created_at FROM ratings WHERE sample_filepath = ? ORDER BY created_at DESC",
             (sample_filepath,)
@@ -207,7 +217,7 @@ def get_sample_ratings(sample_filepath):
 
 def get_average_rating(sample_filepath):
     """Get average rating for a sample."""
-    with get_db() as conn:
+    with get_read_db() as conn:
         row = conn.execute(
             "SELECT AVG(rating) as avg_rating, COUNT(*) as count FROM ratings WHERE sample_filepath = ?",
             (sample_filepath,)
@@ -217,7 +227,7 @@ def get_average_rating(sample_filepath):
 
 def get_top_rated_samples(limit=50):
     """Get top rated samples across all sessions."""
-    with get_db() as conn:
+    with get_read_db() as conn:
         rows = conn.execute("""
             SELECT sample_filepath, AVG(rating) as avg_rating, COUNT(*) as rating_count
             FROM ratings
@@ -244,7 +254,7 @@ def log_usage(sample_filepath, action, session_id=None):
 
 def get_most_used_samples(action=None, limit=50):
     """Get most frequently used samples, optionally filtered by action type."""
-    with get_db() as conn:
+    with get_read_db() as conn:
         if action:
             rows = conn.execute("""
                 SELECT sample_filepath, COUNT(*) as use_count
@@ -264,7 +274,7 @@ def get_most_used_samples(action=None, limit=50):
 
 def get_recently_used_samples(limit=50):
     """Get recently used samples (most recent first)."""
-    with get_db() as conn:
+    with get_read_db() as conn:
         rows = conn.execute("""
             SELECT DISTINCT sample_filepath, MAX(created_at) as last_used
             FROM usage_history
@@ -289,7 +299,7 @@ def set_preference(key, value):
 
 def get_preference(key, default=None):
     """Get a user preference."""
-    with get_db() as conn:
+    with get_read_db() as conn:
         row = conn.execute(
             "SELECT value FROM preferences WHERE key = ?", (key,)
         ).fetchone()
@@ -300,7 +310,7 @@ def get_preference(key, default=None):
 
 def get_all_preferences():
     """Get all user preferences as a dict."""
-    with get_db() as conn:
+    with get_read_db() as conn:
         rows = conn.execute("SELECT key, value FROM preferences").fetchall()
         return {row["key"]: json.loads(row["value"]) for row in rows}
 
@@ -321,7 +331,7 @@ def create_collection(name, description=None, is_smart=False, smart_query=None):
 
 def get_collections():
     """Get all collections."""
-    with get_db() as conn:
+    with get_read_db() as conn:
         rows = conn.execute(
             "SELECT c.*, COUNT(cs.sample_filepath) as sample_count "
             "FROM collections c LEFT JOIN collection_samples cs ON c.id = cs.collection_id "
@@ -350,7 +360,7 @@ def remove_from_collection(collection_id, sample_filepath):
 
 def get_collection_samples(collection_id):
     """Get all sample filepaths in a collection."""
-    with get_db() as conn:
+    with get_read_db() as conn:
         rows = conn.execute(
             "SELECT sample_filepath, added_at FROM collection_samples WHERE collection_id = ? ORDER BY added_at DESC",
             (collection_id,)

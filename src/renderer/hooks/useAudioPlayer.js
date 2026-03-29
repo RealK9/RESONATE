@@ -1,7 +1,8 @@
 /**
  * RESONATE — Audio Player Hook.
  * Dual-channel playback (sample + track mix) using Web Audio API for
- * sample-accurate synchronization. Supports seek, volume, and playback rate.
+ * sample-accurate synchronization. Supports seek, volume, pitch shift,
+ * and timestretch via SoundTouch AudioWorklet.
  */
 
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -35,6 +36,7 @@ export function useAudioPlayer() {
   const tSourceRef = useRef(null);       // BufferSourceNode for track
   const sGainRef = useRef(null);         // GainNode for sample
   const tGainRef = useRef(null);         // GainNode for track
+  const stNodeRef = useRef(null);        // SoundTouchNode for pitch/tempo
   const trackBufferRef = useRef(null);   // Decoded AudioBuffer for track
   const sampleBufferRef = useRef(null);  // Decoded AudioBuffer for current sample
   const startTimeRef = useRef(0);        // AudioContext.currentTime when playback started
@@ -42,6 +44,7 @@ export function useAudioPlayer() {
   const currentPathRef = useRef(null);
   const mixModeRef = useRef(false);
   const playbackRateRef = useRef(1.0);
+  const pitchTempoRef = useRef(null);    // reference to pitchTempo hook for applyParams
 
   // Keep refs in sync with state
   useEffect(() => { mixModeRef.current = mixMode; }, [mixMode]);
@@ -61,19 +64,24 @@ export function useAudioPlayer() {
     return ctxRef.current;
   }, []);
 
+  /** Connect the pitch/tempo hook so we can create nodes. */
+  const connectPitchTempo = useCallback((pt) => {
+    pitchTempoRef.current = pt;
+  }, []);
+
   /** Stop the progress animation loop. */
   const stopRaf = useCallback(() => {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
   }, []);
 
   /** Start the progress animation loop. */
-  const startRaf = useCallback((buf) => {
+  const startRaf = useCallback((buf, effectiveDuration) => {
     stopRaf();
+    const dur = effectiveDuration || buf.duration;
     const tick = () => {
       const ctx = ctxRef.current;
       if (!ctx || !buf) return;
-      const elapsed = (ctx.currentTime - startTimeRef.current) * playbackRateRef.current;
-      const dur = buf.duration;
+      const elapsed = (ctx.currentTime - startTimeRef.current);
       if (elapsed >= dur) {
         // Sample ended
         setPlaying(false);
@@ -81,7 +89,6 @@ export function useAudioPlayer() {
         setProgress(0);
         setCurrentTime(0);
         stopRaf();
-        // Stop track too
         if (tSourceRef.current) { try { tSourceRef.current.stop(); } catch (_) {} tSourceRef.current = null; }
         return;
       }
@@ -96,28 +103,69 @@ export function useAudioPlayer() {
   const stopSources = useCallback(() => {
     if (sSourceRef.current) { try { sSourceRef.current.stop(); } catch (_) {} sSourceRef.current = null; }
     if (tSourceRef.current) { try { tSourceRef.current.stop(); } catch (_) {} tSourceRef.current = null; }
+    // Disconnect SoundTouch node
+    if (stNodeRef.current) { try { stNodeRef.current.disconnect(); } catch (_) {} stNodeRef.current = null; }
     stopRaf();
   }, [stopRaf]);
 
   // ── Play ──────────────────────────────────────────────────────────────
-  const play = useCallback(async (path, id, sync = false) => {
+  /**
+   * @param {string} path - sample file path
+   * @param {string} id - sample id
+   * @param {object} [sampleMeta] - { key, bpm } for pitch/tempo processing
+   */
+  const play = useCallback(async (path, id, sampleMeta) => {
     const ctx = getCtx();
     stopSources();
 
     try {
-      // Fetch and decode the sample
-      const url = API + "/samples/audio/" + encodeURI(path) + (sync ? "?sync=1" : "");
+      // Always fetch raw audio (no ?sync=1 — we handle pitch/tempo client-side now)
+      const url = API + "/samples/audio/" + encodeURI(path);
       const buf = await fetchBuffer(ctx, url);
       sampleBufferRef.current = buf;
-      setDuration(buf.duration);
 
       // Create sample source
       const sSource = ctx.createBufferSource();
       sSource.buffer = buf;
-      sSource.playbackRate.value = playbackRateRef.current;
-      sSource.connect(sGainRef.current);
-      sGainRef.current.gain.value = sampleVol;
       sSourceRef.current = sSource;
+
+      // Try to create SoundTouch node for pitch/tempo processing
+      let outputNode = sGainRef.current; // default: direct to gain
+      const pt = pitchTempoRef.current;
+
+      if (pt) {
+        try {
+          const stNode = await pt.createNode(ctx);
+          if (stNode) {
+            stNodeRef.current = stNode;
+            // Wire: source → soundtouch → gain
+            sSource.connect(stNode);
+            stNode.connect(sGainRef.current);
+            // Apply pitch/tempo params based on sample metadata
+            if (sampleMeta) {
+              pt.applyParams(sampleMeta.key, sampleMeta.bpm);
+            }
+            outputNode = null; // already connected
+          }
+        } catch (e) {
+          console.warn("[Audio] SoundTouch unavailable, playing raw:", e);
+        }
+      }
+
+      // Fallback: direct connection if SoundTouch not available
+      if (outputNode) {
+        sSource.connect(sGainRef.current);
+      }
+
+      sGainRef.current.gain.value = sampleVol;
+
+      // Calculate effective duration accounting for timestretch
+      let effectiveDuration = buf.duration;
+      if (pt && sampleMeta?.bpm) {
+        const tRatio = pt.getTempoRatio(sampleMeta.bpm);
+        if (tRatio > 0) effectiveDuration = buf.duration / tRatio;
+      }
+      setDuration(effectiveDuration);
 
       // When sample ends naturally
       sSource.onended = () => {
@@ -128,11 +176,12 @@ export function useAudioPlayer() {
           setCurrentTime(0);
           stopRaf();
           if (tSourceRef.current) { try { tSourceRef.current.stop(); } catch (_) {} tSourceRef.current = null; }
+          if (stNodeRef.current) { try { stNodeRef.current.disconnect(); } catch (_) {} stNodeRef.current = null; }
         }
       };
 
       // Schedule both at EXACTLY the same time
-      const startAt = ctx.currentTime + 0.01; // tiny lookahead for precision
+      const startAt = ctx.currentTime + 0.01;
       sSource.start(startAt);
 
       // If mix mode is on and we have the track loaded, play it in sync
@@ -140,10 +189,9 @@ export function useAudioPlayer() {
         const tSource = ctx.createBufferSource();
         tSource.buffer = trackBufferRef.current;
         tSource.loop = true;
-        tSource.playbackRate.value = playbackRateRef.current;
         tSource.connect(tGainRef.current);
         tGainRef.current.gain.value = trackVol;
-        tSource.start(startAt); // Same exact start time — perfectly synced
+        tSource.start(startAt);
         tSourceRef.current = tSource;
       }
 
@@ -151,7 +199,7 @@ export function useAudioPlayer() {
       currentPathRef.current = path;
       setPlaying(true);
       setCurrentId(id);
-      startRaf(buf);
+      startRaf(buf, effectiveDuration);
     } catch (e) {
       console.error("Playback error:", e);
       setPlaying(false);
@@ -166,9 +214,14 @@ export function useAudioPlayer() {
     setPlaying(false);
   }, [stopSources]);
 
-  const toggle = useCallback((path, id, sync = false) => {
+  /**
+   * @param {string} path
+   * @param {string} id
+   * @param {object} [sampleMeta] - { key, bpm }
+   */
+  const toggle = useCallback((path, id, sampleMeta) => {
     if (currentId === id && playing) pause();
-    else play(path, id, sync);
+    else play(path, id, sampleMeta);
   }, [currentId, playing, play, pause]);
 
   const stop = useCallback(() => {
@@ -195,9 +248,26 @@ export function useAudioPlayer() {
     // Re-create sample source at new offset
     const sSource = ctx.createBufferSource();
     sSource.buffer = buf;
-    sSource.playbackRate.value = playbackRateRef.current;
-    sSource.connect(sGainRef.current);
     sSourceRef.current = sSource;
+
+    // Re-wire SoundTouch if available
+    const pt = pitchTempoRef.current;
+    let hasStNode = false;
+    if (pt) {
+      try {
+        pt.createNode(ctx).then(stNode => {
+          if (stNode) {
+            stNodeRef.current = stNode;
+            sSource.connect(stNode);
+            stNode.connect(sGainRef.current);
+          }
+        });
+        hasStNode = true;
+      } catch (_) {}
+    }
+    if (!hasStNode) {
+      sSource.connect(sGainRef.current);
+    }
 
     sSource.onended = () => {
       if (sSourceRef.current === sSource) {
@@ -218,14 +288,12 @@ export function useAudioPlayer() {
       const tSource = ctx.createBufferSource();
       tSource.buffer = trackBufferRef.current;
       tSource.loop = true;
-      tSource.playbackRate.value = playbackRateRef.current;
       tSource.connect(tGainRef.current);
       tSource.start(startAt, offset % trackBufferRef.current.duration);
       tSourceRef.current = tSource;
     }
 
-    // Adjust startTimeRef so progress calculation accounts for the seek offset
-    startTimeRef.current = startAt - (offset / playbackRateRef.current);
+    startTimeRef.current = startAt - offset;
     startRaf(buf);
   }, [stopSources, startRaf, stopRaf]);
 
@@ -247,27 +315,21 @@ export function useAudioPlayer() {
     setMixMode(nm);
 
     if (!nm) {
-      // Turning mix OFF — stop the track channel
       if (tSourceRef.current) { try { tSourceRef.current.stop(); } catch (_) {} tSourceRef.current = null; }
     } else if (playing && ctxRef.current) {
       if (!trackBufferRef.current) {
-        console.warn("MIX: Track not loaded yet — loading now...");
-        // Attempt to load track on the fly
         fetchBuffer(ctxRef.current, API + "/track/audio")
           .then(buf => { trackBufferRef.current = buf; })
           .catch(e => console.warn("MIX: Failed to load track:", e));
         return;
       }
-      // Turning mix ON while sample is playing — start track in sync
       const ctx = ctxRef.current;
-      const elapsed = (ctx.currentTime - startTimeRef.current) * playbackRateRef.current;
+      const elapsed = ctx.currentTime - startTimeRef.current;
 
       const tSource = ctx.createBufferSource();
       tSource.buffer = trackBufferRef.current;
       tSource.loop = true;
-      tSource.playbackRate.value = playbackRateRef.current;
       tSource.connect(tGainRef.current);
-      // Start at the same elapsed offset so they're in sync
       tSource.start(0, elapsed % trackBufferRef.current.duration);
       tSourceRef.current = tSource;
     }
@@ -284,13 +346,11 @@ export function useAudioPlayer() {
   }, [playbackRate]);
 
   // ── Preview In Context (enable mix + play in one action) ─────────────
-  const previewInContext = useCallback(async (id, path) => {
-    // Ensure mix mode is on
+  const previewInContext = useCallback(async (id, path, sampleMeta) => {
     if (!mixModeRef.current) {
       setMixMode(true);
       mixModeRef.current = true;
     }
-    // Ensure track is loaded
     if (!trackBufferRef.current) {
       const ctx = getCtx();
       try {
@@ -300,8 +360,7 @@ export function useAudioPlayer() {
         console.warn("previewInContext: Failed to load track:", e);
       }
     }
-    // Now play — mix mode is on so track will play in sync
-    await play(path, id, false);
+    await play(path, id, sampleMeta);
   }, [getCtx, play]);
 
   // ── Cleanup on unmount ────────────────────────────────────────────────
@@ -316,5 +375,6 @@ export function useAudioPlayer() {
     playing, currentId, toggle, stop, progress, duration, currentTime, seek,
     mixMode, toggleMix, trackVol, setTrackVol, sampleVol, setSampleVol,
     loadTrack, playbackRate, setPlaybackRate, previewInContext,
+    connectPitchTempo,
   };
 }

@@ -106,7 +106,7 @@ export const MixPreviewBar = memo(function MixPreviewBar({ theme, isDark, audio,
             borderRadius: 2,
             outline: "none",
             cursor: "pointer",
-            accentColor: "#D946EF",
+            accentColor: "#8B5CF6",
           }}
         />
       </div>
@@ -135,7 +135,7 @@ export const MixPreviewBar = memo(function MixPreviewBar({ theme, isDark, audio,
             height: "100%",
             width: (progress * 100) + "%",
             borderRadius: 2,
-            background: "linear-gradient(90deg, #D946EF, #06B6D4)",
+            background: "linear-gradient(90deg, #8B5CF6, #06B6D4)",
             transition: "width 0.1s linear",
           }} />
         </div>
@@ -159,11 +159,11 @@ export const MixPreviewBar = memo(function MixPreviewBar({ theme, isDark, audio,
             height: 3,
             appearance: "none",
             WebkitAppearance: "none",
-            background: `linear-gradient(to right, #D946EF ${(abMuted ? 0 : audio.sampleVol) * 100}%, ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"} ${(abMuted ? 0 : audio.sampleVol) * 100}%)`,
+            background: `linear-gradient(to right, #8B5CF6 ${(abMuted ? 0 : audio.sampleVol) * 100}%, ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"} ${(abMuted ? 0 : audio.sampleVol) * 100}%)`,
             borderRadius: 2,
             outline: "none",
             cursor: "pointer",
-            accentColor: "#D946EF",
+            accentColor: "#8B5CF6",
           }}
         />
       </div>
@@ -180,7 +180,7 @@ export const MixPreviewBar = memo(function MixPreviewBar({ theme, isDark, audio,
         }}>Sample</div>
         <div style={{
           fontSize: 11,
-          color: "#D946EF",
+          color: "#8B5CF6",
           fontFamily: SERIF,
           overflow: "hidden",
           textOverflow: "ellipsis",
@@ -198,13 +198,13 @@ export const MixPreviewBar = memo(function MixPreviewBar({ theme, isDark, audio,
           width: 32,
           height: 32,
           borderRadius: 6,
-          border: "1px solid " + (abMuted ? "#D946EF" : theme.border),
+          border: "1px solid " + (abMuted ? "#8B5CF6" : theme.border),
           background: abMuted
-            ? "rgba(217,70,239,0.12)"
+            ? "rgba(139,92,246,0.12)"
             : hovAB
               ? (isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)")
               : "transparent",
-          color: abMuted ? "#D946EF" : theme.textSec,
+          color: abMuted ? "#8B5CF6" : theme.textSec,
           cursor: "pointer",
           display: "flex",
           alignItems: "center",

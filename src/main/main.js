@@ -3,6 +3,11 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 
+// Prevent GPU process crash loop on macOS
+app.disableHardwareAcceleration();
+app.commandLine.appendSwitch('disable-gpu');
+app.commandLine.appendSwitch('disable-software-rasterizer');
+
 let mainWindow;
 let backendProcess = null;
 

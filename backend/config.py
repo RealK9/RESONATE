@@ -3,9 +3,12 @@ RESONATE — Configuration & constants.
 Loads environment variables and defines shared paths.
 """
 
+import logging
 import os
 import sys
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # ── Paths ──────────────────────────────────────────────────────────────────
 BACKEND_DIR = Path(__file__).parent
@@ -83,7 +86,8 @@ try:
     import anthropic
     claude_client = anthropic.Anthropic()
     HAS_CLAUDE = True
-except Exception:
+except Exception as exc:
+    logger.warning("Claude client creation failed: %s", exc)
     pass
 
 # ── Print status ───────────────────────────────────────────────────────────

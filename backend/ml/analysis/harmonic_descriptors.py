@@ -26,11 +26,14 @@ def extract_harmonic_descriptors(filepath: str) -> HarmonicDescriptors:
     chroma = librosa.feature.chroma_stft(y=mono, sr=sr, n_fft=2048, hop_length=512)
     chroma_profile = [round(float(np.mean(chroma[i])), 4) for i in range(12)]
 
-    # Harmonic-to-noise ratio
-    hnr = _compute_hnr(mono, sr)
+    # Compute STFT and HPSS once, reuse for HNR and tonalness
+    S = librosa.stft(mono)
+    H, P = librosa.decompose.hpss(S)
 
-    # Harmonic/percussive separation for tonalness
-    H, P = librosa.decompose.hpss(librosa.stft(mono))
+    # Harmonic-to-noise ratio (reuse pre-computed H, P)
+    hnr = _compute_hnr(mono, sr, H=H, P=P)
+
+    # Tonalness/noisiness from the same HPSS
     h_energy = float(np.sum(np.abs(H) ** 2))
     p_energy = float(np.sum(np.abs(P) ** 2))
     total_energy = h_energy + p_energy
@@ -86,10 +89,12 @@ def _estimate_pitch(mono_16k: np.ndarray) -> tuple[float, float]:
     return 0.0, 0.0
 
 
-def _compute_hnr(mono: np.ndarray, sr: int) -> float:
+def _compute_hnr(mono: np.ndarray, sr: int,
+                 H: np.ndarray | None = None, P: np.ndarray | None = None) -> float:
     """Compute harmonic-to-noise ratio in dB using harmonic/percussive decomposition."""
-    S = librosa.stft(mono)
-    H, P = librosa.decompose.hpss(S)
+    if H is None or P is None:
+        S = librosa.stft(mono)
+        H, P = librosa.decompose.hpss(S)
     h_power = np.sum(np.abs(H) ** 2)
     p_power = np.sum(np.abs(P) ** 2)
     if p_power < 1e-10:

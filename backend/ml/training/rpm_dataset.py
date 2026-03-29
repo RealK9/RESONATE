@@ -30,6 +30,13 @@ from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 
 logger = logging.getLogger(__name__)
 
+# Deterministic genre-to-ID mapping (replaces non-deterministic hash())
+_GENRE_TO_ID = {
+    "electronic": 0, "hip_hop": 1, "rnb_soul": 2, "pop": 3,
+    "rock": 4, "jazz": 5, "country": 6, "latin": 7,
+    "classical": 8, "folk_acoustic": 9, "metal": 10, "other": 11,
+}
+
 
 # ──────────────────────────────────────────────────────────────────────
 # Configuration
@@ -43,7 +50,7 @@ class DatasetConfig:
     local_samples_dir: str = ""                    # Path to our 33k samples
     local_profiles_dir: str = ""                   # Path to pre-computed profiles (JSON)
     fma_dir: str = ""                              # Path to FMA dataset
-    nsyth_dir: str = ""                            # Path to NSynth dataset
+    nsynth_dir: str = ""                            # Path to NSynth dataset
     musdb_dir: str = ""                            # Path to MUSDB18 dataset
     jamendo_dir: str = ""                          # Path to MTG-Jamendo dataset
     chart_dir: str = ""                            # Path to chart preview audio
@@ -76,7 +83,7 @@ class TrainingSample:
     """Unified representation for a single training sample across all sources."""
 
     filepath: str
-    source: str  # "local", "fma", "nsyth", "musdb", "jamendo", "chart"
+    source: str  # "local", "fma", "nsynth", "musdb", "jamendo", "chart"
 
     # Labels (all optional — different sources provide different labels)
     role: Optional[int] = None
@@ -112,6 +119,14 @@ class LocalSampleLoader:
         profile_files = sorted(self.profiles_dir.glob("**/*.json"))
         logger.info(f"Loading {len(profile_files)} local sample profiles...")
 
+        # Pre-build set of existing audio files to avoid per-file stat() calls
+        existing_audio: set[str] = set()
+        if self.samples_dir.exists():
+            for root, _dirs, files in os.walk(str(self.samples_dir)):
+                for fname in files:
+                    existing_audio.add(os.path.join(root, fname))
+            logger.info(f"  Found {len(existing_audio)} audio files in {self.samples_dir}")
+
         role_map = {
             "kick": 0, "snare": 1, "clap": 2, "hat": 3, "perc": 4,
             "bass": 5, "lead": 6, "pad": 7, "fx": 8, "texture": 9, "vocal": 10,
@@ -125,7 +140,12 @@ class LocalSampleLoader:
                     profile = json.load(f)
 
                 filepath = profile.get("filepath", "")
-                if not filepath or not os.path.exists(filepath):
+                if not filepath:
+                    continue
+                # Resolve relative paths against samples_dir parent
+                if not os.path.isabs(filepath):
+                    filepath = str(self.samples_dir.parent / filepath)
+                if filepath not in existing_audio:
                     continue
 
                 sample = TrainingSample(
@@ -152,8 +172,9 @@ class LocalSampleLoader:
                 genre_affinity = labels.get("genre_affinity", {})
                 if genre_affinity:
                     top_genre = max(genre_affinity, key=genre_affinity.get)
-                    # Map to genre taxonomy ID (placeholder — aligned in label_alignment.py)
-                    sample.genre_top = hash(top_genre) % 12
+                    sample.genre_top = _GENRE_TO_ID.get(
+                        top_genre.lower().replace(" ", "_").replace("-", "_"), 11
+                    )
 
                 # Perceptual descriptors
                 perc = profile.get("perceptual", {})
@@ -222,15 +243,26 @@ class FMALoader:
                 "Classical": 8, "Folk": 9, "Metal": 10, "Experimental": 11,
             }
 
+            # Pre-build set of existing files per subdirectory (avoid per-file stat calls)
+            fma_audio_root = self.fma_dir / "fma_audio"
+            existing_by_subdir: dict[str, set[str]] = {}
+            if fma_audio_root.exists():
+                for subdir_name in os.listdir(str(fma_audio_root)):
+                    subdir_path = fma_audio_root / subdir_name
+                    if subdir_path.is_dir():
+                        existing_by_subdir[subdir_name] = set(os.listdir(str(subdir_path)))
+                logger.info(f"  FMA: {len(existing_by_subdir)} subdirs on disk")
+
             for track_id, row in tracks.iterrows():
                 try:
                     # FMA file structure: {id:06d}.mp3 in subdirectories
                     tid = int(track_id)
                     subdir = f"{tid:06d}"[:3]
-                    filepath = self.fma_dir / "fma_audio" / subdir / f"{tid:06d}.mp3"
+                    fname = f"{tid:06d}.mp3"
 
-                    if not filepath.exists():
+                    if fname not in existing_by_subdir.get(subdir, set()):
                         continue
+                    filepath = self.fma_dir / "fma_audio" / subdir / fname
 
                     genre_str = str(row.get(genre_col, ""))
                     genre_id = genre_map.get(genre_str, 11)  # default to "other"
@@ -271,8 +303,8 @@ class NSynthLoader:
         "vocal": [90],         # vocal
     }
 
-    def __init__(self, nsyth_dir: str):
-        self.nsyth_dir = Path(nsyth_dir)
+    def __init__(self, nsynth_dir: str):
+        self.nsynth_dir = Path(nsynth_dir)
         self._samples: list[TrainingSample] = []
 
     def load(self) -> list[TrainingSample]:
@@ -280,8 +312,8 @@ class NSynthLoader:
             return self._samples
 
         for split in ["nsynth-train", "nsynth-valid", "nsynth-test"]:
-            examples_json = self.nsyth_dir / split / "examples.json"
-            audio_dir = self.nsyth_dir / split / "audio"
+            examples_json = self.nsynth_dir / split / "examples.json"
+            audio_dir = self.nsynth_dir / split / "audio"
 
             if not examples_json.exists():
                 continue
@@ -290,10 +322,19 @@ class NSynthLoader:
                 with open(examples_json) as f:
                     examples = json.load(f)
 
+                # Pre-build set of existing filenames (one readdir vs 374k stat calls)
+                if audio_dir.exists():
+                    existing_files = set(os.listdir(str(audio_dir)))
+                    logger.info(f"  NSynth {split}: {len(existing_files)} audio files on disk, {len(examples)} in metadata")
+                else:
+                    existing_files = set()
+                    logger.warning(f"  NSynth {split}: audio dir not found at {audio_dir}")
+
                 for note_id, meta in examples.items():
-                    filepath = audio_dir / f"{note_id}.wav"
-                    if not filepath.exists():
+                    fname = f"{note_id}.wav"
+                    if fname not in existing_files:
                         continue
+                    filepath = audio_dir / fname
 
                     family = meta.get("instrument_family_str", "")
                     instrument_ids = self.FAMILY_MAP.get(family, [])
@@ -303,7 +344,7 @@ class NSynthLoader:
 
                     sample = TrainingSample(
                         filepath=str(filepath),
-                        source="nsyth",
+                        source="nsynth",
                         instruments=instruments,
                     )
 
@@ -333,18 +374,33 @@ class JamendoLoader:
         if self._samples:
             return self._samples
 
+        # Collect tags per track_id first, then create one sample per track
+        track_tags: dict[str, dict] = {}  # track_id -> {filepath, genre_top, ...}
+
         # MTG-Jamendo has TSV files mapping track IDs to tags
         for tag_file in ["autotagging_genre.tsv", "autotagging_instrument.tsv",
                          "autotagging_moodtheme.tsv"]:
             tsv_path = self.jamendo_dir / tag_file
             if tsv_path.exists():
-                self._load_tags(tsv_path, tag_file.split("_")[1].split(".")[0])
+                tag_type = tag_file.split("_")[1].split(".")[0]
+                self._collect_tags(tsv_path, tag_type, track_tags)
+
+        # Build one TrainingSample per unique track
+        for track_id, info in track_tags.items():
+            sample = TrainingSample(
+                filepath=info["filepath"],
+                source="jamendo",
+            )
+            if info.get("genre_top") is not None:
+                sample.genre_top = info["genre_top"]
+            self._samples.append(sample)
 
         logger.info(f"Loaded {len(self._samples)} Jamendo tracks")
         return self._samples
 
-    def _load_tags(self, tsv_path: Path, tag_type: str):
-        """Parse a Jamendo TSV tag file."""
+    def _collect_tags(self, tsv_path: Path, tag_type: str,
+                      track_tags: dict[str, dict]):
+        """Parse a Jamendo TSV tag file and merge into track_tags."""
         try:
             with open(tsv_path) as f:
                 for line in f:
@@ -364,10 +420,8 @@ class JamendoLoader:
                         if not filepath.exists():
                             continue
 
-                    sample = TrainingSample(
-                        filepath=str(filepath),
-                        source="jamendo",
-                    )
+                    if track_id not in track_tags:
+                        track_tags[track_id] = {"filepath": str(filepath)}
 
                     if tag_type == "genre":
                         # Map Jamendo genres to our taxonomy
@@ -379,10 +433,8 @@ class JamendoLoader:
                         for tag in tags:
                             tag_lower = tag.lower().strip()
                             if tag_lower in genre_map:
-                                sample.genre_top = genre_map[tag_lower]
+                                track_tags[track_id]["genre_top"] = genre_map[tag_lower]
                                 break
-
-                    self._samples.append(sample)
 
         except Exception as e:
             logger.error(f"Failed to load Jamendo tags from {tsv_path}: {e}")
@@ -410,7 +462,8 @@ class ChartPreviewLoader:
             conn.row_factory = sqlite3.Row
             cursor = conn.execute("""
                 SELECT * FROM chart_entries
-                WHERE preview_path IS NOT NULL AND preview_path != ''
+                WHERE (preview_path IS NOT NULL AND preview_path != '')
+                   OR (deezer_preview_path IS NOT NULL AND deezer_preview_path != '')
             """)
 
             # Map decades to era indices
@@ -420,8 +473,15 @@ class ChartPreviewLoader:
             }
 
             for row in cursor:
-                preview_path = row["preview_path"]
-                if not os.path.exists(preview_path):
+                preview_path = row["preview_path"] or ""
+                # Fallback to Deezer preview
+                try:
+                    deezer_path = row["deezer_preview_path"] or ""
+                except (IndexError, KeyError):
+                    deezer_path = ""
+                if not preview_path and deezer_path:
+                    preview_path = deezer_path
+                if not preview_path or not os.path.exists(preview_path):
                     continue
 
                 year = row["year"]
@@ -490,6 +550,9 @@ def augment_audio(audio: np.ndarray, sr: int = 16000, cfg: DatasetConfig = None)
     - Pitch shifting
     - Background noise injection
     """
+    if not np.isfinite(audio).all():
+        return np.zeros_like(audio)
+
     if cfg is None:
         cfg = DatasetConfig()
 
@@ -712,8 +775,8 @@ def build_dataset(cfg: DatasetConfig, feature_extractor=None,
         all_samples.extend(loader.load())
 
     # 3. NSynth
-    if cfg.nsyth_dir and os.path.isdir(cfg.nsyth_dir):
-        loader = NSynthLoader(cfg.nsyth_dir)
+    if cfg.nsynth_dir and os.path.isdir(cfg.nsynth_dir):
+        loader = NSynthLoader(cfg.nsynth_dir)
         all_samples.extend(loader.load())
 
     # 4. MTG-Jamendo
@@ -731,8 +794,9 @@ def build_dataset(cfg: DatasetConfig, feature_extractor=None,
         return RPMDataset([], cfg, feature_extractor, augment=False)
 
     # Train/val/test split (90/5/5 by default)
-    random.seed(42)
-    random.shuffle(all_samples)
+    all_samples.sort(key=lambda s: s.filepath)
+    rng = random.Random(42)
+    rng.shuffle(all_samples)
 
     n = len(all_samples)
     if split == "train":

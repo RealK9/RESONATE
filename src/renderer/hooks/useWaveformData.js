@@ -11,15 +11,16 @@ export function useWaveformData(url) {
     if (!url) { setPeaks(null); return; }
     let dead = false;
     (async () => {
+      let ctx;
       try {
         const buf = await (await fetch(url)).arrayBuffer();
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
         const audio = await ctx.decodeAudioData(buf);
         const raw = audio.getChannelData(0), n = 80, bs = Math.floor(raw.length / n), out = [];
         for (let i = 0; i < n; i++) { let s = 0; for (let j = 0; j < bs; j++) s += Math.abs(raw[i * bs + j]); out.push(s / bs); }
         const pk = Math.max(...out) || 1;
         if (!dead) setPeaks(out.map(v => v / pk));
-      } catch { if (!dead) setPeaks(null); }
+      } catch { if (!dead) setPeaks(null); } finally { if (ctx) ctx.close(); }
     })();
     return () => { dead = true; };
   }, [url]);

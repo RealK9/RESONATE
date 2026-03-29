@@ -62,7 +62,7 @@ FMA_TO_RPM_GENRE = {
     "Experimental": 11,
     "Instrumental": 11,
     "Spoken": 11,
-    "Blues": 4,  # closest to rock in our taxonomy
+    "Blues": 2,  # closest to R&B/Soul in our taxonomy
     "Easy Listening": 3,  # closest to pop
     "Old-Time / Historic": 9,
 }

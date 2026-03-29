@@ -29,7 +29,8 @@ async def analyze_batch(files: List[UploadFile] = File(...)):
     combined_instruments = set()
 
     for f in files:
-        dest = UPLOAD_DIR / f.filename
+        safe_name = Path(f.filename).name  # strips directory components
+        dest = UPLOAD_DIR / safe_name
         with open(dest, "wb") as out:
             content = await f.read()
             out.write(content)

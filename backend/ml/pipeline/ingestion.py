@@ -18,11 +18,39 @@ from ml.classifiers.quality_scorer import QualityScorer
 
 logger = logging.getLogger(__name__)
 
-# Singletons for classifiers (stateless, safe to share)
-_role_clf = RoleClassifier()
-_genre_clf = GenreEraClassifier()
-_style_tagger = StyleTagger()
-_quality_scorer = QualityScorer()
+# Lazy singletons for classifiers (instantiated on first use, not at import time)
+_role_clf = None
+_genre_clf = None
+_style_tagger = None
+_quality_scorer = None
+
+
+def _get_role_clf() -> RoleClassifier:
+    global _role_clf
+    if _role_clf is None:
+        _role_clf = RoleClassifier()
+    return _role_clf
+
+
+def _get_genre_clf() -> GenreEraClassifier:
+    global _genre_clf
+    if _genre_clf is None:
+        _genre_clf = GenreEraClassifier()
+    return _genre_clf
+
+
+def _get_style_tagger() -> StyleTagger:
+    global _style_tagger
+    if _style_tagger is None:
+        _style_tagger = StyleTagger()
+    return _style_tagger
+
+
+def _get_quality_scorer() -> QualityScorer:
+    global _quality_scorer
+    if _quality_scorer is None:
+        _quality_scorer = QualityScorer()
+    return _quality_scorer
 
 
 def analyze_sample(filepath: str, skip_embeddings: bool = False,
@@ -106,7 +134,7 @@ def analyze_sample(filepath: str, skip_embeddings: bool = False,
             profile.labels.rpm_chart_potential = rpm_result.chart_potential
 
             # Map RPM outputs to legacy fields for backward compatibility
-            profile.labels.genre_affinity = rpm_result.role_distribution  # genre dist
+            profile.labels.genre_affinity = rpm_result.genre_distribution
             profile.labels.era_affinity = rpm_result.era_distribution
             profile.labels.commercial_readiness = rpm_result.chart_potential
 
@@ -145,8 +173,8 @@ def _run_legacy_analysis(profile: SampleProfile, filepath: str, path: Path,
     # Stage 4: Classification
     try:
         panns_tags = profile.embeddings.panns_tags if profile.embeddings.panns_tags else None
-        role, role_conf = _role_clf.classify(filepath, filename_hint=path.name,
-                                              panns_tags=panns_tags)
+        role, role_conf = _get_role_clf().classify(filepath, filename_hint=path.name,
+                                                    panns_tags=panns_tags)
         profile.labels.role = role
         profile.labels.role_confidence = role_conf
     except Exception as e:
@@ -158,17 +186,17 @@ def _run_legacy_analysis(profile: SampleProfile, filepath: str, path: Path,
         pass
 
     try:
-        profile.labels.genre_affinity = _genre_clf.classify_genre(filepath)
-        profile.labels.era_affinity = _genre_clf.classify_era(filepath)
+        profile.labels.genre_affinity = _get_genre_clf().classify_genre(filepath)
+        profile.labels.era_affinity = _get_genre_clf().classify_era(filepath)
     except Exception as e:
         logger.error(f"Genre/era classification failed for {filepath}: {e}")
 
     try:
-        profile.labels.style_tags = _style_tagger.tag(filepath)
+        profile.labels.style_tags = _get_style_tagger().tag(filepath)
     except Exception as e:
         logger.error(f"Style tagging failed for {filepath}: {e}")
 
     try:
-        profile.labels.commercial_readiness = _quality_scorer.score(filepath)
+        profile.labels.commercial_readiness = _get_quality_scorer().score(filepath)
     except Exception as e:
         logger.error(f"Quality scoring failed for {filepath}: {e}")

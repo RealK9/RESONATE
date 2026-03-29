@@ -67,9 +67,9 @@ def _extract_features(profile: MixProfile) -> _FeatureVector:
     else:
         sub_bass_ratio = 0.2  # neutral fallback
 
-    # --- Transient density proxy (variance of density map) ---
+    # --- Transient density proxy (mean of density map, 0-1 range) ---
     dmap = profile.density_map if profile.density_map else [0.5]
-    transient_density = float(np.var(dmap))
+    transient_density = float(np.mean(dmap))
 
     # --- Overall width ---
     overall_width = profile.stereo_width.overall_width

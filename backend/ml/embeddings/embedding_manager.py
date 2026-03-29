@@ -61,11 +61,11 @@ class EmbeddingManager:
         except Exception as e:
             logger.warning(f"CLAP extraction failed for {filepath}: {e}")
 
-        # PANNs
+        # PANNs (single audio load for both embedding and tags)
         try:
-            emb = self.panns.extract_embedding(filepath)
+            emb, tags = self.panns.extract_embedding_and_tags(filepath)
             result.panns_music = emb.tolist()
-            result.panns_tags = self.panns.extract_tags(filepath)
+            result.panns_tags = tags
         except Exception as e:
             logger.warning(f"PANNs extraction failed for {filepath}: {e}")
 

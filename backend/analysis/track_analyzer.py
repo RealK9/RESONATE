@@ -39,6 +39,8 @@ def analyze_track(filepath):
     try:
         bpm, *_ = es.RhythmExtractor2013(method="multifeature")(audio)
         bpm = float(bpm)
+        if not (0 < bpm < 10000):
+            bpm = 120.0
         while bpm > 180: bpm /= 2
         while bpm < 60: bpm *= 2
         bpm = round(bpm, 1)
@@ -128,12 +130,8 @@ def analyze_track(filepath):
             detected_instruments.append("sub_bass_808")
         if bass > 0.15:
             detected_instruments.append("bass")
-        try:
-            rms = float(es.RMS()(audio))
-            if rms > 0.05 and sb > 0.08:
-                detected_instruments.append("kick")
-        except Exception:
-            pass
+        if rms > 0.05 and sb > 0.08:
+            detected_instruments.append("kick")
         mid = freq_bands.get("mid_500_2k", 0)
         upper = freq_bands.get("upper_mid_2k_6k", 0)
         if mid > 0.02 and upper > 0.01:

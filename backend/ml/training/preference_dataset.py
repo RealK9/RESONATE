@@ -75,7 +75,8 @@ CREATE TABLE IF NOT EXISTS preference_pairs (
     mix_filepath TEXT NOT NULL,
     context_style TEXT DEFAULT '',
     strength REAL DEFAULT 1.0,
-    timestamp REAL DEFAULT (strftime('%s','now'))
+    timestamp REAL DEFAULT (strftime('%s','now')),
+    UNIQUE(preferred_filepath, rejected_filepath, mix_filepath)
 );
 
 CREATE TABLE IF NOT EXISTS taste_models (
@@ -343,7 +344,7 @@ class PreferenceDataset:
         with self._connect() as conn:
             conn.executemany(
                 """
-                INSERT INTO preference_pairs
+                INSERT OR IGNORE INTO preference_pairs
                     (preferred_filepath, rejected_filepath, mix_filepath,
                      context_style, strength, timestamp)
                 VALUES (?, ?, ?, ?, ?, ?)

@@ -125,14 +125,62 @@ def _detect_key(mono: np.ndarray, sr: int) -> tuple[str, float, float]:
 # ---------------------------------------------------------------------------
 
 def _detect_bpm(mono: np.ndarray, sr: int) -> tuple[float, float]:
-    """Return (bpm, confidence)."""
-    tempo, beat_frames = librosa.beat.beat_track(y=mono, sr=sr)
-    bpm = float(np.atleast_1d(tempo)[0])
-    # Confidence heuristic: more beats detected → higher confidence
+    """Return (bpm, confidence) with robust octave-aware detection.
+
+    librosa.beat.beat_track frequently returns double or half the true
+    tempo (e.g. 262 for a 131 BPM track).  We run multiple estimation
+    methods and pick the candidate that falls in the most common music
+    range (70-170 BPM), preferring the one closest to the median of all
+    candidates.
+    """
+    # --- Method 1: librosa default beat tracker ---
+    tempo1, beat_frames = librosa.beat.beat_track(y=mono, sr=sr)
+    bpm1 = float(np.atleast_1d(tempo1)[0])
+
+    # --- Method 2: librosa with prior centered at 120 ---
+    tempo2, _ = librosa.beat.beat_track(y=mono, sr=sr, start_bpm=120)
+    bpm2 = float(np.atleast_1d(tempo2)[0])
+
+    # --- Method 3: onset-based autocorrelation (plp) ---
+    try:
+        oenv = librosa.onset.onset_strength(y=mono, sr=sr)
+        pulse = librosa.beat.plp(onset_envelope=oenv, sr=sr)
+        bpm3 = float(np.atleast_1d(
+            librosa.beat.tempo(onset_envelope=oenv, sr=sr)
+        )[0])
+    except Exception:
+        bpm3 = bpm1
+
+    # Collect all raw candidates
+    raw_candidates = [bpm1, bpm2, bpm3]
+
+    # Generate octave variants for each candidate and pick the one
+    # closest to the sweet spot (70-170 BPM range for most music)
+    def _octave_normalize(bpm: float) -> float:
+        if bpm <= 0:
+            return 120.0
+        while bpm > 180:
+            bpm /= 2.0
+        while bpm < 60:
+            bpm *= 2.0
+        return bpm
+
+    candidates = [_octave_normalize(b) for b in raw_candidates]
+
+    # Pick the candidate closest to the median (most agreement)
+    median = float(np.median(candidates))
+    bpm = min(candidates, key=lambda b: abs(b - median))
+    bpm = round(bpm, 1)
+
+    # Confidence: how well do methods agree + beat count check
+    spread = float(np.std(candidates))
+    agreement = max(0.0, 1.0 - spread / 30.0)  # within 30 BPM spread → high conf
     n_beats = len(beat_frames)
     duration = len(mono) / sr
     expected_beats = (bpm / 60.0) * duration if bpm > 0 else 1.0
-    confidence = min(1.0, n_beats / max(expected_beats, 1.0))
+    beat_ratio = min(1.0, n_beats / max(expected_beats, 1.0))
+    confidence = (agreement + beat_ratio) / 2.0
+
     return bpm, confidence
 
 
@@ -188,9 +236,12 @@ def _compute_loudness(stereo: np.ndarray, mono: np.ndarray, sr: int) -> dict:
 # Harmonic density
 # ---------------------------------------------------------------------------
 
-def _harmonic_density(mono: np.ndarray, sr: int) -> float:
+def _harmonic_density(mono: np.ndarray, sr: int,
+                      harmonic: np.ndarray | None = None,
+                      percussive: np.ndarray | None = None) -> float:
     """Ratio of harmonic energy to total energy via HPSS."""
-    harmonic, percussive = librosa.effects.hpss(mono)
+    if harmonic is None or percussive is None:
+        harmonic, percussive = librosa.effects.hpss(mono)
     h_energy = float(np.sum(harmonic ** 2))
     total = float(np.sum(mono ** 2))
     if total < 1e-12:
@@ -300,7 +351,9 @@ def _stereo_width(stereo: np.ndarray, sr: int) -> StereoWidth:
 # Source-role presence heuristics
 # ---------------------------------------------------------------------------
 
-def _source_role_presence(mono: np.ndarray, sr: int) -> SourceRolePresence:
+def _source_role_presence(mono: np.ndarray, sr: int,
+                          harmonic: np.ndarray | None = None,
+                          percussive: np.ndarray | None = None) -> SourceRolePresence:
     """Estimate presence of each sound role using band energy + transient heuristics."""
     # Pre-compute band energies
     band_energy: dict[str, float] = {}
@@ -321,8 +374,9 @@ def _source_role_presence(mono: np.ndarray, sr: int) -> SourceRolePresence:
         max_energy = 1e-10
     norm = {k: v / max_energy for k, v in band_energy.items()}
 
-    # Harmonic / percussive split
-    harmonic, percussive = librosa.effects.hpss(mono)
+    # Harmonic / percussive split (reuse pre-computed if available)
+    if harmonic is None or percussive is None:
+        harmonic, percussive = librosa.effects.hpss(mono)
     perc_energy = _rms(percussive)
     harm_energy = _rms(harmonic)
     total_energy = _rms(mono)
@@ -336,17 +390,44 @@ def _source_role_presence(mono: np.ndarray, sr: int) -> SourceRolePresence:
 
     roles: dict[str, float] = {}
 
+    # Percussive onset sharpness — better indicator than overall perc_ratio
+    # for detecting individual hits within a dense mix
+    perc_sharpness = perc_onset_mean / max(perc_onset_max, 1e-10)
+
     # kick: sub + bass energy with percussive transients
     kick_energy = (norm["sub"] + norm["bass"]) / 2.0
-    roles["kick"] = min(1.0, kick_energy * perc_ratio * 2.0)
+    kick_perc = max(perc_ratio, perc_sharpness)
+    roles["kick"] = min(1.0, kick_energy * kick_perc * 2.5)
 
     # snare_clap: mid + upper_mid transients
+    # Normalize percussive band energy against PERCUSSIVE energy (not total),
+    # so dense loud mixes don't crush the score when snare is clearly there.
+    perc_mid = _bandpass(percussive, 400, 2500, sr)
+    perc_mid_energy = _rms(perc_mid) / max(perc_energy, 1e-10)
     snare_energy = (norm["mid"] + norm["upper_mid"]) / 2.0
-    roles["snare_clap"] = min(1.0, snare_energy * perc_ratio * 1.5)
+    # Onset peak detection in snare range — periodic strong mid transients = snare
+    # Reuse cached bandpass result instead of computing again
+    snare_onset = librosa.onset.onset_strength(
+        y=perc_mid, sr=sr,
+    )
+    snare_onset_peak = float(np.mean(np.sort(snare_onset)[-max(1, len(snare_onset) // 8):])) if len(snare_onset) > 0 else 0.0
+    snare_onset_score = min(1.0, snare_onset_peak / max(perc_onset_max, 1e-10) * 1.5)
+    snare_combined = (perc_mid_energy * 2.0 + snare_energy + snare_onset_score) / 3.0
+    roles["snare_clap"] = min(1.0, snare_combined * max(perc_ratio, 0.35) * 2.5)
 
     # hats_tops: high-frequency transient energy (8k+)
+    # Same fix: normalize against percussive energy, not total energy.
+    perc_hf = _bandpass(percussive, 8000, min(sr // 2 - 1, 20000), sr)
+    perc_hf_energy = _rms(perc_hf) / max(perc_energy, 1e-10)
     hf_energy = (norm["air"] + norm["ultra_high"] + norm["ceiling"]) / 3.0
-    roles["hats_tops"] = min(1.0, hf_energy * perc_ratio * 2.0)
+    # Hi-hats produce frequent sharp HF transients — reuse cached bandpass result
+    hf_onset = librosa.onset.onset_strength(
+        y=perc_hf, sr=sr,
+    )
+    hf_onset_density = float(np.mean(hf_onset > np.percentile(hf_onset, 60))) if len(hf_onset) > 0 else 0.0
+    hf_onset_score = min(1.0, hf_onset_density * 2.0)
+    hats_combined = (perc_hf_energy * 2.0 + hf_energy + hf_onset_score) / 3.0
+    roles["hats_tops"] = min(1.0, hats_combined * max(perc_ratio, 0.35) * 2.5)
 
     # bass: sustained low-frequency energy (60-250Hz range)
     bass_sustained = (norm["bass"] + norm["low_mid"]) / 2.0
@@ -448,8 +529,11 @@ def analyze_mix(filepath: str) -> MixProfile:
     # Loudness
     loud = _compute_loudness(stereo, mono, sr)
 
+    # Compute HPSS once and share across functions
+    harmonic, percussive = librosa.effects.hpss(mono)
+
     # Harmonic density
-    h_density = _harmonic_density(mono, sr)
+    h_density = _harmonic_density(mono, sr, harmonic=harmonic, percussive=percussive)
 
     # Section energy
     sec_energy = _section_energy(mono, n_sections=8)
@@ -461,7 +545,7 @@ def analyze_mix(filepath: str) -> MixProfile:
     sw = _stereo_width(stereo, sr)
 
     # Source-role presence
-    roles = _source_role_presence(mono, sr)
+    roles = _source_role_presence(mono, sr, harmonic=harmonic, percussive=percussive)
 
     # Density map
     dmap = _density_map(mono, sr, n_segments=16)

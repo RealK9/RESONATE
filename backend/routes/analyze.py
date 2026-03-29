@@ -3,8 +3,11 @@ RESONATE — Track analysis route.
 Supports file upload and bridge (DAW master) analysis.
 """
 
+from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, HTTPException
+from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 from config import HAS_CLAUDE
 from analysis.track_analyzer import analyze_track
@@ -90,14 +93,15 @@ async def analyze_upload(file: UploadFile = File(...)):
     """Analyze an uploaded track."""
     from config import UPLOAD_DIR
 
-    dest = UPLOAD_DIR / file.filename
+    safe_name = Path(file.filename).name  # strips directory components
+    dest = UPLOAD_DIR / safe_name
     with open(dest, "wb") as f:
         content = await file.read()
         f.write(content)
 
-    track = analyze_track(str(dest))
+    track = await run_in_threadpool(analyze_track, str(dest))
     state.latest_track_file = dest
-    ai = _run_ai_analysis(track)
+    ai = await run_in_threadpool(_run_ai_analysis, track)
     _finalize(track, ai)
     return _build_response(track, ai)
 
@@ -121,12 +125,12 @@ async def analyze_from_daw():
         f.write(wav_data)
     print(f"  [Bridge] Captured {len(wav_data)} bytes → {dest}")
 
-    track = analyze_track(str(dest))
+    track = await run_in_threadpool(analyze_track, str(dest))
     if bridge_state["bpm"] > 0:
         track["bpm"] = bridge_state["bpm"]
 
     state.latest_track_file = dest
-    ai = _run_ai_analysis(track)
+    ai = await run_in_threadpool(_run_ai_analysis, track)
     _finalize(track, ai, "Bridge analysis")
     return _build_response(track, ai, filename="DAW Master")
 
@@ -175,26 +179,27 @@ async def analyze_v2(file: UploadFile = File(...)):
     from config import UPLOAD_DIR, REFERENCE_CORPUS_PATH
 
     # Save uploaded file
-    dest = UPLOAD_DIR / file.filename
+    safe_name = Path(file.filename).name  # strips directory components
+    dest = UPLOAD_DIR / safe_name
     with open(dest, "wb") as f:
         content = await file.read()
         f.write(content)
 
     # --- v2 pipeline ---
     print("\n  [v2] Running mix analysis...")
-    mix_profile = analyze_mix(str(dest))
+    mix_profile = await run_in_threadpool(analyze_mix, str(dest))
 
     print("  [v2] Classifying style...")
-    mix_profile.style = StyleClassifier().classify(mix_profile)
+    mix_profile.style = await run_in_threadpool(StyleClassifier().classify, mix_profile)
 
     print("  [v2] Loading reference corpus...")
-    corpus = StylePriorsTrainer(str(REFERENCE_CORPUS_PATH)).load_or_default()
+    corpus = await run_in_threadpool(StylePriorsTrainer(str(REFERENCE_CORPUS_PATH)).load_or_default)
 
     print("  [v2] Diagnosing needs...")
-    mix_profile.needs = NeedsEngine(corpus=corpus).diagnose(mix_profile)
+    mix_profile.needs = await run_in_threadpool(NeedsEngine(corpus=corpus).diagnose, mix_profile)
 
     print("  [v2] Running gap analysis...")
-    gap_result = GapAnalyzer().analyze(mix_profile)
+    gap_result = await run_in_threadpool(GapAnalyzer().analyze, mix_profile)
     mix_profile.gap_analysis = gap_result.to_dict()
     state.latest_gap_result = gap_result
 
@@ -202,9 +207,9 @@ async def analyze_v2(file: UploadFile = File(...)):
 
     # --- backwards-compat: also run v1 pipeline ---
     print("  [v2] Running legacy v1 analysis for backwards compatibility...")
-    track = analyze_track(str(dest))
+    track = await run_in_threadpool(analyze_track, str(dest))
     state.latest_track_file = dest
-    ai = _run_ai_analysis(track)
+    ai = await run_in_threadpool(_run_ai_analysis, track)
     _finalize(track, ai, label="v2 Analysis")
 
     return mix_profile.to_dict()
@@ -251,7 +256,8 @@ async def upload_reference(file: UploadFile = File(...), genre: Optional[str] = 
     _require_v2()
     from config import UPLOAD_DIR, REFERENCE_CORPUS_PATH
 
-    dest = UPLOAD_DIR / f"ref_{file.filename}"
+    safe_name = Path(file.filename).name  # strips directory components
+    dest = UPLOAD_DIR / f"ref_{safe_name}"
     with open(dest, "wb") as f:
         content = await file.read()
         f.write(content)
@@ -320,7 +326,7 @@ async def recommend_v2(max_results: int = 20):
     gap_result = getattr(state, "latest_gap_result", None)
     print(f"  [v2] Generating candidates... (vector index: {'yes' if vector_index else 'no'}, gap analysis: {'yes' if gap_result else 'no'})")
     generator = CandidateGenerator(sample_store=store, vector_index=vector_index, gap_result=gap_result)
-    candidates = generator.generate(mix_profile, needs, max_candidates=max_results * 5)
+    candidates = await run_in_threadpool(generator.generate, mix_profile, needs, max_results * 5)
 
     # Load preference server (Phase 5)
     pref_db_path = str(PROFILE_DB_PATH).replace(".db", "_prefs.db")
@@ -332,12 +338,12 @@ async def recommend_v2(max_results: int = 20):
     # Stage 2: reranking (with learned preferences + gap intelligence)
     print(f"  [v2] Reranking {len(candidates)} candidates... (gap analysis: {'yes' if gap_result else 'no'})")
     reranker = Reranker(corpus=corpus, preference_server=pref_server, gap_result=gap_result)
-    recommendations = reranker.rerank(candidates, mix_profile, needs)
+    recommendations = await run_in_threadpool(reranker.rerank, candidates, mix_profile, needs)
 
     # Stage 3: explanations (gap-aware)
     print("  [v2] Generating explanations...")
     engine = ExplanationEngine(gap_result=gap_result)
-    engine.explain_batch(recommendations, mix_profile, needs)
+    await run_in_threadpool(engine.explain_batch, recommendations, mix_profile, needs)
 
     # Trim to requested count
     recommendations = recommendations[:max_results]
@@ -381,27 +387,28 @@ async def analyze_and_recommend(
     from config import UPLOAD_DIR, REFERENCE_CORPUS_PATH, PROFILE_DB_PATH
 
     # Save uploaded file
-    dest = UPLOAD_DIR / file.filename
+    safe_name = Path(file.filename).name  # strips directory components
+    dest = UPLOAD_DIR / safe_name
     with open(dest, "wb") as f:
         content = await file.read()
         f.write(content)
 
     # ── Stage 1: Mix Analysis ──
     print("\n  [v2/full] Running mix analysis...")
-    mix_profile = analyze_mix(str(dest))
+    mix_profile = await run_in_threadpool(analyze_mix, str(dest))
 
     print("  [v2/full] Classifying style...")
-    mix_profile.style = StyleClassifier().classify(mix_profile)
+    mix_profile.style = await run_in_threadpool(StyleClassifier().classify, mix_profile)
 
     print("  [v2/full] Loading reference corpus...")
-    corpus = StylePriorsTrainer(str(REFERENCE_CORPUS_PATH)).load_or_default()
+    corpus = await run_in_threadpool(StylePriorsTrainer(str(REFERENCE_CORPUS_PATH)).load_or_default)
 
     print("  [v2/full] Diagnosing needs...")
-    mix_profile.needs = NeedsEngine(corpus=corpus).diagnose(mix_profile)
+    mix_profile.needs = await run_in_threadpool(NeedsEngine(corpus=corpus).diagnose, mix_profile)
 
     # ── Stage 2: Gap Analysis ──
     print("  [v2/full] Running gap analysis...")
-    gap_result = GapAnalyzer().analyze(mix_profile)
+    gap_result = await run_in_threadpool(GapAnalyzer().analyze, mix_profile)
     mix_profile.gap_analysis = gap_result.to_dict()
     state.latest_gap_result = gap_result
     state.latest_mix_profile = mix_profile
@@ -422,7 +429,7 @@ async def analyze_and_recommend(
         generator = CandidateGenerator(
             sample_store=store, vector_index=vector_index, gap_result=gap_result
         )
-        candidates = generator.generate(mix_profile, needs, max_candidates=max_results * 5)
+        candidates = await run_in_threadpool(generator.generate, mix_profile, needs, max_results * 5)
         total_candidates = len(candidates)
 
         # Load preference server
@@ -434,11 +441,11 @@ async def analyze_and_recommend(
 
         print(f"  [v2/full] Reranking {len(candidates)} candidates...")
         reranker = Reranker(corpus=corpus, preference_server=pref_server, gap_result=gap_result)
-        recommendations_list = reranker.rerank(candidates, mix_profile, needs)
+        recommendations_list = await run_in_threadpool(reranker.rerank, candidates, mix_profile, needs)
 
         print("  [v2/full] Generating explanations...")
         engine = ExplanationEngine(gap_result=gap_result)
-        engine.explain_batch(recommendations_list, mix_profile, needs)
+        await run_in_threadpool(engine.explain_batch, recommendations_list, mix_profile, needs)
 
         recommendations_list = recommendations_list[:max_results]
 
@@ -452,9 +459,9 @@ async def analyze_and_recommend(
 
     # ── Also run v1 for backwards compat ──
     print("  [v2/full] Running legacy v1 analysis...")
-    track = analyze_track(str(dest))
+    track = await run_in_threadpool(analyze_track, str(dest))
     state.latest_track_file = dest
-    ai = _run_ai_analysis(track)
+    ai = await run_in_threadpool(_run_ai_analysis, track)
     _finalize(track, ai, label="v2/full Analysis")
 
     # ── Build combined response ──
@@ -477,6 +484,17 @@ async def analyze_and_recommend(
             "recommendations_count": len(recommendations_list),
             "gap_summary": gap_result.summary,
         },
+        # v1 track analysis data (frequency bands, instruments, etc.)
+        "track_analysis": {
+            "frequency_bands": track.get("frequency_bands", {}),
+            "frequency_gaps": track.get("frequency_gaps", []),
+            "detected_instruments": track.get("detected_instruments", []),
+            "key": track.get("key", ""),
+            "bpm": track.get("bpm", 0),
+            "energy_label": ai.get("energy", ""),
+            "mood": ai.get("mood", ""),
+            "genre": ai.get("genre", ""),
+        },
     }
 
 
@@ -493,35 +511,38 @@ def _get_pref_dataset() -> "PreferenceDataset":
     return ds
 
 
+class FeedbackBody(BaseModel):
+    sample_filepath: str
+    action: str
+    mix_filepath: str = ""
+    session_id: str = ""
+    rating: Optional[int] = None
+    recommendation_rank: int = 0
+
+
 @router.post("/feedback/v2")
-async def log_feedback(
-    sample_filepath: str,
-    action: str,
-    mix_filepath: str = "",
-    session_id: str = "",
-    rating: Optional[int] = None,
-    recommendation_rank: int = 0,
-):
+async def log_feedback(body: FeedbackBody):
     """Log a user interaction with a recommended sample.
 
     Actions: click, audition, drag, keep, discard, rate, skip
+    Accepts a JSON body instead of query parameters to avoid filepath exposure in URLs.
     """
     _require_v2()
     valid_actions = {"click", "audition", "drag", "keep", "discard", "rate", "skip"}
-    if action not in valid_actions:
+    if body.action not in valid_actions:
         raise HTTPException(status_code=400, detail=f"Invalid action. Must be one of: {valid_actions}")
 
-    if action == "rate" and (rating is None or not 1 <= rating <= 5):
+    if body.action == "rate" and (body.rating is None or not 1 <= body.rating <= 5):
         raise HTTPException(status_code=400, detail="Rating must be 1-5 for 'rate' action")
 
     import time
     event = FeedbackEvent(
-        sample_filepath=sample_filepath,
-        mix_filepath=mix_filepath or (state.latest_mix_profile.filepath if state.latest_mix_profile else ""),
-        session_id=session_id,
-        action=action,
-        rating=rating,
-        recommendation_rank=recommendation_rank,
+        sample_filepath=body.sample_filepath,
+        mix_filepath=body.mix_filepath or (state.latest_mix_profile.filepath if state.latest_mix_profile else ""),
+        session_id=body.session_id,
+        action=body.action,
+        rating=body.rating,
+        recommendation_rank=body.recommendation_rank,
         context_style=state.latest_mix_profile.style.primary_cluster if state.latest_mix_profile else "",
         timestamp=time.time(),
     )

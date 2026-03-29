@@ -139,7 +139,8 @@ function BpmBar({ yourBpm, avgBpm, stdBpm, isDark }) {
 
 // ── Main component ──────────────────────────────────────────────────────────
 export function ChartIntel({ data }) {
-  const { theme, isDark } = useTheme();
+  const { theme, mode } = useTheme();
+  const isDark = mode === "dark";
 
   if (!data) return null;
 

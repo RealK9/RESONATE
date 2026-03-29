@@ -3,6 +3,8 @@ RESONATE — Silence Trimmer.
 Strips leading and trailing silence from audio samples with caching.
 """
 
+from collections import OrderedDict
+
 import librosa
 import numpy as np
 import soundfile as sf
@@ -15,8 +17,16 @@ SILENCE_THRESHOLD_DB = -25
 # Minimum pad to keep around content (seconds)
 PAD_SEC = 0.005
 
-# In-memory cache of already-trimmed paths
-_trim_cache: dict = {}
+# In-memory cache of already-trimmed paths — bounded to prevent memory leaks
+_TRIM_CACHE_MAX = 200
+_trim_cache: OrderedDict = OrderedDict()
+
+
+def _cache_put(key: str, value: Path):
+    """Insert into the trim cache with LRU eviction."""
+    _trim_cache[key] = value
+    if len(_trim_cache) > _TRIM_CACHE_MAX:
+        _trim_cache.popitem(last=False)
 
 
 def _load_audio(filepath: Path):
@@ -36,20 +46,23 @@ def trim_silence(filepath: Path) -> Path:
     """
     key = str(filepath)
     if key in _trim_cache:
+        _trim_cache.move_to_end(key)
         cached = _trim_cache[key]
         if cached.exists():
             return cached
+        else:
+            del _trim_cache[key]
 
     try:
         y, sr = _load_audio(filepath)
         if y is None or len(y) == 0:
-            _trim_cache[key] = filepath
+            _cache_put(key, filepath)
             return filepath
 
         # Find non-silent intervals
         ref = np.max(np.abs(y))
         if ref < 1e-10:
-            _trim_cache[key] = filepath
+            _cache_put(key, filepath)
             return filepath
 
         threshold = ref * (10 ** (SILENCE_THRESHOLD_DB / 20))
@@ -57,7 +70,7 @@ def trim_silence(filepath: Path) -> Path:
         nonzero = np.nonzero(above)[0]
 
         if len(nonzero) == 0:
-            _trim_cache[key] = filepath
+            _cache_put(key, filepath)
             return filepath
 
         pad_samples = int(PAD_SEC * sr)
@@ -70,7 +83,7 @@ def trim_silence(filepath: Path) -> Path:
 
         # Only trim if there's meaningful silence (> 100ms total)
         if total_removed < 0.05:
-            _trim_cache[key] = filepath
+            _cache_put(key, filepath)
             return filepath
 
         y_trimmed = y[start:end]
@@ -87,13 +100,13 @@ def trim_silence(filepath: Path) -> Path:
             cache_path = TRANSPOSED_DIR / cache_name
 
         sf.write(str(cache_path), y_trimmed, sr)
-        _trim_cache[key] = cache_path
+        _cache_put(key, cache_path)
         print(f"  ✂ Trimmed {filepath.name}: removed {leading_sec:.2f}s lead + {trailing_sec:.2f}s trail")
         return cache_path
 
     except Exception as e:
         print(f"  Trim error for {filepath.name}: {e}")
-        _trim_cache[key] = filepath
+        _cache_put(key, filepath)
         return filepath
 
 

@@ -99,12 +99,14 @@ def precompute(samples_dir: str, output_dir: str, batch_size: int = 50,
         else:
             device = "cpu"
 
-    # Collect all WAV files
-    wav_files = sorted(samples_dir.rglob("*.wav"))
-    logger.info(f"Found {len(wav_files):,} WAV files in {samples_dir}")
+    # Collect all audio files
+    audio_exts = {".wav", ".mp3", ".flac", ".aiff", ".aif", ".m4a"}
+    audio_files = sorted(f for f in samples_dir.rglob("*") if f.suffix.lower() in audio_exts)
+    wav_files = audio_files  # keep variable name for downstream compat
+    logger.info(f"Found {len(wav_files):,} audio files in {samples_dir}")
 
     if not wav_files:
-        logger.error("No WAV files found!")
+        logger.error("No audio files found!")
         return
 
     # Check how many already done

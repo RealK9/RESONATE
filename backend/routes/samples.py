@@ -3,6 +3,7 @@ RESONATE — Sample listing, audio serving, and waveform routes.
 """
 
 import time as _time
+from collections import OrderedDict
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -22,8 +23,9 @@ import state
 
 router = APIRouter()
 
-# Waveform peak cache
-_waveform_cache = {}
+# Waveform peak cache — bounded to prevent memory leaks
+_WAVEFORM_CACHE_MAX = 500
+_waveform_cache: OrderedDict = OrderedDict()
 
 
 def find_sample_file(sample_path):
@@ -36,13 +38,20 @@ def find_sample_file(sample_path):
     if abs_path.is_absolute() and abs_path.exists() and abs_path.is_file():
         # Only allow paths within known sample directories
         allowed = [SAMPLE_DIR] + list(getattr(config, 'SPLICE_DIRS', [])) + list(getattr(config, 'LOOPCLOUD_DIRS', []))
-        if any(str(abs_path).startswith(str(d.resolve())) for d in allowed if d):
-            return abs_path
+        for d in allowed:
+            if d:
+                try:
+                    abs_path.relative_to(d.resolve())
+                    return abs_path
+                except ValueError:
+                    pass
         return None  # path outside allowed directories
 
     # Prevent path traversal for relative paths
     fp = (SAMPLE_DIR / decoded).resolve()
-    if not str(fp).startswith(str(SAMPLE_DIR.resolve())):
+    try:
+        fp.relative_to(SAMPLE_DIR.resolve())
+    except ValueError:
         return None
     if fp.exists() and fp.is_file():
         return fp
@@ -80,7 +89,14 @@ async def list_samples():
     if not indexing_status["done"]:
         import asyncio
         print("  Waiting for sample indexing to complete...")
+        _wait_start = _time.time()
+        _MAX_WAIT_SEC = 60
         while not indexing_status["done"]:
+            if _time.time() - _wait_start > _MAX_WAIT_SEC:
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Sample indexing not complete after {_MAX_WAIT_SEC}s — try again later",
+                )
             await asyncio.sleep(0.5)
         print(f"  Indexing done — {len(sample_cache)} samples ready")
 
@@ -221,32 +237,31 @@ async def list_samples():
     synced_key = state.latest_track_profile.get("key", "") if state.latest_track_profile else ""
     synced_bpm = (state.daw_bpm if state.daw_bpm > 0 else state.latest_track_profile.get("bpm", 0)) if state.latest_track_profile else 0
 
+    def get_match_reason(s):
+        stype = s.get("sample_type", "unknown")
+        gaps = state.latest_track_profile.get("frequency_gaps", []) if state.latest_track_profile else []
+        sc = s.get("spectral_centroid", 2000)
+        reasons = []
+        if sc < 1500:
+            reasons.append("dark tone")
+        elif sc < 2200:
+            reasons.append("warm character")
+        if stype in ("melody", "pad", "strings") and "midrange_melody" in gaps:
+            reasons.append("fills midrange")
+        elif stype == "vocals" and "upper_mid_presence" in gaps:
+            reasons.append("adds presence")
+        elif stype == "hihat" and "high_end_sparkle" in gaps:
+            reasons.append("high-end sparkle")
+        elif stype in ("melody", "pad") and "low_mid_warmth" in gaps:
+            reasons.append("adds warmth")
+        if s.get("duration", 0) > 4 and stype in ("melody", "vocals", "pad"):
+            reasons.append("rich content")
+        if not reasons:
+            reasons.append("spectral fit")
+        return " · ".join(reasons[:2])
+
     samples_response = []
     for s in all_sample_data:
-
-        def get_match_reason(s):
-            stype = s.get("sample_type", "unknown")
-            gaps = state.latest_track_profile.get("frequency_gaps", []) if state.latest_track_profile else []
-            sc = s.get("spectral_centroid", 2000)
-            reasons = []
-            if sc < 1500:
-                reasons.append("dark tone")
-            elif sc < 2200:
-                reasons.append("warm character")
-            if stype in ("melody", "pad", "strings") and "midrange_melody" in gaps:
-                reasons.append("fills midrange")
-            elif stype == "vocals" and "upper_mid_presence" in gaps:
-                reasons.append("adds presence")
-            elif stype == "hihat" and "high_end_sparkle" in gaps:
-                reasons.append("high-end sparkle")
-            elif stype in ("melody", "pad") and "low_mid_warmth" in gaps:
-                reasons.append("adds warmth")
-            if s.get("duration", 0) > 4 and stype in ("melody", "vocals", "pad"):
-                reasons.append("rich content")
-            if not reasons:
-                reasons.append("spectral fit")
-            return " · ".join(reasons[:2])
-
         samples_response.append({
             "id": s["id"],
             "name": s["name"],
@@ -311,6 +326,7 @@ async def get_waveform(sample_path: str, bars: int = 100):
     """Return waveform peaks for visualizing the actual audio shape."""
     cache_key = f"{sample_path}:{bars}"
     if cache_key in _waveform_cache:
+        _waveform_cache.move_to_end(cache_key)
         return JSONResponse(content=_waveform_cache[cache_key])
 
     fp = find_sample_file(sample_path)
@@ -320,6 +336,8 @@ async def get_waveform(sample_path: str, bars: int = 100):
     try:
         result = extract_waveform_peaks(fp, bars)
         _waveform_cache[cache_key] = result
+        if len(_waveform_cache) > _WAVEFORM_CACHE_MAX:
+            _waveform_cache.popitem(last=False)
         return JSONResponse(content=result)
     except Exception as e:
         return JSONResponse(content={"peaks": [], "error": str(e)})
@@ -369,7 +387,7 @@ async def get_audio(sample_path: str, sync: int = 0):
 def get_sample_profile(sample_path: str):
     """Get the full v2 analysis profile for a sample."""
     from config import PROFILE_DB_PATH
-    from backend.ml.db.sample_store import SampleStore
+    from ml.db.sample_store import SampleStore
 
     store = SampleStore(str(PROFILE_DB_PATH))
     store.init()
@@ -391,7 +409,7 @@ def get_sample_profile(sample_path: str):
 def get_indexing_stats():
     """Get v2 pipeline indexing statistics."""
     from config import PROFILE_DB_PATH
-    from backend.ml.db.sample_store import SampleStore
+    from ml.db.sample_store import SampleStore
 
     store = SampleStore(str(PROFILE_DB_PATH))
     store.init()

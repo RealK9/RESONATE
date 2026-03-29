@@ -514,7 +514,7 @@ _INSTRUMENTS: list[Instrument] = [
     Instrument(
         name="saxophone (alto)",
         aliases=["alto_sax", "alto"],
-        category=CAT_BRASS,
+        category=CAT_WOODWINDS,
         subcategory="saxophone",
         frequency_range=(139.0, 12000.0),
         fundamental_range=(139.0, 880.0),
@@ -529,7 +529,7 @@ _INSTRUMENTS: list[Instrument] = [
     Instrument(
         name="saxophone (tenor)",
         aliases=["tenor_sax", "tenor"],
-        category=CAT_BRASS,
+        category=CAT_WOODWINDS,
         subcategory="saxophone",
         frequency_range=(104.0, 10000.0),
         fundamental_range=(104.0, 698.0),
@@ -544,7 +544,7 @@ _INSTRUMENTS: list[Instrument] = [
     Instrument(
         name="saxophone (soprano)",
         aliases=["soprano_sax"],
-        category=CAT_BRASS,
+        category=CAT_WOODWINDS,
         subcategory="saxophone",
         frequency_range=(233.0, 14000.0),
         fundamental_range=(233.0, 1397.0),
@@ -559,7 +559,7 @@ _INSTRUMENTS: list[Instrument] = [
     Instrument(
         name="saxophone (baritone)",
         aliases=["bari_sax", "baritone_sax"],
-        category=CAT_BRASS,
+        category=CAT_WOODWINDS,
         subcategory="saxophone",
         frequency_range=(69.0, 8000.0),
         fundamental_range=(69.3, 466.0),

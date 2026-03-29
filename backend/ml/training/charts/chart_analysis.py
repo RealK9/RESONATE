@@ -70,7 +70,7 @@ class DecadeProfile:
             self.energy_mean,
             self.danceability_mean,
             self.valence_mean,
-            (self.loudness_mean + 20) / 20.0,  # normalize -20..0 → 0..1
+            (self.loudness_mean + 60) / 60.0,  # normalize -20..0 → 0..1
             self.acousticness_mean,
             self.instrumentalness_mean,
             self.duration_mean / 600.0,
@@ -111,7 +111,7 @@ class GenreProfile:
             self.acousticness_mean,
             self.instrumentalness_mean,
             self.speechiness_mean,
-            (self.loudness_mean + 20) / 20.0,
+            (self.loudness_mean + 60) / 60.0,
             self.major_ratio,
             self.avg_peak_position / 100.0,
         ], dtype=np.float32)

@@ -100,6 +100,27 @@ class PANNsExtractor:
         # Fallback: generic class names
         return [f"class_{i}" for i in range(num_classes)]
 
+    def extract_embedding_and_tags(self, filepath: str, top_k: int = 20
+                                   ) -> tuple[np.ndarray, dict[str, float]]:
+        """Extract both embedding and tags in one pass (single audio load)."""
+        audio = self._load_audio(filepath)
+        clipwise_output, embedding = self.model.inference(audio[np.newaxis, :])
+
+        # Embedding
+        emb = embedding.flatten().astype(np.float32)
+
+        # Tags
+        probs = clipwise_output.flatten()
+        label_list = self._get_labels(len(probs))
+        top_indices = np.argsort(probs)[::-1][:top_k]
+        tags = {
+            label_list[i]: round(float(probs[i]), 4)
+            for i in top_indices
+            if probs[i] > 0.01
+        }
+
+        return emb, tags
+
     def _load_audio(self, filepath: str) -> np.ndarray:
         """Load audio at 32kHz mono (PANNs requirement)."""
         audio, _ = librosa.load(filepath, sr=32000, mono=True)

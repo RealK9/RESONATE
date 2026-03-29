@@ -236,7 +236,7 @@ _CHORD_DEFS: List[dict] = [
      "category": "altered", "common_functions": ["dominant"],
      "tension_level": 0.65, "genre_associations": ["jazz", "bossa nova", "classical"],
      "description": "Dark dominant, strong pull to resolution"},
-    {"name": "7 sharp 11", "symbol": "7#11", "intervals": (0, 4, 7, 10, 14, 18),
+    {"name": "7 sharp 11", "symbol": "7#11", "intervals": (0, 4, 7, 10, 18),
      "category": "altered", "common_functions": ["dominant", "subdominant"],
      "tension_level": 0.55, "genre_associations": ["jazz", "fusion", "progressive"],
      "description": "Lydian dominant, bright tension"},

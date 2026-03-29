@@ -276,27 +276,30 @@ class SpotifyEnricher:
         for new developer apps.  This method is kept for backwards compatibility
         but will gracefully return None on 403 errors.
         """
-        self._rate_limit()
-        try:
-            results = self.sp.audio_features([track_id])
-            if not results or results[0] is None:
+        for _attempt in range(3):
+            self._rate_limit()
+            try:
+                results = self.sp.audio_features([track_id])
+                if not results or results[0] is None:
+                    return None
+                raw = results[0]
+                return {k: raw[k] for k in self._FEATURE_KEYS if k in raw}
+            except spotipy.exceptions.SpotifyException as exc:
+                if exc.http_status == 403:
+                    # Deprecated endpoint — silently skip
+                    return None
+                if exc.http_status == 429:
+                    retry_after = int(exc.headers.get("Retry-After", 5))
+                    logger.warning("Rate limited on audio_features. Sleeping %ds.", retry_after)
+                    time.sleep(retry_after)
+                    continue
+                logger.warning("Audio features error for %s: %s", track_id, exc)
                 return None
-            raw = results[0]
-            return {k: raw[k] for k in self._FEATURE_KEYS if k in raw}
-        except spotipy.exceptions.SpotifyException as exc:
-            if exc.http_status == 403:
-                # Deprecated endpoint — silently skip
+            except Exception as exc:
+                logger.warning("Unexpected audio_features error: %s", exc)
                 return None
-            if exc.http_status == 429:
-                retry_after = int(exc.headers.get("Retry-After", 5))
-                logger.warning("Rate limited on audio_features. Sleeping %ds.", retry_after)
-                time.sleep(retry_after)
-                return self.get_audio_features(track_id)
-            logger.warning("Audio features error for %s: %s", track_id, exc)
-            return None
-        except Exception as exc:
-            logger.warning("Unexpected audio_features error: %s", exc)
-            return None
+        logger.warning("Max retries exceeded for audio_features on %s", track_id)
+        return None
 
     def get_track_metadata(self, track_id: str) -> Optional[dict]:
         """
@@ -305,51 +308,80 @@ class SpotifyEnricher:
         Returns popularity, duration_ms, explicit, release_date, album_name.
         This works for all apps (unlike audio_features which is deprecated).
         """
-        self._rate_limit()
-        try:
-            track = self.sp.track(track_id)
-            if not track:
+        for _attempt in range(3):
+            self._rate_limit()
+            try:
+                track = self.sp.track(track_id)
+                if not track:
+                    return None
+                album = track.get("album", {})
+                return {
+                    "popularity": track.get("popularity", 0),
+                    "duration_ms": track.get("duration_ms", 0),
+                    "explicit": track.get("explicit", False),
+                    "release_date": album.get("release_date", ""),
+                    "album_name": album.get("name", ""),
+                    "preview_url": track.get("preview_url"),
+                }
+            except spotipy.exceptions.SpotifyException as exc:
+                if exc.http_status == 429:
+                    retry_after = int(exc.headers.get("Retry-After", 5))
+                    logger.warning("Rate limited on track endpoint. Sleeping %ds.", retry_after)
+                    time.sleep(retry_after)
+                    continue
+                logger.warning("Track metadata error for %s: %s", track_id, exc)
                 return None
-            album = track.get("album", {})
-            return {
-                "popularity": track.get("popularity", 0),
-                "duration_ms": track.get("duration_ms", 0),
-                "explicit": track.get("explicit", False),
-                "release_date": album.get("release_date", ""),
-                "album_name": album.get("name", ""),
-                "preview_url": track.get("preview_url"),
-            }
-        except spotipy.exceptions.SpotifyException as exc:
-            if exc.http_status == 429:
-                retry_after = int(exc.headers.get("Retry-After", 5))
-                logger.warning("Rate limited on track endpoint. Sleeping %ds.", retry_after)
-                time.sleep(retry_after)
-                return self.get_track_metadata(track_id)
-            logger.warning("Track metadata error for %s: %s", track_id, exc)
-            return None
-        except Exception as exc:
-            logger.warning("Unexpected track metadata error: %s", exc)
-            return None
+            except Exception as exc:
+                logger.warning("Unexpected track metadata error: %s", exc)
+                return None
+        logger.warning("Max retries exceeded for track metadata on %s", track_id)
+        return None
 
     def get_preview_url(self, track_id: str) -> Optional[str]:
         """
         Return the 30-second preview MP3 URL for a track, or None if
         no preview is available.
         """
-        self._rate_limit()
+        for _attempt in range(3):
+            self._rate_limit()
+            try:
+                track = self.sp.track(track_id)
+                return track.get("preview_url")
+            except spotipy.exceptions.SpotifyException as exc:
+                if exc.http_status == 429:
+                    retry_after = int(exc.headers.get("Retry-After", 5))
+                    logger.warning("Rate limited on track endpoint. Sleeping %ds.", retry_after)
+                    time.sleep(retry_after)
+                    continue
+                logger.warning("Track endpoint error for %s: %s", track_id, exc)
+                return None
+            except Exception as exc:
+                logger.warning("Unexpected track endpoint error: %s", exc)
+                return None
+        logger.warning("Max retries exceeded for preview URL on %s", track_id)
+        return None
+
+    def _download_preview_from_url(
+        self,
+        track_id: str,
+        preview_url: str,
+        output_dir: str | Path = "previews",
+    ) -> Optional[str]:
+        """Download a preview MP3 from a known URL (no API call needed)."""
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        filepath = output_dir / f"{track_id}.mp3"
+
+        if filepath.exists() and filepath.stat().st_size > 0:
+            return str(filepath)
+
         try:
-            track = self.sp.track(track_id)
-            return track.get("preview_url")
-        except spotipy.exceptions.SpotifyException as exc:
-            if exc.http_status == 429:
-                retry_after = int(exc.headers.get("Retry-After", 5))
-                logger.warning("Rate limited on track endpoint. Sleeping %ds.", retry_after)
-                time.sleep(retry_after)
-                return self.get_preview_url(track_id)
-            logger.warning("Track endpoint error for %s: %s", track_id, exc)
-            return None
+            resp = requests.get(preview_url, timeout=30)
+            resp.raise_for_status()
+            filepath.write_bytes(resp.content)
+            return str(filepath)
         except Exception as exc:
-            logger.warning("Unexpected track endpoint error: %s", exc)
+            logger.debug("Preview download failed for %s: %s", track_id, exc)
             return None
 
     def download_preview(
@@ -410,18 +442,29 @@ class SpotifyEnricher:
         not_found = 0
 
         for entry in tqdm(entries, desc="Enriching chart entries", unit="song"):
-            # --- Resume: skip already-enriched ---
+            # --- Resume: skip fully-enriched (has ID + metadata/preview) ---
             cached_id = self._is_already_enriched(entry.title, entry.artist, entry.chart_name)
             if cached_id:
                 entry.spotify_id = cached_id
                 cached_feat = self._features_cached(cached_id)
                 if cached_feat:
                     entry.spotify_features = asdict(cached_feat)
-                skipped += 1
-                continue
 
-            # --- Step 1: Search ---
-            track_id = self.search_track(entry.title, entry.artist)
+                # Check if we still need metadata (popularity, preview_url)
+                row = self._conn.execute(
+                    "SELECT popularity, preview_url FROM chart_entries "
+                    "WHERE title = ? AND artist = ? AND chart_name = ?",
+                    (entry.title, entry.artist, entry.chart_name),
+                ).fetchone()
+                has_metadata = row and row["popularity"] and row["popularity"] > 0
+
+                if has_metadata:
+                    skipped += 1
+                    continue
+                # Fall through to fetch metadata for entries missing it
+
+            # --- Step 1: Search (or use cached ID) ---
+            track_id = cached_id or self.search_track(entry.title, entry.artist)
             if not track_id:
                 not_found += 1
                 continue
@@ -460,6 +503,26 @@ class SpotifyEnricher:
                     self._save_features(sf)
 
             entry.spotify_features = features_dict
+
+            # --- Download 30-second preview MP3 ---
+            if download_previews:
+                preview_url = features_dict.get("preview_url") or (
+                    metadata.get("preview_url") if metadata else None
+                )
+                if preview_url:
+                    preview_path = self._download_preview_from_url(
+                        track_id, preview_url, output_dir
+                    )
+                    if preview_path:
+                        features_dict["preview_path"] = preview_path
+                        entry.preview_path = preview_path
+                        # Also update DB
+                        self._conn.execute(
+                            "UPDATE chart_entries SET preview_path = ? "
+                            "WHERE title = ? AND artist = ? AND chart_name = ?",
+                            (preview_path, entry.title, entry.artist, entry.chart_name),
+                        )
+                        self._conn.commit()
 
             # Write back to chart_entries table
             self._update_chart_entry(

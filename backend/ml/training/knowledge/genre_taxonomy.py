@@ -444,7 +444,7 @@ def _build_genres() -> List[Genre]:
                                   "rave aesthetics"],
         typical_instruments=["TB-303", "TR-909", "modular synth"],
         production_style="Intense, 303-driven production combining acid squelch with techno's pounding rhythms",
-        era_of_origin="1980s", parent_genres=["Techno", "Acid House"],
+        era_of_origin="1990s", parent_genres=["Techno", "Acid House"],
         sibling_genres=["Hard Techno", "Acid House"],
         energy_range=(0.7, 0.95), danceability_range=(0.6, 0.85), acousticness_range=(0.0, 0.05),
         famous_artists=["Plastikman", "Dave Clarke", "Luke Vibert"],

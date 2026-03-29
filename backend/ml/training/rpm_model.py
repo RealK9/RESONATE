@@ -20,7 +20,10 @@ Single model replaces CLAP + PANNs + AST with one purpose-built architecture.
 """
 from __future__ import annotations
 
+import logging
 import math
+
+logger = logging.getLogger(__name__)
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -282,6 +285,7 @@ class OrdinalEraHead(nn.Module):
         zeros = torch.zeros(x.shape[0], 1, device=x.device)
         extended = torch.cat([ones, cum_probs, zeros], dim=1)  # [B, K+1]
         probs = extended[:, :-1] - extended[:, 1:]  # [B, K]
+        probs = probs.clamp(min=0)
 
         return {"cumulative_logits": cum_logits, "probabilities": probs}
 
@@ -387,6 +391,10 @@ class RPMModel(nn.Module):
         for param in self._backbone.parameters():
             param.requires_grad = True
         self.cfg.freeze_backbone = False
+        # Enable gradient checkpointing to reduce memory usage
+        if hasattr(self._backbone, 'gradient_checkpointing_enable'):
+            self._backbone.gradient_checkpointing_enable()
+            logger.info("  ✓ Gradient checkpointing enabled on backbone")
 
     def extract_backbone_features(self, input_values: torch.Tensor) -> torch.Tensor:
         """
@@ -606,51 +614,101 @@ class RPMLoss(nn.Module):
 
         # Head 1: Role (cross-entropy)
         if "role" in targets and self.weights["role"] > 0:
-            loss = self.ce(outputs["role_logits"], targets["role"])
+            mask = targets.get("role_mask", None)
+            loss = F.cross_entropy(outputs["role_logits"], targets["role"], reduction="none")
+            if mask is not None:
+                loss = loss * mask
+                loss = loss.sum() / mask.sum().clamp(min=1)
+            else:
+                loss = loss.mean()
             losses["role"] = loss
             total = total + self.weights["role"] * loss
 
         # Head 2: Genre (hierarchical cross-entropy)
         if "genre_top" in targets and self.weights["genre_top"] > 0:
-            loss = self.ce(outputs["genre_top_logits"], targets["genre_top"])
+            mask = targets.get("genre_top_mask", None)
+            loss = F.cross_entropy(outputs["genre_top_logits"], targets["genre_top"], reduction="none")
+            if mask is not None:
+                loss = loss * mask
+                loss = loss.sum() / mask.sum().clamp(min=1)
+            else:
+                loss = loss.mean()
             losses["genre_top"] = loss
             total = total + self.weights["genre_top"] * loss
 
         if "genre_sub" in targets and self.weights["genre_sub"] > 0:
-            loss = self.ce(outputs["genre_sub_logits"], targets["genre_sub"])
+            mask = targets.get("genre_sub_mask", None)
+            loss = F.cross_entropy(outputs["genre_sub_logits"], targets["genre_sub"], reduction="none")
+            if mask is not None:
+                loss = loss * mask
+                loss = loss.sum() / mask.sum().clamp(min=1)
+            else:
+                loss = loss.mean()
             losses["genre_sub"] = loss
             total = total + self.weights["genre_sub"] * loss
 
         # Head 3: Instruments (multi-label BCE)
         if "instruments" in targets and self.weights["instrument"] > 0:
-            loss = self.bce(outputs["instrument_logits"], targets["instruments"].float())
+            mask = targets.get("instruments_mask", None)
+            if mask is not None:
+                loss = F.binary_cross_entropy_with_logits(
+                    outputs["instrument_logits"], targets["instruments"].float(), reduction="none"
+                )
+                # mask shape [B], loss shape [B, num_instruments] — broadcast
+                loss = (loss * mask.unsqueeze(-1)).sum() / mask.sum().clamp(min=1)
+            else:
+                loss = self.bce(outputs["instrument_logits"], targets["instruments"].float())
             losses["instrument"] = loss
             total = total + self.weights["instrument"] * loss
 
         # Head 4: Music theory
         if "key" in targets and self.weights["key"] > 0:
-            loss = self.ce(outputs["key_logits"], targets["key"])
+            mask = targets.get("key_mask", None)
+            loss = F.cross_entropy(outputs["key_logits"], targets["key"], reduction="none")
+            if mask is not None:
+                loss = loss * mask
+                loss = loss.sum() / mask.sum().clamp(min=1)
+            else:
+                loss = loss.mean()
             losses["key"] = loss
             total = total + self.weights["key"] * loss
 
         if "chord" in targets and self.weights["chord"] > 0:
-            loss = self.ce(outputs["chord_logits"], targets["chord"])
+            mask = targets.get("chord_mask", None)
+            loss = F.cross_entropy(outputs["chord_logits"], targets["chord"], reduction="none")
+            if mask is not None:
+                loss = loss * mask
+                loss = loss.sum() / mask.sum().clamp(min=1)
+            else:
+                loss = loss.mean()
             losses["chord"] = loss
             total = total + self.weights["chord"] * loss
 
         if "mode" in targets and self.weights["mode"] > 0:
-            loss = self.ce(outputs["mode_logits"], targets["mode"])
+            mask = targets.get("mode_mask", None)
+            loss = F.cross_entropy(outputs["mode_logits"], targets["mode"], reduction="none")
+            if mask is not None:
+                loss = loss * mask
+                loss = loss.sum() / mask.sum().clamp(min=1)
+            else:
+                loss = loss.mean()
             losses["mode"] = loss
             total = total + self.weights["mode"] * loss
 
         # Head 5: Perceptual (MSE regression)
         if "perceptual" in targets and self.weights["perceptual"] > 0:
-            loss = self.mse(outputs["perceptual"], targets["perceptual"].float())
+            mask = targets.get("perceptual_mask", None)
+            if mask is not None:
+                loss = F.mse_loss(outputs["perceptual"], targets["perceptual"].float(), reduction="none")
+                loss = (loss * mask.unsqueeze(-1)).sum() / mask.sum().clamp(min=1)
+            else:
+                loss = self.mse(outputs["perceptual"], targets["perceptual"].float())
             losses["perceptual"] = loss
             total = total + self.weights["perceptual"] * loss
 
         # Head 6: Era (ordinal — BCE on cumulative logits)
         if "era" in targets and self.weights["era"] > 0:
+            mask = targets.get("era_mask", None)
             # Convert era label to cumulative binary targets
             # era=3 (1980s) → [1, 1, 1, 0, 0, 0, 0] (> 1950s, > 1960s, > 1970s)
             era_labels = targets["era"]  # [B]
@@ -662,14 +720,28 @@ class RPMLoss(nn.Module):
             for k in range(num_thresholds):
                 cum_targets[:, k] = (era_labels > k).float()
 
-            loss = self.bce(outputs["era_cumulative_logits"], cum_targets)
+            if mask is not None:
+                loss = F.binary_cross_entropy_with_logits(
+                    outputs["era_cumulative_logits"], cum_targets, reduction="none"
+                )
+                loss = (loss * mask.unsqueeze(-1)).sum() / mask.sum().clamp(min=1)
+            else:
+                loss = self.bce(outputs["era_cumulative_logits"], cum_targets)
             losses["era"] = loss
             total = total + self.weights["era"] * loss
 
         # Head 7: Chart potential (MSE)
         if "chart_potential" in targets and self.weights["chart"] > 0:
-            loss = self.mse(outputs["chart_potential"].squeeze(-1),
-                          targets["chart_potential"].float())
+            mask = targets.get("chart_potential_mask", None)
+            if mask is not None:
+                loss = F.mse_loss(
+                    outputs["chart_potential"].squeeze(-1),
+                    targets["chart_potential"].float(), reduction="none"
+                )
+                loss = (loss * mask).sum() / mask.sum().clamp(min=1)
+            else:
+                loss = self.mse(outputs["chart_potential"].squeeze(-1),
+                              targets["chart_potential"].float())
             losses["chart"] = loss
             total = total + self.weights["chart"] * loss
 

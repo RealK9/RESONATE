@@ -1,18 +1,18 @@
 /**
  * RESONATE — Color System.
- * Light and dark theme palettes with brand gradient (pink → cyan).
+ * Light and dark theme palettes with brand gradient (purple → cyan).
  */
 
 // Brand gradient colors (matches logo)
 const BRAND = {
-  pink: "#D946EF",
-  blue: "#06B6D4",
-  gradient: "linear-gradient(135deg, #D946EF, #8B5CF6, #06B6D4)",
-  gradientHover: "linear-gradient(135deg, #E879F9, #A78BFA, #22D3EE)",
-  gradientSubtle: "linear-gradient(135deg, rgba(217,70,239,0.12), rgba(6,182,212,0.12))",
-  gradientSubtleDark: "linear-gradient(135deg, rgba(217,70,239,0.08), rgba(6,182,212,0.08))",
-  glow: "0 0 20px rgba(217,70,239,0.15), 0 0 40px rgba(6,182,212,0.1)",
-  glowStrong: "0 0 24px rgba(217,70,239,0.25), 0 0 48px rgba(6,182,212,0.15)",
+  purple: "#8B5CF6",
+  cyan: "#06B6D4",
+  gradient: "linear-gradient(135deg, #8B5CF6, #06B6D4)",
+  gradientHover: "linear-gradient(135deg, #A78BFA, #22D3EE)",
+  gradientSubtle: "linear-gradient(135deg, rgba(139,92,246,0.12), rgba(6,182,212,0.12))",
+  gradientSubtleDark: "linear-gradient(135deg, rgba(139,92,246,0.08), rgba(6,182,212,0.08))",
+  glow: "0 0 20px rgba(139,92,246,0.15), 0 0 40px rgba(6,182,212,0.1)",
+  glowStrong: "0 0 24px rgba(139,92,246,0.25), 0 0 48px rgba(6,182,212,0.15)",
 };
 
 export const brand = BRAND;
@@ -31,15 +31,15 @@ export const lightTheme = {
   tagText: "#666666",
   red: "#DC2626",
   green: "#16A34A",
-  accent: BRAND.pink,
-  accentSec: BRAND.blue,
-  surfaceActive: "rgba(217,70,239,0.06)",
+  accent: BRAND.purple,
+  accentSec: BRAND.cyan,
+  surfaceActive: "rgba(139,92,246,0.06)",
   gradient: BRAND.gradient,
   gradientHover: BRAND.gradientHover,
   gradientSubtle: BRAND.gradientSubtle,
   brand: BRAND,
   // Player
-  waveformActive: BRAND.pink,
+  waveformActive: BRAND.purple,
   waveformInactive: "#D4D0CC",
   waveformActiveAlpha: 0.85,
   waveformInactiveAlpha: 0.35,
@@ -66,20 +66,20 @@ export const darkTheme = {
   tagText: "#909098",
   red: "#EF4444",
   green: "#22C55E",
-  accent: BRAND.pink,
-  accentSec: BRAND.blue,
-  surfaceActive: "rgba(217,70,239,0.08)",
+  accent: BRAND.purple,
+  accentSec: BRAND.cyan,
+  surfaceActive: "rgba(139,92,246,0.08)",
   gradient: BRAND.gradient,
   gradientHover: BRAND.gradientHover,
   gradientSubtle: BRAND.gradientSubtleDark,
   brand: BRAND,
   // Player
-  waveformActive: BRAND.pink,
+  waveformActive: BRAND.purple,
   waveformInactive: "#2A2A32",
   waveformActiveAlpha: 0.85,
   waveformInactiveAlpha: 0.35,
   // Spectrum
-  spectrumTrack: "rgba(217,70,239,0.18)",
+  spectrumTrack: "rgba(139,92,246,0.18)",
   spectrumSample: "rgba(6,182,212,0.22)",
   spectrumGap: "rgba(239,68,68,0.25)",
   // Scrollbar

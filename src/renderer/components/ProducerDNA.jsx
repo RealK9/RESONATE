@@ -80,15 +80,15 @@ function RadarChart({ affinities, isDark }) {
       {/* Data polygon */}
       <polygon
         points={polygon}
-        fill="rgba(217,70,239,0.15)"
-        stroke="#D946EF"
+        fill="rgba(139,92,246,0.15)"
+        stroke="#8B5CF6"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
 
       {/* Data dots */}
       {points.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r={p.val > 0.05 ? 3 : 1.5} fill="#D946EF" opacity={p.val > 0.05 ? 1 : 0.3} />
+        <circle key={i} cx={p.x} cy={p.y} r={p.val > 0.05 ? 3 : 1.5} fill="#8B5CF6" opacity={p.val > 0.05 ? 1 : 0.3} />
       ))}
 
       {/* Axis labels */}
@@ -129,7 +129,7 @@ function GenreBars({ preferences, isDark, theme }) {
       {sorted.map(s => {
         const pct = Math.abs(s.preference) / maxAbs;
         const isPositive = s.preference >= 0;
-        const color = isPositive ? "#D946EF" : "#6366F1";
+        const color = isPositive ? "#8B5CF6" : "#6366F1";
         return (
           <div key={s.style} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
             <span style={{ width: 70, fontSize: 10, color: theme.textSec, fontFamily: AF, textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 0 }}>
@@ -218,9 +218,9 @@ export function ProducerDNA({ data, onTrain, training, theme, isDark }) {
           style={{
             padding: "6px 20px",
             borderRadius: 6,
-            border: "1px solid " + (isDark ? "rgba(217,70,239,0.3)" : "rgba(217,70,239,0.25)"),
-            background: isDark ? "rgba(217,70,239,0.08)" : "rgba(217,70,239,0.05)",
-            color: "#D946EF",
+            border: "1px solid " + (isDark ? "rgba(139,92,246,0.3)" : "rgba(139,92,246,0.25)"),
+            background: isDark ? "rgba(139,92,246,0.08)" : "rgba(139,92,246,0.05)",
+            color: "#8B5CF6",
             fontSize: 10,
             fontWeight: 600,
             fontFamily: AF,
