@@ -378,64 +378,88 @@ def background_index_v2():
 
         if rpm_available:
             # ── RPM path: single model, faster, purpose-built ────────────
-            print("  ⟳ V2 Phase 2: Loading RPM model for embeddings...")
 
-            # Load genre and instrument label mappings
-            genre_labels = {}
-            instrument_labels = []
-            try:
-                from ml.training.knowledge.genre_taxonomy import get_top_level_genres, get_genre_labels
-                top_genres = get_top_level_genres()
-                genre_labels = {i: name for i, name in enumerate(top_genres)}
-                # Add sub-genre labels
-                for gid, gname in get_genre_labels():
-                    genre_labels[gid] = gname
-            except Exception as e:
-                print(f"  ⚠ Could not load genre labels: {e}")
-            try:
-                from ml.training.knowledge.instruments import get_instrument_labels
-                instrument_labels = get_instrument_labels()
-            except Exception as e:
-                print(f"  ⚠ Could not load instrument labels: {e}")
+            # Check if pre-built FAISS index exists (from GPU extraction)
+            prebuilt_faiss = (VECTOR_INDEX_DIR / "rpm" / "index.faiss").exists()
 
-            rpm_extractor = RPMExtractor(
-                genre_labels=genre_labels,
-                instrument_labels=instrument_labels,
-            )
-            _rpm_extractor = rpm_extractor  # store globally for analyze routes
-
-            processor_emb = BatchProcessor(
-                skip_embeddings=False,
-                rpm_extractor=rpm_extractor,
-                db_path=str(PROFILE_DB_PATH),
-                max_workers=1,  # RPM is GPU-bound, no benefit from threads
+            # Check how many profiles already have RPM embeddings
+            _sample = store.list_all(limit=1)
+            has_prebuilt_embeddings = (
+                _sample and _sample[0].embeddings and
+                _sample[0].embeddings.rpm and len(_sample[0].embeddings.rpm) == 768
             )
 
-            for source, d in dirs_to_index:
-                if d.exists():
-                    result = processor_emb.process_directory(str(d), source=source)
-                    print(f"  ✓ RPM Embeddings: {result['processed']} {source} samples")
-
-            # ── Build FAISS vector index from RPM embeddings (768-d) ─────
-            print("  ⟳ Building FAISS vector index from RPM embeddings...")
-            all_profiles = store.list_all()
-            rpm_dim = 768
-
-            vi = VectorIndex(dim=rpm_dim)
-            indexed = 0
-            for profile in all_profiles:
-                if profile.embeddings and profile.embeddings.rpm:
-                    vec = np.array(profile.embeddings.rpm, dtype=np.float32)
-                    if vec.shape[0] == rpm_dim:
-                        vi.add(profile.filepath, vec)
-                        indexed += 1
-
-            if indexed > 0:
-                vi.save(vector_index_path)
-                _vector_index = vi
-                print(f"  ✓ FAISS index built: {indexed} vectors ({rpm_dim}-dim RPM)")
+            if prebuilt_faiss and has_prebuilt_embeddings:
+                # Pre-built embeddings exist (from GPU extraction) — skip CPU re-extraction
+                print("  ✓ Pre-built RPM embeddings detected — skipping CPU extraction")
+                try:
+                    _vector_index = VectorIndex.load(vector_index_path)
+                    print(f"  ✓ Loaded pre-built FAISS index: {_vector_index.size()} vectors (768-dim RPM)")
+                except Exception as e:
+                    print(f"  ⚠ Could not load pre-built FAISS index: {e}")
             else:
-                print("  ⚠ No RPM embeddings found — vector index empty")
+                # Need to extract embeddings on CPU
+                print("  ⟳ V2 Phase 2: Loading RPM model for embeddings...")
+
+                # Load genre and instrument label mappings
+                genre_labels = {}
+                instrument_labels = []
+                try:
+                    from ml.training.knowledge.genre_taxonomy import get_top_level_genres, get_genre_labels
+                    top_genres = get_top_level_genres()
+                    genre_labels = {i: name for i, name in enumerate(top_genres)}
+                    for gid, gname in get_genre_labels():
+                        genre_labels[gid] = gname
+                except Exception as e:
+                    print(f"  ⚠ Could not load genre labels: {e}")
+                try:
+                    from ml.training.knowledge.instruments import get_instrument_labels
+                    instrument_labels = get_instrument_labels()
+                except Exception as e:
+                    print(f"  ⚠ Could not load instrument labels: {e}")
+
+                rpm_extractor = RPMExtractor(
+                    genre_labels=genre_labels,
+                    instrument_labels=instrument_labels,
+                )
+                _rpm_extractor = rpm_extractor  # store globally for analyze routes
+
+                processor_emb = BatchProcessor(
+                    skip_embeddings=False,
+                    rpm_extractor=rpm_extractor,
+                    db_path=str(PROFILE_DB_PATH),
+                    max_workers=1,
+                )
+
+                for source, d in dirs_to_index:
+                    if d.exists():
+                        result = processor_emb.process_directory(str(d), source=source)
+                        print(f"  ✓ RPM Embeddings: {result['processed']} {source} samples")
+
+                # ── Build FAISS vector index from RPM embeddings (768-d) ─────
+                print("  ⟳ Building FAISS vector index from RPM embeddings...")
+                all_profiles = store.list_all()
+                rpm_dim = 768
+
+                vi = VectorIndex(dim=rpm_dim)
+                indexed = 0
+                for profile in all_profiles:
+                    if profile.embeddings and profile.embeddings.rpm:
+                        vec = np.array(profile.embeddings.rpm, dtype=np.float32)
+                        if vec.shape[0] == rpm_dim:
+                            vi.add(profile.filepath, vec)
+                            indexed += 1
+
+                if indexed > 0:
+                    vi.save(vector_index_path)
+                    _vector_index = vi
+                    print(f"  ✓ FAISS index built: {indexed} vectors ({rpm_dim}-dim RPM)")
+                else:
+                    print("  ⚠ No RPM embeddings found — vector index empty")
+
+            # Lazy-load RPM extractor for analyze routes (on first mix upload)
+            if _rpm_extractor is None:
+                print("  ℹ RPM extractor will load on first mix upload (lazy)")
 
         else:
             # ── Legacy path: CLAP + PANNs + AST ─────────────────────────
