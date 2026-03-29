@@ -66,3 +66,6 @@ backend/vector_indexes/
 .cache/
 backend/.cache/
 .superpowers/
+
+# Training data & checkpoints (too large for git)
+data/
